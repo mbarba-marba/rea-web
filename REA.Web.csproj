@@ -6,6 +6,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>REA.Web</RootNamespace>
     <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+    <WasmBuildNative>false</WasmBuildNative>
+    <PublishTrimmed>false</PublishTrimmed>
+    <BlazorEnableTimeZoneSupport>false</BlazorEnableTimeZoneSupport>
+    <DisableDefaultWasmBuild>true</DisableDefaultWasmBuild>
+    <StaticWebAssetBasePath>/</StaticWebAssetBasePath>
   </PropertyGroup>
 
   <ItemGroup>
