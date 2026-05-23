@@ -1,0 +1,201 @@
+@page "/checklists/{ChecklistId:long}/paso/{PasoId:long}"
+@using Microsoft.AspNetCore.Authorization
+@using REA.Web.Models
+@using REA.Web.Services
+@attribute [Authorize(Roles = "admin,auxiliar")]
+@inject ChecklistService ChecklistService
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageHeader Title="@_titulo" Subtitle="@_subtitulo" />
+
+@if (_error != null)
+{
+    <ErrorBanner Message="@_error" OnDismiss="() => _error = null" />
+}
+
+@if (_cargando)
+{
+    <SkeletonLoader />
+}
+else if (_paso != null)
+{
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="glass-card" style="padding:20px;">
+            <h3 style="margin-bottom:12px;">Información del Paso</h3>
+            <dl class="detail-list">
+                <dt>Número</dt><dd>@_paso.NumeroPaso de 14</dd>
+                <dt>Estado</dt><dd><BadgeEstado Estado="@_paso.Estado" /></dd>
+                @if (_paso.CompletadoEn.HasValue)
+                {
+                    <dt>Completado</dt><dd>@_paso.CompletadoEn.Value.ToString("dd/MM/yyyy HH:mm")</dd>
+                }
+                <dt>Notas</dt>
+                <dd>
+                    <textarea @bind="_notas" class="glass-input" rows="3" style="width:100%;margin-top:4px;"></textarea>
+                </dd>
+            </dl>
+            <div style="display:flex;gap:8px;margin-top:16px;">
+                <GlassButton Variant="primary" OnClick="GuardarNotas" Disabled="@_guardando">Guardar Notas</GlassButton>
+                @if (_paso.Estado == "pendiente")
+                {
+                    <GlassButton Variant="primary" OnClick="IniciarPaso">Iniciar</GlassButton>
+                }
+                else if (_paso.Estado == "en_proceso")
+                {
+                    <GlassButton Variant="primary" OnClick="CompletarPaso">Completar</GlassButton>
+                    <GlassButton Variant="danger" OnClick="BloquearPaso">Bloquear</GlassButton>
+                }
+                else if (_paso.Estado == "bloqueado")
+                {
+                    <GlassButton Variant="secondary" OnClick="DesbloquearPaso">Desbloquear</GlassButton>
+                }
+            </div>
+        </div>
+
+        <div class="glass-card" style="padding:20px;">
+            <h3 style="margin-bottom:12px;">Evidencias (@_evidencias.Count)</h3>
+            @if (_evidencias.Count == 0)
+            {
+                <p style="color:var(--text-secondary);padding:20px 0;">Sin documentos adjuntos</p>
+            }
+            else
+            {
+                <div style="display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;">
+                    @foreach (var e in _evidencias)
+                    {
+                        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface-raised);border-radius:8px;">
+                            <div style="overflow:hidden;">
+                                <div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">@e.NombreArchivo</div>
+                                <div style="font-size:10px;color:var(--text-secondary);">@FormatearTamano(e.TamanoBytes)</div>
+                            </div>
+                            <a href="http://localhost:5000/api/v1/checklists/evidencias/@e.EvidenciaId/descargar" class="btn-ghost" target="_blank">
+                                <LucideIcon Name="download" Size="14" />
+                            </a>
+                        </div>
+                    }
+                </div>
+            }
+
+            <div style="margin-top:16px;border-top:1px solid var(--border-glass);padding-top:12px;">
+                <p style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">Adjuntar documento</p>
+                <InputFile OnChange="OnArchivoSeleccionado" style="display:none;" @ref="_fileInput" />
+                <GlassButton Variant="secondary" OnClick="AbrirFileDialog" style="width:100%;">
+                    <LucideIcon Name="paperclip" Size="14" /> @(_archivoNombre ?? "Seleccionar archivo")
+                </GlassButton>
+                @if (_archivo != null)
+                {
+                    <GlassButton Variant="primary" OnClick="SubirEvidencia" Disabled="@_subiendo" style="margin-top:8px;width:100%;">
+                        @(_subiendo ? "Subiendo..." : "Subir Archivo")
+                    </GlassButton>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public long ChecklistId { get; set; }
+    [Parameter] public long PasoId { get; set; }
+
+    private PasoDto? _paso;
+    private List<EvidenciaDto> _evidencias = new();
+    private string _titulo = "Paso";
+    private string _subtitulo = "";
+    private string _notas = "";
+    private bool _cargando = true;
+    private bool _guardando;
+    private bool _subiendo;
+    private string? _error;
+    private string? _archivoNombre;
+    private IBrowserFile? _archivo;
+    private InputFile? _fileInput;
+
+    protected override async Task OnInitializedAsync() => await Cargar();
+
+    private async Task Cargar()
+    {
+        _cargando = true;
+        try
+        {
+            var result = await ChecklistService.ObtenerAsync(ChecklistId);
+            if (result?.Ok == true && result.Data != null)
+            {
+                _paso = result.Data.Pasos.FirstOrDefault(p => p.PasoId == PasoId);
+                _evidencias = _paso?.Evidencias ?? new();
+                _notas = _paso?.Notas ?? "";
+                _titulo = $"Paso {_paso?.NumeroPaso}";
+                _subtitulo = _paso?.NombrePaso ?? "";
+            }
+        }
+        catch { }
+        _cargando = false;
+    }
+
+    private async Task GuardarNotas()
+    {
+        _guardando = true;
+        var r = await ChecklistService.ActualizarPasoAsync(ChecklistId, PasoId, new UpdatePasoRequest { Notas = _notas, Estado = _paso!.Estado });
+        if (r?.Ok != true) _error = r?.Error?.Message;
+        _guardando = false;
+    }
+
+    private async Task IniciarPaso() => await Cambiar("en_proceso");
+    private async Task CompletarPaso() => await Cambiar("completado");
+    private async Task BloquearPaso() => await Cambiar("bloqueado");
+    private async Task DesbloquearPaso() => await Cambiar("en_proceso");
+
+    private async Task Cambiar(string estado)
+    {
+        var r = await ChecklistService.ActualizarPasoAsync(ChecklistId, PasoId, new UpdatePasoRequest { Estado = estado, Notas = _notas });
+        if (r?.Ok == true) await Cargar();
+        else _error = r?.Error?.Message;
+    }
+
+    private async Task AbrirFileDialog()
+    {
+        _archivo = null;
+        _archivoNombre = null;
+    }
+
+    private async Task OnArchivoSeleccionado(InputFileChangeEventArgs e)
+    {
+        if (e.FileCount > 0)
+        {
+            _archivo = e.File;
+            _archivoNombre = e.File.Name;
+        }
+    }
+
+    private async Task SubirEvidencia()
+    {
+        if (_archivo == null) return;
+        _subiendo = true;
+        try
+        {
+            using var content = new MultipartFormDataContent();
+            var stream = _archivo.OpenReadStream(25 * 1024 * 1024);
+            var fileContent = new StreamContent(stream);
+            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(_archivo.ContentType);
+            content.Add(fileContent, "archivo", _archivo.Name);
+
+            var r = await Http.PostAsync($"http://localhost:5000/api/v1/checklists/{ChecklistId}/pasos/{PasoId}/evidencias", content);
+            if (r.IsSuccessStatusCode)
+            {
+                _archivo = null;
+                _archivoNombre = null;
+                await Cargar();
+            }
+            else _error = "Error al subir";
+        }
+        catch (Exception ex) { _error = ex.Message; }
+        _subiendo = false;
+    }
+
+    private static string FormatearTamano(long bytes) => bytes switch
+    {
+        < 1024 => $"{bytes} B",
+        < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
+        _ => $"{bytes / (1024.0 * 1024.0):F1} MB"
+    };
+}

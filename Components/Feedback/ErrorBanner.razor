@@ -1,0 +1,17 @@
+@if (!string.IsNullOrEmpty(Message))
+{
+    <div class="error-banner">
+        <div style="display:flex;align-items:center;gap:8px;">
+            <LucideIcon Name="alert-circle" Size="18" />
+            <span>@Message</span>
+        </div>
+        <button @onclick="OnDismiss" class="error-dismiss" title="Cerrar">
+            <LucideIcon Name="x" Size="16" />
+        </button>
+    </div>
+}
+
+@code {
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public EventCallback OnDismiss { get; set; }
+}

@@ -1,0 +1,39 @@
+<div class="form-group">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label class="input-label">@Label</label>
+    }
+    <select class="glass-input" value="@Value" @onchange="OnValueChanged" disabled="@Disabled">
+        @if (!string.IsNullOrEmpty(Placeholder))
+        {
+            <option value="">@Placeholder</option>
+        }
+        @foreach (var opt in Options)
+        {
+            <option value="@opt.Value">@opt.Text</option>
+        }
+        @ChildContent
+    </select>
+</div>
+
+@code {
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "Seleccionar...";
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public List<SelectOption> Options { get; set; } = new();
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private async Task OnValueChanged(ChangeEventArgs e)
+    {
+        Value = e.Value?.ToString();
+        await ValueChanged.InvokeAsync(Value);
+    }
+}
+
+public class SelectOption
+{
+    public string Value { get; set; } = "";
+    public string Text { get; set; } = "";
+}

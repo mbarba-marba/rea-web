@@ -1,0 +1,73 @@
+@page "/calculos/iva/{Id:long}"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "admin,auxiliar")]
+@inject HttpClient Http
+
+<PageHeader Title="Cálculo IVA" />
+
+@if (_cargando)
+{
+    <SkeletonLoader />
+}
+else if (_calculo != null)
+{
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="glass-card" style="padding:20px;">
+            <h3 style="margin-bottom:12px;">IVA Causado (Ventas)</h3>
+            <dl class="detail-list">
+                <dt>Actos 16%</dt><dd class="mono">@_calculo.IvaActos16.ToString("N2")</dd>
+                <dt>Actos 8%</dt><dd class="mono">@_calculo.IvaActos08.ToString("N2")</dd>
+                <dt>Actos 0%</dt><dd class="mono">@_calculo.IvaActos00.ToString("N2")</dd>
+                <dt style="font-weight:700;">Total IVA Causado</dt><dd class="mono" style="font-weight:700;">@_calculo.TotalIvaCausado.ToString("N2")</dd>
+            </dl>
+        </div>
+        <div class="glass-card" style="padding:20px;">
+            <h3 style="margin-bottom:12px;">IVA Acreditable (Compras)</h3>
+            <dl class="detail-list">
+                <dt>Compras 16%</dt><dd class="mono">@_calculo.ComprasAcred16.ToString("N2")</dd>
+                <dt>Compras 8%</dt><dd class="mono">@_calculo.ComprasAcred08.ToString("N2")</dd>
+                <dt style="font-weight:700;">Total IVA Acreditable</dt><dd class="mono" style="font-weight:700;">@_calculo.TotalIvaAcreditable.ToString("N2")</dd>
+            </dl>
+        </div>
+        <div class="glass-card" style="padding:20px;grid-column:1/-1;text-align:center;">
+            <h3>IVA a Cargo / Favor</h3>
+            <p class="display" style="font-size:32px;color:@(_calculo.IvaACargo > 0 ? "var(--danger)" : "var(--success)");">
+                @_calculo.IvaACargo.ToString("N2") MXN
+            </p>
+            <p class="caption text-muted">
+                Retenido: @_calculo.IvaRetenidoAnt.ToString("N2") | Saldo a favor ant.: @_calculo.SaldoAFavorAnt.ToString("N2")
+            </p>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public long Id { get; set; }
+    private CalculoIvaData? _calculo;
+    private bool _cargando = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var r = await Http.GetFromJsonAsync<ApiResponse<CalculoIvaData>>($"http://localhost:5000/api/v1/calculos/iva");
+            _calculo = r?.Data;
+        }
+        catch { }
+        _cargando = false;
+    }
+
+    private class CalculoIvaData
+    {
+        public decimal IvaActos16 { get; set; }
+        public decimal IvaActos08 { get; set; }
+        public decimal IvaActos00 { get; set; }
+        public decimal TotalIvaCausado { get; set; }
+        public decimal ComprasAcred16 { get; set; }
+        public decimal ComprasAcred08 { get; set; }
+        public decimal TotalIvaAcreditable { get; set; }
+        public decimal IvaRetenidoAnt { get; set; }
+        public decimal SaldoAFavorAnt { get; set; }
+        public decimal IvaACargo { get; set; }
+    }
+}

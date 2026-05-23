@@ -1,0 +1,34 @@
+<div class="paso-row @RowClass">
+    <div class="paso-numero">
+        <span class="paso-num">@Numero</span>
+    </div>
+    <div class="paso-info">
+        <div class="paso-nombre">@Nombre</div>
+        @if (!string.IsNullOrEmpty(Notas))
+        {
+            <div class="paso-notas">@Notas</div>
+        }
+    </div>
+    <div class="paso-estado">
+        <BadgeEstado Estado="@Estado" />
+    </div>
+    <div class="paso-acciones">
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Numero { get; set; }
+    [Parameter] public string Nombre { get; set; } = string.Empty;
+    [Parameter] public string Estado { get; set; } = "pendiente";
+    [Parameter] public string? Notas { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string RowClass => Estado.ToLower() switch
+    {
+        "completado" => "paso-completado",
+        "en_proceso" => "paso-proceso",
+        "bloqueado" => "paso-bloqueado",
+        _ => ""
+    };
+}

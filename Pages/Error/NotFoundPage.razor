@@ -1,0 +1,12 @@
+@page "/not-found"
+@page "/{*url}"
+@layout AuthLayout
+
+<div style="display:flex;min-height:100vh;align-items:center;justify-content:center;text-align:center;">
+    <div class="empty-state">
+        <span class="empty-state-icon"><LucideIcon Name="circle-alert" Size="40" /></span>
+        <h2 class="empty-state-heading">Página no encontrada</h2>
+        <p class="empty-state-body">La ruta solicitada no existe o fue movida.</p>
+        <a href="/" class="btn btn-primary" style="margin-top:var(--space-md);">Volver al inicio</a>
+    </div>
+</div>

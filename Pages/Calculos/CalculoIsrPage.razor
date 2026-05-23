@@ -1,0 +1,100 @@
+@page "/calculos/isr/{Id:long}"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "admin,auxiliar")]
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageHeader Title="Cálculo ISR" />
+
+@if (_cargando)
+{
+    <SkeletonLoader />
+}
+else if (_calculo != null)
+{
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="glass-card" style="padding:20px;">
+            <h3 style="margin-bottom:12px;">Ingresos</h3>
+            <dl class="detail-list">
+                <dt>Ingresos PUE</dt><dd class="mono">@_calculo.IngresosPue.ToString("N2")</dd>
+                <dt>Ingresos RCP</dt><dd class="mono">@_calculo.IngresosRcp.ToString("N2")</dd>
+                <dt>Otros Efectivo</dt><dd class="mono">@_calculo.OtrosIngresosEfectivo.ToString("N2")</dd>
+                <dt>Otros Edo Cta</dt><dd class="mono">@_calculo.OtrosIngresosEdoCta.ToString("N2")</dd>
+                <dt style="font-weight:700;">Total Ingresos</dt><dd class="mono" style="font-weight:700;">@_calculo.TotalIngresos.ToString("N2")</dd>
+            </dl>
+        </div>
+        <div class="glass-card" style="padding:20px;">
+            <h3 style="margin-bottom:12px;">Deducciones</h3>
+            <dl class="detail-list">
+                <dt>Compras PUE</dt><dd class="mono">@_calculo.ComprasPue.ToString("N2")</dd>
+                <dt>Compras RCP</dt><dd class="mono">@_calculo.ComprasRcp.ToString("N2")</dd>
+                <dt>Nómina</dt><dd class="mono">@_calculo.NominaPagada.ToString("N2")</dd>
+                <dt style="font-weight:700;">Total Deducciones</dt><dd class="mono" style="font-weight:700;">@_calculo.TotalDeducciones.ToString("N2")</dd>
+            </dl>
+        </div>
+        <div class="glass-card" style="padding:20px;grid-column:1/-1;">
+            <h3 style="margin-bottom:12px;">Resultado ISR</h3>
+            <dl class="detail-list" style="grid-template-columns:1fr 1fr;">
+                <dt>Utilidad del Período</dt><dd class="mono">@_calculo.UtilidadPeriodo.ToString("N2")</dd>
+                <dt>PTU Pagada</dt><dd class="mono">@_calculo.PtuPagada.ToString("N2")</dd>
+                <dt>Pérdidas Ej. Ant.</dt><dd class="mono">@_calculo.PerdidasEjercAnt.ToString("N2")</dd>
+                <dt>Base para ISR</dt><dd class="mono" style="font-weight:700;">@_calculo.BaseParaIsr.ToString("N2")</dd>
+                <dt>Límite Inferior</dt><dd class="mono">@_calculo.LimiteInferior.ToString("N2")</dd>
+                <dt>Excedente</dt><dd class="mono">@_calculo.Excedente.ToString("N2")</dd>
+                <dt>% Aplicable</dt><dd>@(_calculo.PorcentajeAplicable * 100).ToString("F2")%</dd>
+                <dt>Impuesto Marginal</dt><dd class="mono">@_calculo.ImpuestoMarginal.ToString("N2")</dd>
+                <dt>Cuota Fija</dt><dd class="mono">@_calculo.CuotaFija.ToString("N2")</dd>
+                <dt style="font-weight:700;">ISR Causado</dt><dd class="mono" style="font-weight:700;">@_calculo.IsrCausado.ToString("N2")</dd>
+                <dt>ISR Retenido</dt><dd class="mono">@_calculo.IsrRetenidoAnt.ToString("N2")</dd>
+                <dt>Pagos Provisionales</dt><dd class="mono">@_calculo.PagosProvisionales.ToString("N2")</dd>
+                <dt style="font-weight:700;color:var(--accent);">ISR A PAGAR / FAVOR</dt>
+                <dd class="mono" style="font-weight:700;color:@(_calculo.IsrAPagar > 0 ? "var(--danger)" : "var(--success)");font-size:18px;">
+                    @_calculo.IsrAPagar.ToString("N2")
+                </dd>
+            </dl>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public long Id { get; set; }
+    private CalculoIsrData? _calculo;
+    private bool _cargando = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var r = await Http.GetFromJsonAsync<ApiResponse<CalculoIsrData>>($"http://localhost:5000/api/v1/calculos/isr");
+            _calculo = r?.Data;
+        }
+        catch { }
+        _cargando = false;
+    }
+
+    private class CalculoIsrData
+    {
+        public decimal IngresosPue { get; set; }
+        public decimal IngresosRcp { get; set; }
+        public decimal OtrosIngresosEfectivo { get; set; }
+        public decimal OtrosIngresosEdoCta { get; set; }
+        public decimal TotalIngresos { get; set; }
+        public decimal ComprasPue { get; set; }
+        public decimal ComprasRcp { get; set; }
+        public decimal NominaPagada { get; set; }
+        public decimal TotalDeducciones { get; set; }
+        public decimal UtilidadPeriodo { get; set; }
+        public decimal PtuPagada { get; set; }
+        public decimal PerdidasEjercAnt { get; set; }
+        public decimal BaseParaIsr { get; set; }
+        public decimal LimiteInferior { get; set; }
+        public decimal Excedente { get; set; }
+        public decimal PorcentajeAplicable { get; set; }
+        public decimal ImpuestoMarginal { get; set; }
+        public decimal CuotaFija { get; set; }
+        public decimal IsrCausado { get; set; }
+        public decimal IsrRetenidoAnt { get; set; }
+        public decimal PagosProvisionales { get; set; }
+        public decimal IsrAPagar { get; set; }
+    }
+}

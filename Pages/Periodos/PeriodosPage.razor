@@ -1,0 +1,141 @@
+@page "/periodos"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "admin")]
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageHeader Title="Períodos Fiscales" Subtitle="Gestión de períodos mensuales" />
+
+<div class="glass-card" style="margin-bottom:16px;padding:16px 20px;">
+    <div style="display:flex;gap:12px;align-items:center;">
+        <select @bind="_anio" class="glass-input" style="width:120px;">
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+            <option value="2026" selected>2026</option>
+            <option value="2027">2027</option>
+        </select>
+        <select @bind="_mes" class="glass-input" style="width:120px;">
+            @for (int i = 1; i <= 12; i++)
+            {
+                <option value="@i">@(new DateTime(2026, i, 1).ToString("MMMM"))</option>
+            }
+        </select>
+        <GlassButton Variant="primary" OnClick="CrearPeriodo">
+            <LucideIcon Name="plus" Size="16" /> Abrir Período
+        </GlassButton>
+    </div>
+    @if (_msg != null)
+    {
+        <div style="margin-top:8px;color:var(--success);">@_msg</div>
+    }
+    @if (_error != null)
+    {
+        <ErrorBanner Message="@_error" OnDismiss="() => _error = null" />
+    }
+</div>
+
+@if (_cargando)
+{
+    <SkeletonLoader />
+}
+else if (_periodos.Count == 0)
+{
+    <div class="glass-card" style="text-align:center;padding:40px;">
+        <p>No hay períodos registrados</p>
+    </div>
+}
+else
+{
+    <div class="glass-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Período</th>
+                    <th>Inicio</th>
+                    <th>Fin</th>
+                    <th>Estado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in _periodos)
+                {
+                    <tr>
+                        <td>@p.Anio-@p.Mes.ToString("D2")</td>
+                        <td>@p.FechaInicio.ToString("dd/MM/yyyy")</td>
+                        <td>@p.FechaFin.ToString("dd/MM/yyyy")</td>
+                        <td>
+                            @if (p.Cerrado) { <BadgeEstado Estado="completado" /> }
+                            else { <BadgeEstado Estado="en_proceso" /> }
+                        </td>
+                        <td>
+                            @if (!p.Cerrado)
+                            {
+                                <GlassButton Variant="secondary" OnClick="() => CerrarPeriodo(p.PeriodoId)">
+                                    Cerrar
+                                </GlassButton>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<PeriodoDto> _periodos = new();
+    private int _anio = 2026;
+    private int _mes = DateTime.Now.Month;
+    private bool _cargando = true;
+    private string? _error;
+    private string? _msg;
+
+    protected override async Task OnInitializedAsync() => await Cargar();
+
+    private async Task Cargar()
+    {
+        _cargando = true;
+        try
+        {
+            var r = await Http.GetFromJsonAsync<ApiResponse<List<PeriodoDto>>>($"http://localhost:5000/api/v1/periodos?anio={_anio}");
+            if (r?.Ok == true) _periodos = r.Data ?? new();
+        }
+        catch { }
+        _cargando = false;
+    }
+
+    private async Task CrearPeriodo()
+    {
+        _error = null; _msg = null;
+        try
+        {
+            var r = await Http.PostAsJsonAsync("http://localhost:5000/api/v1/periodos", new { anio = _anio, mes = _mes });
+            if (r.IsSuccessStatusCode) { _msg = "Período creado"; await Cargar(); }
+            else _error = "Error al crear período";
+        }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+
+    private async Task CerrarPeriodo(long id)
+    {
+        _error = null;
+        try
+        {
+            var r = await Http.PostAsync($"http://localhost:5000/api/v1/periodos/{id}/cerrar", null);
+            if (r.IsSuccessStatusCode) await Cargar();
+            else _error = "Error al cerrar período";
+        }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+
+    private class PeriodoDto
+    {
+        public long PeriodoId { get; set; }
+        public int Anio { get; set; }
+        public int Mes { get; set; }
+        public DateOnly FechaInicio { get; set; }
+        public DateOnly FechaFin { get; set; }
+        public bool Cerrado { get; set; }
+    }
+}

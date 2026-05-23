@@ -1,0 +1,78 @@
+@page "/reportes"
+@using Microsoft.AspNetCore.Authorization
+@using REA.Web.Models
+@attribute [Authorize(Roles = "admin,auxiliar")]
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageHeader Title="Reportes" Subtitle="Generación y descarga de reportes fiscales" />
+
+<div class="glass-card" style="text-align:center;padding:40px;margin-bottom:24px;">
+    <LucideIcon Name="scroll-text" Size="48" />
+    <h3 style="margin:12px 0 4px;">Generar Nuevo Reporte</h3>
+    <p class="caption text-muted">Seleccione un cliente y período para generar reportes PDF</p>
+</div>
+
+@if (_cargando)
+{
+    <div style="text-align:center;padding:20px;">Cargando...</div>
+}
+else if (_reportes.Count == 0)
+{
+    <div class="glass-card" style="text-align:center;padding:40px;">
+        <LucideIcon Name="inbox" Size="32" />
+        <p>No hay reportes generados</p>
+    </div>
+}
+else
+{
+    <div class="glass-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Cliente</th>
+                    <th>Tipo</th>
+                    <th>Estado</th>
+                    <th>Fecha</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in _reportes)
+                {
+                    <tr>
+                        <td>@r.ClienteNombre</td>
+                        <td>@r.Tipo</td>
+                        <td><BadgeEstado Estado="@r.Estatus" /></td>
+                        <td style="font-size:12px;">@(r.GeneradoEn?.ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<ReporteDto> _reportes = new();
+    private bool _cargando = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var result = await Http.GetFromJsonAsync<ApiResponse<List<ReporteDto>>>("http://localhost:5000/api/v1/reportes");
+            if (result?.Ok == true)
+                _reportes = result.Data ?? new();
+        }
+        catch { }
+        _cargando = false;
+    }
+
+    private class ReporteDto
+    {
+        public long ReporteId { get; set; }
+        public string ClienteNombre { get; set; } = string.Empty;
+        public string Tipo { get; set; } = string.Empty;
+        public string Estatus { get; set; } = string.Empty;
+        public DateTime? GeneradoEn { get; set; }
+    }
+}

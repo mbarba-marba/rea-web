@@ -1,0 +1,8 @@
+<span class="badge @GetClass()">@Label</span>
+
+@code {
+    [Parameter] public string Clasificacion { get; set; } = "activo";
+
+    private string Label => Clasificacion.ToLower() == "activo" ? "Activo" : "Irregular";
+    private string GetClass() => Clasificacion.ToLower() == "activo" ? "badge-success" : "badge-warning";
+}

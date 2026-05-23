@@ -1,0 +1,47 @@
+@page "/perfil"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@attribute [Authorize]
+@inject AuthenticationStateProvider Auth
+
+<PageHeader Title="Mi Perfil" />
+
+<div class="glass-card" style="max-width:480px;padding:24px;">
+    <div style="text-align:center;margin-bottom:24px;">
+        <div style="width:64px;height:64px;border-radius:50%;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;">
+            <span style="color:white;font-size:24px;font-weight:700;">@_iniciales</span>
+        </div>
+        <h3 style="margin:12px 0 4px;">@_nombre</h3>
+        <p class="caption text-muted">@_email · @_rol</p>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;">
+        <GlassButton Variant="secondary" OnClick="SetupMfa">
+            <LucideIcon Name="shield" Size="16" /> Configurar MFA
+        </GlassButton>
+        <GlassButton Variant="secondary" OnClick="CambiarPassword">
+            <LucideIcon Name="key" Size="16" /> Cambiar Contraseña
+        </GlassButton>
+    </div>
+</div>
+
+@code {
+    private string _nombre = "";
+    private string _email = "";
+    private string _rol = "";
+    private string _iniciales = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await Auth.GetAuthenticationStateAsync();
+        var user = state.User;
+
+        _email = user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "";
+        _nombre = user.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "";
+        _rol = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+        _iniciales = _nombre.Split(' ').Select(p => p.FirstOrDefault()).Take(2).Aggregate("", (a, b) => a + b).ToUpper();
+    }
+
+    private void SetupMfa() { }
+    private void CambiarPassword() { }
+}

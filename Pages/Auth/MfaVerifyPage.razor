@@ -1,0 +1,77 @@
+@page "/auth/mfa-verify"
+@using REA.Web.Models
+@using REA.Web.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+
+<div class="login-page animate-fade-in">
+    <div class="login-card glass-elevation-2">
+        <div class="login-logo">
+            <span style="font-size:28px;font-weight:700;color:var(--accent);font-family:var(--font-mono);">REA</span>
+        </div>
+
+        <h1 class="login-title">Verificación MFA</h1>
+        <p class="login-subtitle">Ingresa el código TOTP de tu aplicación autenticadora</p>
+
+        <EditForm Model="_model" OnValidSubmit="Verificar" FormName="mfav">
+            <div style="display:flex;flex-direction:column;gap:12px;">
+                <InputText class="input-field" @bind-Value="_model.CodigoTotp" placeholder="123456" maxlength="6" />
+
+                @if (!string.IsNullOrEmpty(_error))
+                {
+                    <div class="error-banner">@_error</div>
+                }
+
+                <button type="submit" class="btn btn-primary" style="width:100%;" disabled="@_verificando">
+                    @(_verificando ? "Verificando..." : "Verificar")
+                </button>
+            </div>
+        </EditForm>
+
+        <p class="caption" style="margin-top:12px;text-align:center;">
+            <a href="/auth/recovery" style="color:var(--accent);">Usar código de respaldo</a>
+        </p>
+    </div>
+</div>
+
+@code {
+    private MfaVerifyRequest _model = new();
+    private string? _error;
+    private bool _verificando;
+
+    protected override Task OnInitializedAsync()
+    {
+        _model = new MfaVerifyRequest
+        {
+            MfaTokenTemp = "" // Will be passed via query or session
+        };
+        return Task.CompletedTask;
+    }
+
+    private async Task Verificar()
+    {
+        _error = null;
+        _verificando = true;
+        try
+        {
+            var result = await AuthService.VerifyMfaAsync(_model.MfaTokenTemp, _model.CodigoTotp);
+            if (result?.Ok == true && result.Data != null)
+            {
+                var auth = (Providers.ReaAuthStateProvider)AuthStateProvider;
+                await auth.MarkUserAsAuthenticated(result.Data.AccessToken);
+                Navigation.NavigateTo("/");
+            }
+            else
+            {
+                _error = result?.Error?.Message ?? "Código inválido o expirado";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        _verificando = false;
+    }
+}

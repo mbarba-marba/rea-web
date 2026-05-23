@@ -1,0 +1,44 @@
+<div style="display:flex;flex-direction:column;gap:8px;">
+    @if (Evidencias == null || Evidencias.Count == 0)
+    {
+        <EmptyState Icon="paperclip" Title="Sin evidencias" Description="No hay documentos adjuntos a este paso" />
+    }
+    else
+    {
+        @foreach (var e in Evidencias)
+        {
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface-raised);border-radius:8px;">
+                <div style="display:flex;align-items:center;gap:8px;overflow:hidden;">
+                    <LucideIcon Name="@IconoArchivo(e.TipoMime)" Size="16" />
+                    <div>
+                        <div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">@e.NombreArchivo</div>
+                        <div style="font-size:10px;color:var(--text-secondary);">@FormatearTamano(e.TamanoBytes)</div>
+                    </div>
+                </div>
+                <a href="@DescargarUrl(e)" class="btn-ghost" target="_blank" style="font-size:12px;">
+                    <LucideIcon Name="download" Size="14" />
+                </a>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public List<EvidenciaItem>? Evidencias { get; set; }
+    [Parameter] public Func<EvidenciaItem, string>? DescargarUrl { get; set; }
+
+    private static string IconoArchivo(string mime) => mime switch
+    {
+        "application/pdf" => "file-text",
+        "image/png" or "image/jpeg" => "image",
+        "application/zip" => "file-archive",
+        _ => "file"
+    };
+
+    private static string FormatearTamano(long bytes) => bytes switch
+    {
+        < 1024 => $"{bytes} B",
+        < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
+        _ => $"{bytes / (1024.0 * 1024.0):F1} MB"
+    };
+}

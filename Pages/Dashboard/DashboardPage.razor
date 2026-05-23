@@ -1,0 +1,140 @@
+@page "/"
+@page "/dashboard"
+@using Microsoft.AspNetCore.Authorization
+@using REA.Web.Models
+@using REA.Web.Services
+@attribute [Authorize]
+@inject DashboardService DashboardService
+@inject ClienteService ClienteService
+@inject HttpClient Http
+
+<div class="page-container animate-fade-in">
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1>Dashboard</h1>
+            <p class="body-small text-muted">Resumen operativo del periodo actual</p>
+        </div>
+    </div>
+
+    @if (_error != null)
+    {
+        <REA.Web.Components.Feedback.ErrorBanner Message="@_error" OnDismiss="() => _error = null" />
+    }
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:var(--space-md);margin-bottom:var(--space-xl);">
+        <div class="card">
+            <p class="label">Total Clientes</p>
+            <p class="display" style="font-size:28px;">@_dashboard?.TotalClientes</p>
+            <p class="caption text-muted" style="margin-top:var(--space-xs);">
+                <span class="text-success">@_dashboard?.ClientesActivos Activos</span> · <span class="text-warning">@_dashboard?.ClientesIrregulares Irregulares</span>
+            </p>
+        </div>
+
+        <div class="card">
+            <p class="label">Avance Global</p>
+            <p class="display" style="font-size:28px;">@_dashboard?.PorcentajeGlobalAvance%</p>
+            <div class="progress-bar" style="margin-top:var(--space-sm);">
+                <div class="progress-bar-fill" style="width:@(_dashboard?.PorcentajeGlobalAvance ?? 0)%;"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <p class="label">Completados</p>
+            <p class="display" style="font-size:28px;">@_dashboard?.ChecklistsCompletados</p>
+            <p class="caption text-muted" style="margin-top:var(--space-xs);">
+                @_dashboard?.ChecklistsEnProceso en proceso · @_dashboard?.ChecklistsPendientes pendientes
+            </p>
+        </div>
+
+        <div class="card">
+            <p class="label">Alertas</p>
+            <p class="display" style="font-size:28px;color:var(--danger);">@_dashboard?.DeclaracionesVencidas</p>
+            <p class="caption text-muted" style="margin-top:var(--space-xs);">Declaraciones por vencer</p>
+        </div>
+    </div>
+
+    <div class="card glass-elevation-2" style="padding:0;overflow:hidden;">
+        <div style="padding:var(--space-lg);border-bottom:1px solid var(--border-subtle);">
+            <h3>Clientes Recientes</h3>
+        </div>
+        <div style="overflow-x:auto;">
+            @if (_cargando)
+            {
+                <div style="text-align:center;padding:40px;color:var(--text-secondary);">Cargando...</div>
+            }
+            else if (_clientes.Count == 0)
+            {
+                <div style="text-align:center;padding:40px;color:var(--text-secondary);">No hay clientes registrados</div>
+            }
+            else
+            {
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>RFC</th>
+                            <th>Razón Social</th>
+                            <th>Clasificación</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var c in _clientes)
+                        {
+                            <tr>
+                                <td class="mono">@c.Rfc</td>
+                                <td>@c.RazonSocial</td>
+                                <td>
+                                    <REA.Web.Components.Data.BadgeCliente Clasificacion="@c.Clasificacion" />
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+
+    <div style="margin-top:24px;">
+        <div class="card glass-elevation-2" style="padding:20px;overflow:hidden;">
+            <h3 style="margin-bottom:8px;">Clientes por Estado</h3>
+            <MexicoMap Estados="@_estadosClientes" />
+        </div>
+    </div>
+</div>
+
+@code {
+    private DashboardDto? _dashboard;
+    private List<ClienteDto> _clientes = new();
+    private List<EstadoClienteDto> _estadosClientes = new();
+    private bool _cargando = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var dashTask = DashboardService.ObtenerResumenAsync();
+            var clientesTask = ClienteService.ListarAsync(page: 1, limit: 5);
+
+            var dashResult = await dashTask;
+            if (dashResult?.Ok == true)
+                _dashboard = dashResult.Data;
+
+            var clientesResult = await clientesTask;
+            if (clientesResult?.Ok == true)
+                _clientes = clientesResult.Data ?? new();
+
+            try
+            {
+                var mapResult = await Http.GetFromJsonAsync<ApiResponse<List<EstadoClienteDto>>>("http://localhost:5000/api/v1/dashboard/clientes-por-estado");
+                if (mapResult?.Ok == true)
+                    _estadosClientes = mapResult.Data ?? new();
+            }
+            catch { }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        _cargando = false;
+    }
+}

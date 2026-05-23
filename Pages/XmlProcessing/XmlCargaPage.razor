@@ -1,0 +1,172 @@
+@page "/xml"
+@using Microsoft.AspNetCore.Authorization
+@using REA.Web.Models
+@using REA.Web.Services
+@using Microsoft.AspNetCore.Components.Forms
+@attribute [Authorize(Roles = "admin,auxiliar")]
+@inject NavigationManager Navigation
+@inject HttpClient Http
+@inject IJSRuntime JS
+
+<PageHeader Title="XML Processing" Subtitle="Carga de ZIPs del SAT" />
+
+<div class="glass-card" style="margin-bottom:24px;padding:24px;text-align:center;">
+    <LucideIcon Name="file-archive" Size="48" />
+    <h3 style="margin:12px 0 4px;">Cargar ZIP con XMLs</h3>
+    <p class="caption text-muted" style="margin-bottom:16px;">Arrastre o seleccione un archivo ZIP con facturas del SAT</p>
+
+    <InputFile OnChange="OnFileSelected" accept=".zip" style="display:none;" @ref="_fileInput" />
+    <GlassButton Variant="primary" OnClick="OpenFileDialog">
+        <LucideIcon Name="upload" Size="16" /> Seleccionar ZIP
+    </GlassButton>
+
+    @if (_selectedFile != null)
+    {
+        <div style="margin-top:12px;padding:8px 16px;background:var(--surface-raised);border-radius:8px;">
+            <strong>@_selectedFile</strong>
+            <GlassButton Variant="primary" OnClick="SubirCarga" Disabled="@_uploading" style="margin-left:12px;">
+                @(_uploading ? "Subiendo..." : "Subir")
+            </GlassButton>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <ErrorBanner Message="@_error" OnDismiss="() => _error = null" />
+    }
+
+    @if (!string.IsNullOrEmpty(_success))
+    {
+        <div style="margin-top:12px;color:var(--success);">@_success</div>
+    }
+</div>
+
+<div class="glass-card">
+    <h3 style="padding:16px 20px 0;">Historial de Cargas</h3>
+    @if (_cargando)
+    {
+        <div style="text-align:center;padding:40px;color:var(--text-secondary);">Cargando...</div>
+    }
+    else if (_cargas.Count == 0)
+    {
+        <div style="text-align:center;padding:40px;color:var(--text-secondary);">
+            <LucideIcon Name="inbox" Size="32" />
+            <p>No hay cargas registradas</p>
+        </div>
+    }
+    else
+    {
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Archivo</th>
+                    <th>Archivos</th>
+                    <th>Procesados</th>
+                    <th>Errores</th>
+                    <th>Estado</th>
+                    <th>Fecha</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in _cargas)
+                {
+                    <tr>
+                        <td>@c.NombreZip</td>
+                        <td>@c.TotalArchivos</td>
+                        <td>@c.Procesados</td>
+                        <td style="color:@(c.ConErrores > 0 ? "var(--danger)" : "inherit")">@c.ConErrores</td>
+                        <td><BadgeEstado Estado="@c.Estado" /></td>
+                        <td style="font-size:12px;">@c.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td>
+                            @if (c.Estado == "completado")
+                            {
+                                <GlassButton Variant="ghost" OnClick="() => VerCarga(c.CargaId)">
+                                    <LucideIcon Name="eye" Size="14" />
+                                </GlassButton>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    private InputFile? _fileInput;
+    private string? _selectedFile;
+    private IBrowserFile? _browserFile;
+    private bool _uploading;
+    private bool _cargando = true;
+    private string? _error;
+    private string? _success;
+    private List<XmlCargaDto> _cargas = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarHistorial();
+    }
+
+    private async Task CargarHistorial()
+    {
+        _cargando = true;
+        try
+        {
+            var result = await Http.GetFromJsonAsync<ApiResponse<List<XmlCargaDto>>>("http://localhost:5000/api/v1/xml/cargas");
+            if (result?.Ok == true)
+                _cargas = result.Data ?? new();
+        }
+        catch { }
+        _cargando = false;
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        _browserFile = e.File;
+        _selectedFile = e.File.Name;
+    }
+
+    private async Task OpenFileDialog()
+    {
+        await JS.InvokeVoidAsync("eval", "document.querySelector('.glass-card input[type=file]').click()");
+    }
+
+    private void VerCarga(long id) => Navigation.NavigateTo($"/xml/cargas/{id}");
+
+    private async Task SubirCarga()
+    {
+        if (_browserFile == null) return;
+        _uploading = true;
+        _error = null;
+        _success = null;
+
+        try
+        {
+            using var content = new MultipartFormDataContent();
+            var fileContent = new StreamContent(_browserFile.OpenReadStream(50 * 1024 * 1024));
+            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/zip");
+            content.Add(fileContent, "archivo", _browserFile.Name);
+            content.Add(new StringContent("1"), "clienteId"); // TODO: select from dropdown
+            content.Add(new StringContent("1"), "periodoId"); // TODO: select from dropdown
+
+            var response = await Http.PostAsync("http://localhost:5000/api/v1/xml/cargas", content);
+            if (response.IsSuccessStatusCode)
+            {
+                _success = "Carga procesada exitosamente";
+                _selectedFile = null;
+                _browserFile = null;
+                await CargarHistorial();
+            }
+            else
+            {
+                _error = "Error al procesar la carga";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        _uploading = false;
+    }
+}

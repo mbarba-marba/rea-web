@@ -1,0 +1,110 @@
+@page "/clientes"
+@using Microsoft.AspNetCore.Authorization
+@using REA.Web.Models
+@using REA.Web.Services
+@attribute [Authorize(Roles = "admin,auxiliar")]
+@inject ClienteService ClienteService
+@inject NavigationManager Navigation
+
+<PageHeader Title="Clientes" />
+<ErrorBanner Message="@_error" OnDismiss="() => _error = null" />
+
+<div class="glass-card" style="margin-bottom:24px;padding:16px 20px;">
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+        <div class="search-field">
+            <LucideIcon Name="search" Size="16" />
+            <input type="text" @bind="_busqueda" @bind:event="oninput" placeholder="Buscar por RFC o razón social..." style="border:none;background:transparent;color:var(--text-primary);outline:none;width:260px;" />
+        </div>
+        <select @bind="_clasificacion" style="background:var(--surface-raised);color:var(--text-primary);border:1px solid var(--border-glass);border-radius:8px;padding:8px 12px;">
+            <option value="">Todas las clasificaciones</option>
+            <option value="activo">Activos</option>
+            <option value="irregular">Irregulares</option>
+        </select>
+        <GlassButton Variant="primary" OnClick="Buscar">Buscar</GlassButton>
+        <GlassButton Variant="primary" OnClick="IrANuevo" style="margin-left:auto;">
+            <LucideIcon Name="plus" Size="16" /> Nuevo Cliente
+        </GlassButton>
+    </div>
+</div>
+
+@if (_cargando)
+{
+    <div style="text-align:center;padding:40px;color:var(--text-secondary);">Cargando...</div>
+}
+else if (_clientes.Count == 0)
+{
+    <div class="empty-state">
+        <LucideIcon Name="users" Size="48" />
+        <p>No se encontraron clientes</p>
+    </div>
+}
+else
+{
+    <div class="glass-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>RFC</th>
+                    <th>Razón Social</th>
+                    <th>Nombre Comercial</th>
+                    <th>Clasificación</th>
+                    <th>E-Firma</th>
+                    <th style="width:80px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in _clientes)
+                {
+                    <tr style="cursor:pointer" @onclick="() => VerCliente(c.ClienteId)">
+                        <td class="mono">@c.Rfc</td>
+                        <td>@c.RazonSocial</td>
+                        <td>@c.NombreComercial</td>
+                        <td><BadgeCliente Clasificacion="@c.Clasificacion" /></td>
+                        <td><BadgeEstado Estado="@(c.EstatusEfirma?.ToLower() ?? "pendiente")" /></td>
+                        <td>
+                            <button class="btn-ghost" @onclick:stopPropagation @onclick="() => Editar(c.ClienteId)">
+                                <LucideIcon Name="pencil" Size="14" />
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<ClienteDto> _clientes = new();
+    private string _busqueda = "";
+    private string _clasificacion = "";
+    private bool _cargando = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Buscar();
+    }
+
+    private async Task Buscar()
+    {
+        _cargando = true;
+        _error = null;
+        try
+        {
+            var result = await ClienteService.ListarAsync(_clasificacion, _busqueda);
+            if (result?.Ok == true)
+                _clientes = result.Data ?? new();
+            else
+                _error = result?.Error?.Message ?? "Error al cargar clientes";
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        _cargando = false;
+    }
+
+    private void Editar(long id) => Navigation.NavigateTo($"/clientes/{id}/editar");
+    private void VerCliente(long id) => Navigation.NavigateTo($"/clientes/{id}");
+    private void IrANuevo() => Navigation.NavigateTo("/clientes/nuevo");
+}

@@ -1,0 +1,19 @@
+@page "/403"
+@page "/forbidden"
+@inject NavigationManager Navigation
+
+<div class="login-page animate-fade-in">
+    <div class="login-card glass-elevation-2" style="text-align:center;">
+        <LucideIcon Name="shield-off" Size="64" />
+        <h1 style="font-size:48px;margin:16px 0 4px;">403</h1>
+        <p>Acceso denegado</p>
+        <p class="caption text-muted">No tiene permisos para acceder a esta página</p>
+        <GlassButton Variant="primary" OnClick="IrInicio" style="margin-top:16px;">
+            Volver al inicio
+        </GlassButton>
+    </div>
+</div>
+
+@code {
+    private void IrInicio() => Navigation.NavigateTo("/");
+}

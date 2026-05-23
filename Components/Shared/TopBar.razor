@@ -1,0 +1,30 @@
+@inject NavigationManager Navigation
+
+<header class="topbar">
+    <div class="topbar-search">
+        <div style="position:relative;">
+            <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);display:flex;">
+                <LucideIcon Name="search" Size="16" />
+            </span>
+            <input type="search"
+                   class="input-field"
+                   style="padding-left:36px;height:36px;font-size:13px;"
+                   placeholder="Buscar cliente, RFC..."
+                   @bind-value="searchText" />
+        </div>
+    </div>
+
+    <div class="topbar-actions">
+        <button class="btn btn-ghost btn-icon" title="Notificaciones">
+            <LucideIcon Name="bell" />
+        </button>
+        <div class="topbar-avatar">
+            @(userInitials)
+        </div>
+    </div>
+</header>
+
+@code {
+    private string searchText = string.Empty;
+    private string userInitials = "AU";
+}

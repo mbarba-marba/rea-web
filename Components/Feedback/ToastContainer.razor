@@ -1,0 +1,40 @@
+@if (_toasts.Count > 0)
+{
+    <div class="toast-container">
+        @foreach (var toast in _toasts)
+        {
+            <div class="toast glass-elevation-2 @GetClass(toast.Type)">
+                <span>@toast.Message</span>
+                <button class="toast-close" @onclick="() => Remove(toast.Id)"><LucideIcon Name="x" Size="12" /></button>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<ToastItem> _toasts = new();
+
+    public void Show(string message, string type = "info")
+    {
+        var id = Guid.NewGuid().ToString();
+        _toasts.Add(new ToastItem(id, message, type));
+        InvokeAsync(StateHasChanged);
+        _ = Task.Delay(4000).ContinueWith(_ => Remove(id));
+    }
+
+    private void Remove(string id)
+    {
+        _toasts.RemoveAll(t => t.Id == id);
+        InvokeAsync(StateHasChanged);
+    }
+
+    private static string GetClass(string type) => type switch
+    {
+        "success" => "toast-success",
+        "error" => "toast-error",
+        "warning" => "toast-warning",
+        _ => "toast-info"
+    };
+
+    private record ToastItem(string Id, string Message, string Type);
+}

@@ -1,0 +1,78 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using REA.Web.Services
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+@inject AuthService AuthService
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <img src="images/logo.svg" alt="REA" onerror="this.style.display='none'" />
+        <span style="font-weight:600;font-size:16px;color:var(--text-primary)">REA</span>
+    </div>
+
+    <nav class="sidebar-nav">
+        <NavLink href="/" Match="NavLinkMatch.All" class="nav-item">
+            <span class="nav-item-icon"><LucideIcon Name="layout-dashboard" /></span>
+            Dashboard
+        </NavLink>
+
+        <AuthorizeView Roles="admin,auxiliar">
+            <NavLink href="/clientes" Match="NavLinkMatch.Prefix" class="nav-item">
+                <span class="nav-item-icon"><LucideIcon Name="users" /></span>
+                Clientes
+            </NavLink>
+        </AuthorizeView>
+
+        <NavLink href="/checklists" Match="NavLinkMatch.Prefix" class="nav-item">
+            <span class="nav-item-icon"><LucideIcon Name="list-checks" /></span>
+            Checklist
+        </NavLink>
+
+        <AuthorizeView Roles="admin,auxiliar">
+            <NavLink href="/xml" Match="NavLinkMatch.Prefix" class="nav-item">
+                <span class="nav-item-icon"><LucideIcon Name="file-archive" /></span>
+                XML
+            </NavLink>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="admin,auxiliar">
+            <NavLink href="/calculos" Match="NavLinkMatch.Prefix" class="nav-item">
+                <span class="nav-item-icon"><LucideIcon Name="shield-check" /></span>
+                Cálculos
+            </NavLink>
+        </AuthorizeView>
+
+        <NavLink href="/reportes" Match="NavLinkMatch.Prefix" class="nav-item">
+            <span class="nav-item-icon"><LucideIcon Name="scroll-text" /></span>
+            Reportes
+        </NavLink>
+
+        <AuthorizeView Roles="admin">
+            <NavLink href="/usuarios" Match="NavLinkMatch.Prefix" class="nav-item">
+                <span class="nav-item-icon"><LucideIcon Name="shield-check" /></span>
+                Usuarios
+            </NavLink>
+        </AuthorizeView>
+    </nav>
+
+    <div class="sidebar-footer">
+        <NavLink href="/perfil" class="nav-item">
+            <span class="nav-item-icon"><LucideIcon Name="settings" /></span>
+            Perfil
+        </NavLink>
+        <button class="nav-item" style="width:100%;border:none;background:none;text-align:left;" @onclick="Logout">
+            <span class="nav-item-icon"><LucideIcon Name="log-out" /></span>
+            Cerrar sesión
+        </button>
+    </div>
+</aside>
+
+@code {
+    private async Task Logout()
+    {
+        await AuthService.LogoutAsync();
+        var auth = (Providers.ReaAuthStateProvider)AuthStateProvider;
+        await auth.MarkUserAsLoggedOut();
+        Navigation.NavigateTo("/login");
+    }
+}

@@ -1,0 +1,172 @@
+@using REA.Web.Models
+
+<div style="position:relative;width:100%;">
+    @if (_hoveredState != null)
+    {
+        <div style="position:absolute;z-index:30;pointer-events:none;background:var(--surface-raised);border:1px solid var(--border-glass);padding:8px 12px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.3);left:@(_tooltipX)px;top:@(_tooltipY)px;transform:translate(-50%, -115%);">
+            <p style="font-size:13px;font-weight:600;color:var(--text-primary);white-space:nowrap;">@_hoveredState.Estado</p>
+            <p style="font-size:11px;color:var(--text-secondary);white-space:nowrap;">
+                @_hoveredState.TotalClientes clientes · Activos: @_hoveredState.ClientesActivos · Irregulares: @_hoveredState.ClientesIrregulares
+            </p>
+            <div style="position:absolute;left:50%;top:100%;transform:translateX(-50%);border:6px solid transparent;border-top-color:var(--surface-raised);"></div>
+        </div>
+    }
+
+    <svg viewBox="0 0 793 498" style="width:100%;height:auto;max-height:460px;"
+         @onmousemove="OnSvgMouseMove"
+         @onmouseleave="OnSvgMouseLeave">
+        <defs>
+            <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+                <feGaussianBlur stdDeviation="3" result="blur"/>
+                <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+            </filter>
+        </defs>
+
+        @foreach (var stateName in _allStateNames)
+        {
+            var stateData = FindStateData(stateName);
+            var pathData = StatePaths[stateName];
+            var color = GetHeatmapColor(stateData?.TotalClientes ?? 0);
+            var isHovered = _hoveredState?.Estado == stateName;
+            var isSelected = _selectedState?.Estado == stateName;
+            var strokeColor = isHovered || isSelected ? "#10b981" : "#475569";
+            var strokeWidth = isHovered || isSelected ? "2" : "0.7";
+            var filter = isHovered || isSelected ? "url(#glow)" : "none";
+            var opacity = isHovered || isSelected ? "1" : "0.95";
+
+            <path d="@pathData"
+                  fill="@color"
+                  stroke="@strokeColor"
+                  stroke-width="@strokeWidth"
+                  stroke-linejoin="round"
+                  style="filter: @filter; cursor: pointer; transition: all 0.2s ease;"
+                  opacity="@opacity"
+                  @onmouseenter="e => OnMouseEnter(stateName, e)"
+                  @onmouseleave="OnMouseLeave"
+                  @onclick="() => OnStateClick(stateName)" />
+        }
+
+        @foreach (var state in _estados.Where(s => s.TotalClientes > 0 && !IsTinyState(s.Estado)))
+        {
+            var center = GetRealLabelCenter(state.Estado);
+            <foreignObject x="@(center.X - 32)" y="@(center.Y - 10)" width="64" height="24" style="pointer-events:none;overflow:visible;">
+                <div style="display:flex;flex-direction:column;align-items:center;line-height:1;">
+                    <div style="font-size:8px;font-weight:700;white-space:nowrap;padding:1px 4px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.9);background:rgba(0,0,0,0.5);border-radius:2px;">
+                        @state.Estado
+                    </div>
+                    @if (state.TotalClientes >= 2)
+                    {
+                        <div style="font-size:7px;font-weight:600;margin-top:1px;white-space:nowrap;padding:1px 4px;color:#6ee7b7;text-shadow:0 1px 3px rgba(0,0,0,0.9);background:rgba(0,0,0,0.5);border-radius:2px;">
+                            @state.TotalClientes clientes
+                        </div>
+                    }
+                </div>
+            </foreignObject>
+        }
+    </svg>
+
+    <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:10px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;">Intensidad</span>
+            <div style="display:flex;align-items:center;gap:2px;">
+                @for (int i = 0; i <= 4; i++)
+                {
+                    var val = i * 2;
+                    var c = GetHeatmapColor(val);
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+                        <div style="height:10px;width:28px;background:@c;border-radius:2px;"></div>
+                        <span style="font-size:8px;color:var(--text-muted);">@val+</span>
+                    </div>
+                }
+            </div>
+        </div>
+        <span style="font-size:10px;color:var(--text-secondary);">
+            @_estados.Count(s => s.TotalClientes > 0) estados activos de 32
+        </span>
+    </div>
+
+    @if (_selectedState != null)
+    {
+        <div style="margin-top:16px;background:var(--surface-raised);padding:16px;border:1px solid var(--border-glass);border-radius:12px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <LucideIcon Name="map-pin" Size="18" />
+                    <span style="font-weight:600;color:var(--text-primary);">@_selectedState.Estado</span>
+                </div>
+                <button @onclick="() => _selectedState = null" style="cursor:pointer;color:var(--text-secondary);background:none;border:none;">
+                    <LucideIcon Name="x" Size="16" />
+                </button>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:16px;text-align:center;">
+                <div>
+                    <p style="font-size:24px;font-weight:700;color:var(--text-primary);">@_selectedState.TotalClientes</p>
+                    <p style="font-size:10px;text-transform:uppercase;color:var(--text-secondary);">Total</p>
+                </div>
+                <div>
+                    <p style="font-size:24px;font-weight:700;color:var(--success);">@_selectedState.ClientesActivos</p>
+                    <p style="font-size:10px;text-transform:uppercase;color:var(--text-secondary);">Activos</p>
+                </div>
+                <div>
+                    <p style="font-size:24px;font-weight:700;color:var(--warning);">@_selectedState.ClientesIrregulares</p>
+                    <p style="font-size:10px;text-transform:uppercase;color:var(--text-secondary);">Irregulares</p>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public List<EstadoClienteDto> Estados { get; set; } = new();
+
+    private List<EstadoClienteDto> _estados => Estados;
+    private EstadoClienteDto? _hoveredState;
+    private EstadoClienteDto? _selectedState;
+    private double _tooltipX;
+    private double _tooltipY;
+    private List<string> _allStateNames => MexicoMapPaths.StatePaths.Keys.ToList();
+
+    private EstadoClienteDto? FindStateData(string stateName)
+    {
+        return _estados.FirstOrDefault(s =>
+            s.Estado.Equals(stateName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void OnMouseEnter(string stateName, MouseEventArgs e)
+    {
+        _hoveredState = FindStateData(stateName) ?? new EstadoClienteDto { Estado = stateName };
+        UpdateTooltipPosition(e);
+    }
+
+    private void OnMouseLeave() => _hoveredState = null;
+    private void OnSvgMouseMove(MouseEventArgs e) { if (_hoveredState != null) UpdateTooltipPosition(e); }
+    private void OnSvgMouseLeave() => _hoveredState = null;
+
+    private void UpdateTooltipPosition(MouseEventArgs e) { _tooltipX = e.OffsetX; _tooltipY = e.OffsetY; }
+
+    private void OnStateClick(string stateName)
+    {
+        var state = FindStateData(stateName);
+        _selectedState = _selectedState?.Estado == stateName ? null : state;
+    }
+
+    private string GetHeatmapColor(int clientes) => clientes switch
+    {
+        0 => "var(--map-neutral)",
+        1 => "var(--map-low)",
+        2 => "var(--map-mid)",
+        3 => "var(--map-high)",
+        >= 4 => "var(--map-max)",
+        _ => "var(--map-neutral)"
+    };
+
+    private bool IsTinyState(string state) => state switch
+    {
+        "Ciudad de México" or "Estado de México" or "Morelos" or "Tlaxcala" or "Hidalgo" or "Aguascalientes" or "Colima" => true,
+        _ => false
+    };
+
+    private (double X, double Y) GetRealLabelCenter(string state) =>
+        MexicoMapCenters.StateCenters.GetValueOrDefault(state, (0, 0));
+
+    private Dictionary<string, string> StatePaths => MexicoMapPaths.StatePaths;
+}

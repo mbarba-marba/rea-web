@@ -1,0 +1,81 @@
+@page "/usuarios"
+@using Microsoft.AspNetCore.Authorization
+@using REA.Web.Services
+@using REA.Web.Models
+@attribute [Authorize(Roles = "admin")]
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageHeader Title="Usuarios" Subtitle="Gestión de usuarios del sistema" />
+
+<div class="glass-card" style="margin-bottom:16px;text-align:right;padding:12px 20px;">
+        <GlassButton Variant="primary" OnClick="IrANuevo">
+            <LucideIcon Name="user-plus" Size="16" /> Nuevo Usuario
+        </GlassButton>
+</div>
+
+@if (_cargando)
+{
+    <div style="text-align:center;padding:40px;">Cargando...</div>
+}
+else
+{
+    <div class="glass-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Email</th>
+                    <th>Rol</th>
+                    <th>MFA</th>
+                    <th>Último Acceso</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var u in _usuarios)
+                {
+                    <tr>
+                        <td>@u.Nombre @u.Apellidos</td>
+                        <td>@u.Email</td>
+                        <td><BadgeEstado Estado="@u.Rol" /></td>
+                        <td>@(u.MfaHabilitado ? "Activado" : "No")</td>
+                        <td style="font-size:12px;">@(u.UltimoAcceso?.ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
+                        <td>@(u.Activo ? "Activo" : "Inactivo")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<UsuarioDto> _usuarios = new();
+    private bool _cargando = true;
+
+    private void IrANuevo() => Navigation.NavigateTo("/usuarios/nuevo");
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var result = await Http.GetFromJsonAsync<ApiResponse<List<UsuarioDto>>>("http://localhost:5000/api/v1/usuarios");
+            if (result?.Ok == true)
+                _usuarios = result.Data ?? new();
+        }
+        catch { }
+        _cargando = false;
+    }
+
+    private class UsuarioDto
+    {
+        public long UsuarioId { get; set; }
+        public string Email { get; set; } = string.Empty;
+        public string Nombre { get; set; } = string.Empty;
+        public string Apellidos { get; set; } = string.Empty;
+        public string Rol { get; set; } = string.Empty;
+        public bool Activo { get; set; }
+        public bool MfaHabilitado { get; set; }
+        public DateTime? UltimoAcceso { get; set; }
+    }
+}

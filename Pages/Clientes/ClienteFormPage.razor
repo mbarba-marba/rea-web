@@ -1,0 +1,167 @@
+@page "/clientes/nuevo"
+@page "/clientes/{Id:long}/editar"
+@using Microsoft.AspNetCore.Authorization
+@using REA.Web.Models
+@using REA.Web.Services
+@attribute [Authorize(Roles = "admin,auxiliar")]
+@inject ClienteService ClienteService
+@inject NavigationManager Navigation
+
+<PageHeader Title="@(EsEdicion ? "Editar Cliente" : "Nuevo Cliente")" />
+
+@if (_error != null)
+{
+    <ErrorBanner Message="@_error" OnDismiss="() => _error = null" />
+}
+
+<div class="glass-card" style="max-width:680px;padding:24px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="form-group">
+            <label>RFC *</label>
+            <input @bind="_form.Rfc" class="glass-input" disabled="@EsEdicion" />
+        </div>
+        <div class="form-group">
+            <label>Clasificación</label>
+            <select @bind="_form.Clasificacion" class="glass-input">
+                <option value="activo">Activo</option>
+                <option value="irregular">Irregular</option>
+            </select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1;">
+            <label>Razón Social *</label>
+            <input @bind="_form.RazonSocial" class="glass-input" />
+        </div>
+        <div class="form-group">
+            <label>Nombre Comercial</label>
+            <input @bind="_form.NombreComercial" class="glass-input" />
+        </div>
+        <div class="form-group">
+            <label>Régimen Fiscal</label>
+            <input @bind="_form.RegimenFiscal" class="glass-input" />
+        </div>
+        <div class="form-group">
+            <label>Email</label>
+            <input @bind="_form.Email" class="glass-input" type="email" />
+        </div>
+        <div class="form-group">
+            <label>Teléfono</label>
+            <input @bind="_form.Telefono" class="glass-input" />
+        </div>
+        <div class="form-group" style="grid-column:1/-1;">
+            <label>Dirección</label>
+            <input @bind="_form.Direccion" class="glass-input" />
+        </div>
+        <div class="form-group">
+            <label>Actividad</label>
+            <input @bind="_form.Actividad" class="glass-input" />
+        </div>
+        <div class="form-group">
+            <label>% Actividad</label>
+            <input @bind="_form.PorcentajeAct" class="glass-input" type="number" step="0.01" />
+        </div>
+    </div>
+
+    <div style="display:flex;gap:12px;margin-top:24px;justify-content:flex-end;">
+        <GlassButton Variant="ghost" OnClick="Cancelar">Cancelar</GlassButton>
+        <GlassButton Variant="primary" OnClick="Guardar" Disabled="@_guardando">
+            @(_guardando ? "Guardando..." : (EsEdicion ? "Actualizar" : "Crear Cliente"))
+        </GlassButton>
+    </div>
+</div>
+
+@code {
+    [Parameter] public long Id { get; set; }
+
+    private CreateClienteRequest _form = new();
+    private bool _guardando;
+    private bool _cargando = true;
+    private string? _error;
+
+    private bool EsEdicion => Id > 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (EsEdicion)
+        {
+            await CargarCliente();
+        }
+        _cargando = false;
+    }
+
+    private async Task CargarCliente()
+    {
+        try
+        {
+            var result = await ClienteService.ObtenerAsync(Id);
+            if (result?.Ok == true && result.Data != null)
+            {
+                var c = result.Data;
+                _form = new CreateClienteRequest
+                {
+                    Rfc = c.Rfc,
+                    RazonSocial = c.RazonSocial,
+                    NombreComercial = c.NombreComercial,
+                    Clasificacion = c.Clasificacion,
+                    Actividad = c.Actividad,
+                    PorcentajeAct = c.PorcentajeAct,
+                    RegimenFiscal = c.RegimenFiscal,
+                    Email = c.Email,
+                    Telefono = c.Telefono,
+                    Direccion = c.Direccion
+                };
+            }
+            else
+            {
+                _error = result?.Error?.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private async Task Guardar()
+    {
+        _error = null;
+        _guardando = true;
+        try
+        {
+            if (EsEdicion)
+            {
+                var req = new UpdateClienteRequest
+                {
+                    RazonSocial = _form.RazonSocial,
+                    NombreComercial = _form.NombreComercial,
+                    Clasificacion = _form.Clasificacion,
+                    Actividad = _form.Actividad,
+                    PorcentajeAct = _form.PorcentajeAct,
+                    RegimenFiscal = _form.RegimenFiscal,
+                    Email = _form.Email,
+                    Telefono = _form.Telefono,
+                    Direccion = _form.Direccion
+                };
+                var result = await ClienteService.ActualizarAsync(Id, req);
+                if (result?.Ok == true)
+                    Navigation.NavigateTo("/clientes");
+                else
+                    _error = result?.Error?.Message;
+            }
+            else
+            {
+                var result = await ClienteService.CrearAsync(_form);
+                if (result?.Ok == true)
+                    Navigation.NavigateTo("/clientes");
+                else
+                    _error = result?.Error?.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        _guardando = false;
+    }
+
+    private void Cancelar() => Navigation.NavigateTo("/clientes");
+}

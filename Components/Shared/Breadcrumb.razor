@@ -1,0 +1,20 @@
+<nav class="breadcrumb" aria-label="breadcrumb">
+    @for (int i = 0; i < Items.Count; i++)
+    {
+        var item = Items[i];
+        var isLast = i == Items.Count - 1;
+        if (isLast)
+        {
+            <span class="breadcrumb-current">@item.Text</span>
+        }
+        else
+        {
+            <a href="@item.Url" class="breadcrumb-link">@item.Text</a>
+            <span class="breadcrumb-separator">/</span>
+        }
+    }
+</nav>
+
+@code {
+    [Parameter] public List<BreadcrumbItem> Items { get; set; } = new();
+}

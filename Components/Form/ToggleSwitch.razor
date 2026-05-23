@@ -1,0 +1,27 @@
+<div class="form-group" style="display:flex;align-items:center;gap:12px;">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label class="input-label" style="margin:0;">@Label</label>
+    }
+    <button type="button" class="toggle-switch @(Value ? "toggle-on" : "toggle-off")" @onclick="Toggle" disabled="@Disabled">
+        <span class="toggle-knob"></span>
+    </button>
+    @if (!string.IsNullOrEmpty(LabelRight))
+    {
+        <span style="font-size:13px;color:var(--text-secondary);">@LabelRight</span>
+    }
+</div>
+
+@code {
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string? LabelRight { get; set; }
+    [Parameter] public bool Value { get; set; }
+    [Parameter] public EventCallback<bool> ValueChanged { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+
+    private async Task Toggle()
+    {
+        Value = !Value;
+        await ValueChanged.InvokeAsync(Value);
+    }
+}

@@ -1,0 +1,153 @@
+@page "/checklists/{Id:long}"
+@using Microsoft.AspNetCore.Authorization
+@using REA.Web.Models
+@using REA.Web.Services
+@attribute [Authorize(Roles = "admin,auxiliar")]
+@inject ChecklistService ChecklistService
+@inject NavigationManager Navigation
+
+<PageHeader Title="Checklist" Subtitle="@(_checklist?.ClienteNombre ?? "")" />
+
+@if (_error != null)
+{
+    <ErrorBanner Message="@_error" OnDismiss="() => _error = null" />
+}
+
+@if (_cargando)
+{
+    <div style="text-align:center;padding:40px;">Cargando...</div>
+}
+else if (_checklist != null)
+{
+    <div class="glass-card" style="margin-bottom:16px;padding:16px 20px;display:flex;align-items:center;gap:16px;">
+        <div style="flex:1;">
+            <div style="color:var(--text-secondary);font-size:12px;">Periodo</div>
+            <div style="font-weight:600;">@_checklist.PeriodoNombre</div>
+        </div>
+        <div style="flex:1;text-align:center;">
+            <div style="color:var(--text-secondary);font-size:12px;">Progreso</div>
+            <div style="font-weight:600;">@_checklist.PorcentajeAvance%</div>
+        </div>
+        <div style="width:200px;">
+            <div class="progress-bar">
+                <div class="progress-fill" style="width:@(_checklist.PorcentajeAvance)%"></div>
+            </div>
+        </div>
+        <div>
+            @if (_checklist.Completado)
+            {
+                <BadgeEstado Estado="completado" />
+            }
+            else if (_checklist.Cerrado)
+            {
+                <BadgeEstado Estado="bloqueado" />
+            }
+            else
+            {
+                <BadgeEstado Estado="en_proceso" />
+            }
+        </div>
+    </div>
+
+    <div class="glass-card">
+        @foreach (var paso in _checklist.Pasos)
+        {
+            <div class="paso-row @GetRowClass(paso.Estado)" style="cursor:pointer;" @onclick="() => VerPaso(Id, paso.PasoId)">
+                <div class="paso-numero">
+                    <span class="paso-num">@paso.NumeroPaso</span>
+                </div>
+                <div class="paso-info">
+                    <div class="paso-nombre">@paso.NombrePaso</div>
+                    @if (!string.IsNullOrEmpty(paso.Notas))
+                    {
+                        <div class="paso-notas">@paso.Notas</div>
+                    }
+                </div>
+                <div class="paso-estado">
+                    <BadgeEstado Estado="@paso.Estado" />
+                </div>
+                <div class="paso-acciones">
+                    @if (paso.Estado == "pendiente")
+                    {
+                        <GlassButton Variant="primary" OnClick="() => CambiarEstado(paso, estado: EstadoPaso.EnProceso)">Iniciar</GlassButton>
+                    }
+                    else if (paso.Estado == "en_proceso")
+                    {
+                        <GlassButton Variant="primary" OnClick="() => CambiarEstado(paso, estado: EstadoPaso.Completado)">Completar</GlassButton>
+                        <GlassButton Variant="ghost" OnClick="() => CambiarEstado(paso, estado: EstadoPaso.Bloqueado)">Bloquear</GlassButton>
+                    }
+                    else if (paso.Estado == "bloqueado")
+                    {
+                        <GlassButton Variant="secondary" OnClick="() => CambiarEstado(paso, estado: EstadoPaso.EnProceso)">Desbloquear</GlassButton>
+                    }
+                    else
+                    {
+                        <span style="color:var(--text-secondary);font-size:12px;">
+                            @(paso.CompletadoEn?.ToString("dd/MM/yyyy HH:mm") ?? "")
+                        </span>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public long Id { get; set; }
+
+    private ChecklistDto? _checklist;
+    private bool _cargando = true;
+    private string? _error;
+
+    private void VerPaso(long checklistId, long pasoId) => Navigation.NavigateTo($"/checklists/{checklistId}/paso/{pasoId}");
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Cargar();
+    }
+
+    private async Task Cargar()
+    {
+        _cargando = true;
+        _error = null;
+        try
+        {
+            var result = await ChecklistService.ObtenerAsync(Id);
+            if (result?.Ok == true)
+                _checklist = result.Data;
+            else
+                _error = result?.Error?.Message ?? "Error al cargar checklist";
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        _cargando = false;
+    }
+
+    private async Task CambiarEstado(PasoDto paso, REA.Web.Enums.EstadoPaso estado)
+    {
+        _error = null;
+        var estadoStr = estado.ToString().ToLower();
+        try
+        {
+            var result = await ChecklistService.ActualizarPasoAsync(Id, paso.PasoId, new UpdatePasoRequest { Estado = estadoStr });
+            if (result?.Ok == true)
+                await Cargar();
+            else
+                _error = result?.Error?.Message;
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private string GetRowClass(string estado) => estado.ToLower() switch
+    {
+        "completado" => "paso-completado",
+        "en_proceso" => "paso-proceso",
+        "bloqueado" => "paso-bloqueado",
+        _ => ""
+    };
+}

@@ -1,0 +1,37 @@
+@inject IJSRuntime JS
+
+<div class="file-dropzone @(IsDragOver ? "dropzone-active" : "")"
+     @ondragover="OnDragOver"
+     @ondragleave="OnDragLeave"
+     @ondrop="OnDrop"
+     @onclick="OpenFileDialog">
+    <LucideIcon Name="upload" Size="32" />
+    <p style="margin:8px 0 4px;">@Label</p>
+    <p class="caption text-muted">@SubLabel</p>
+    <InputFile OnChange="OnFileSelected" style="display:none;" @ref="_input" accept="@Accept" />
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "Arrastre un archivo aquí";
+    [Parameter] public string SubLabel { get; set; } = "o haga clic para seleccionar";
+    [Parameter] public string Accept { get; set; } = "*";
+    [Parameter] public EventCallback<IBrowserFile> OnFile { get; set; }
+
+    private InputFile? _input;
+    private bool IsDragOver;
+
+    private void OnDragOver() => IsDragOver = true;
+    private void OnDragLeave() => IsDragOver = false;
+    private void OnDrop() => IsDragOver = false;
+
+    private async Task OpenFileDialog()
+    {
+        await JS.InvokeVoidAsync("eval", "document.querySelector('.file-dropzone input[type=file]').click()");
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        if (e.FileCount > 0)
+            await OnFile.InvokeAsync(e.File);
+    }
+}

@@ -1,0 +1,24 @@
+<span class="badge @GetClass()">@Label</span>
+
+@code {
+    [Parameter] public string Estado { get; set; } = "pendiente";
+
+    private string Label => Estado.ToLower() switch
+    {
+        "completado" => "Completado",
+        "en_proceso" => "En Proceso",
+        "bloqueado" => "Bloqueado",
+        "vigente" => "Vigente",
+        "por_vencer" => "Por Vencer",
+        "vencida" => "Vencida",
+        _ => "Pendiente"
+    };
+
+    private string GetClass() => Estado.ToLower() switch
+    {
+        "completado" or "vigente" => "badge-success",
+        "en_proceso" or "por_vencer" => "badge-warning",
+        "bloqueado" or "vencida" => "badge-danger",
+        _ => "badge-muted"
+    };
+}

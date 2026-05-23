@@ -1,0 +1,9 @@
+<div class="glass-panel glass-elevation-2" style="@($"width:{Width}px;{Style}")">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public int Width { get; set; } = 400;
+    [Parameter] public string? Style { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

@@ -1,0 +1,16 @@
+<div class="empty-state">
+    <LucideIcon Name="@Icon" Size="40" />
+    <h4 style="margin:12px 0 4px;">@Title</h4>
+    <p class="caption text-muted">@Description</p>
+    @if (Action != null)
+    {
+        <div style="margin-top:12px;">@Action</div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Icon { get; set; } = "inbox";
+    [Parameter] public string Title { get; set; } = "Sin resultados";
+    [Parameter] public string Description { get; set; } = "No se encontraron elementos";
+    [Parameter] public RenderFragment? Action { get; set; }
+}

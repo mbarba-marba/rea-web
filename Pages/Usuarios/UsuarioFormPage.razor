@@ -1,0 +1,98 @@
+@page "/usuarios/nuevo"
+@page "/usuarios/{Id:long}/editar"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "admin")]
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageHeader Title="@(EsEdicion ? "Editar Usuario" : "Nuevo Usuario")" />
+
+@if (_error != null)
+{
+    <ErrorBanner Message="@_error" OnDismiss="() => _error = null" />
+}
+
+<div class="glass-card" style="max-width:480px;padding:24px;">
+    <div style="display:flex;flex-direction:column;gap:16px;">
+        <div class="form-group">
+            <label>Nombre</label>
+            <input @bind="_nombre" class="glass-input" />
+        </div>
+        <div class="form-group">
+            <label>Apellidos</label>
+            <input @bind="_apellidos" class="glass-input" />
+        </div>
+        <div class="form-group">
+            <label>Email</label>
+            <input @bind="_email" class="glass-input" type="email" disabled="@EsEdicion" />
+        </div>
+        @if (!EsEdicion)
+        {
+            <div class="form-group">
+                <label>Contraseña</label>
+                <input @bind="_password" class="glass-input" type="password" />
+            </div>
+            <div class="form-group">
+                <label>Rol</label>
+                <select @bind="_rol" class="glass-input">
+                    <option value="auxiliar">Auxiliar Contable</option>
+                    <option value="cliente">Cliente</option>
+                </select>
+            </div>
+        }
+    </div>
+
+    <div style="display:flex;gap:12px;margin-top:24px;justify-content:flex-end;">
+        <GlassButton Variant="ghost" OnClick="Cancelar">Cancelar</GlassButton>
+        <GlassButton Variant="primary" OnClick="Guardar" Disabled="@_guardando">
+            @(_guardando ? "Guardando..." : (EsEdicion ? "Actualizar" : "Crear"))
+        </GlassButton>
+    </div>
+</div>
+
+@code {
+    [Parameter] public long Id { get; set; }
+    private bool EsEdicion => Id > 0;
+    private string _nombre = "", _apellidos = "", _email = "", _password = "", _rol = "auxiliar";
+    private bool _guardando;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (EsEdicion)
+        {
+            try
+            {
+                var r = await Http.GetFromJsonAsync<ApiResponse<UsuarioInfo>>($"http://localhost:5000/api/v1/usuarios/{Id}");
+                if (r?.Ok == true && r.Data != null)
+                {
+                    _nombre = r.Data.Nombre;
+                    _apellidos = r.Data.Apellidos;
+                    _email = r.Data.Email;
+                }
+            }
+            catch { }
+        }
+    }
+
+    private void Cancelar() => Navigation.NavigateTo("/usuarios");
+
+    private async Task Guardar()
+    {
+        _guardando = true; _error = null;
+        try
+        {
+            HttpResponseMessage r;
+            if (EsEdicion)
+                r = await Http.PutAsJsonAsync($"http://localhost:5000/api/v1/usuarios/{Id}", new { nombre = _nombre, apellidos = _apellidos });
+            else
+                r = await Http.PostAsJsonAsync("http://localhost:5000/api/v1/usuarios", new { email = _email, nombre = _nombre, apellidos = _apellidos, password = _password, rol = _rol });
+            if (r.IsSuccessStatusCode) Navigation.NavigateTo("/usuarios");
+            else _error = "Error al guardar";
+        }
+        catch (Exception ex) { _error = ex.Message; }
+        _guardando = false;
+    }
+
+    private class UsuarioInfo { public string Nombre { get; set; } = ""; public string Apellidos { get; set; } = ""; public string Email { get; set; } = ""; }
+}

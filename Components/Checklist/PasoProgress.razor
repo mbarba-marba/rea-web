@@ -1,0 +1,23 @@
+<div style="margin:16px 0;">
+    <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+        <span style="font-size:12px;color:var(--text-secondary);">Progreso del Checklist</span>
+        <span style="font-size:12px;font-weight:600;">@Completados/@Total pasos (@Porcentaje%)</span>
+    </div>
+    <div class="progress-bar" style="height:8px;">
+        <div class="progress-fill" style="width:@(Porcentaje)%;"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:4px;">
+        @for (int i = 1; i <= Total; i++)
+        {
+            var estado = i <= Completados ? "✓" : "○";
+            var color = i <= Completados ? "var(--success)" : "var(--text-muted)";
+            <span style="font-size:10px;color:@color;width:16px;text-align:center;" title="Paso @i">@estado</span>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Total { get; set; } = 14;
+    [Parameter] public int Completados { get; set; }
+    [Parameter] public decimal Porcentaje { get; set; }
+}

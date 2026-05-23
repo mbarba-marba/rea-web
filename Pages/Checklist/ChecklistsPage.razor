@@ -1,0 +1,100 @@
+@page "/checklists"
+@using Microsoft.AspNetCore.Authorization
+@using REA.Web.Models
+@using REA.Web.Services
+@attribute [Authorize]
+@inject ChecklistService ChecklistService
+@inject ClienteService ClienteService
+@inject NavigationManager Navigation
+
+<PageHeader Title="Checklists" Subtitle="Seleccione cliente y período" />
+
+@if (_error != null)
+{
+    <ErrorBanner Message="@_error" OnDismiss="() => _error = null" />
+}
+
+@if (_cargando)
+{
+    <SkeletonLoader />
+}
+else if (_checklists.Count == 0)
+{
+    <div class="glass-card" style="text-align:center;padding:40px;">
+        <LucideIcon Name="list-checks" Size="48" />
+        <p>No hay checklists disponibles</p>
+        <GlassButton Variant="primary" OnClick="CrearNuevo" style="margin-top:12px;">
+            <LucideIcon Name="plus" Size="16" /> Nuevo Checklist
+        </GlassButton>
+    </div>
+}
+else
+{
+    <div class="glass-card" style="margin-bottom:16px;text-align:right;padding:12px 20px;">
+        <GlassButton Variant="primary" OnClick="CrearNuevo">
+            <LucideIcon Name="plus" Size="16" /> Nuevo Checklist
+        </GlassButton>
+    </div>
+
+    <div class="glass-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Cliente</th>
+                    <th>Período</th>
+                    <th>Avance</th>
+                    <th>Estado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in _checklists)
+                {
+                    <tr style="cursor:pointer" @onclick="() => VerChecklist(c.ChecklistId)">
+                        <td>@c.ClienteNombre</td>
+                        <td>@c.PeriodoNombre</td>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <span>@c.PorcentajeAvance%</span>
+                                <div class="progress-bar" style="width:80px;">
+                                    <div class="progress-fill" style="width:@(c.PorcentajeAvance)%"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            @if (c.Completado) { <BadgeEstado Estado="completado" /> }
+                            else if (c.Cerrado) { <BadgeEstado Estado="bloqueado" /> }
+                            else { <BadgeEstado Estado="en_proceso" /> }
+                        </td>
+                        <td>
+                            <GlassButton Variant="ghost" OnClick="() => VerChecklist(c.ChecklistId)">
+                                <LucideIcon Name="eye" Size="14" />
+                            </GlassButton>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<ChecklistDto> _checklists = new();
+    private bool _cargando = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var result = await ChecklistService.ListarAsync();
+            if (result?.Ok == true)
+                _checklists = result.Data ?? new();
+        }
+        catch (Exception ex) { _error = ex.Message; }
+        _cargando = false;
+    }
+
+    private void VerChecklist(long id) => Navigation.NavigateTo($"/checklists/{id}");
+    private void CrearNuevo() { /* Modal de selección cliente/período */ }
+}

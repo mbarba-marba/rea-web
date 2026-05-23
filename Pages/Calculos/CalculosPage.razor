@@ -1,0 +1,18 @@
+@page "/calculos"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "admin,auxiliar")]
+@inject NavigationManager Navigation
+
+<PageHeader Title="Cálculos de Impuestos" Subtitle="ISR e IVA por cliente y período" />
+
+<div class="glass-card" style="text-align:center;padding:40px;">
+    <LucideIcon Name="shield-check" Size="48" />
+    <h3 style="margin:12px 0 4px;">Cálculos ISR / IVA</h3>
+    <p class="caption text-muted" style="margin-bottom:20px;">
+        Seleccione un cliente y período para calcular impuestos automáticamente desde las facturas procesadas.
+    </p>
+    <p style="color:var(--text-secondary);">
+        Los cálculos se generan automáticamente al procesar los XMLs del SAT.<br/>
+        Utilice el checklist para asegurar que todos los datos estén completos antes de generar la declaración.
+    </p>
+</div>

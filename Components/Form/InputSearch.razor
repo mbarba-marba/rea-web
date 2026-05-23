@@ -1,0 +1,36 @@
+<div class="form-group">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label class="input-label">@Label</label>
+    }
+    <div class="search-field">
+        <LucideIcon Name="search" Size="16" />
+        <input value="@Value"
+               @oninput="OnInput"
+               placeholder="@Placeholder"
+               style="border:none;background:transparent;color:var(--text-primary);outline:none;flex:1;" />
+        @if (!string.IsNullOrEmpty(Value))
+        {
+            <button class="btn-ghost" @onclick="Clear" type="button"><LucideIcon Name="x" Size="14" /></button>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "Buscar...";
+
+    private async Task OnInput(ChangeEventArgs e)
+    {
+        Value = e.Value?.ToString();
+        await ValueChanged.InvokeAsync(Value);
+    }
+
+    private async Task Clear()
+    {
+        Value = null;
+        await ValueChanged.InvokeAsync(null);
+    }
+}

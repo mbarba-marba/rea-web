@@ -1,0 +1,42 @@
+@if (_visible)
+{
+    <div class="modal-backdrop" @onclick="Cancelar">
+        <div class="modal-dialog glass-elevation-2" @onclick:stopPropagation>
+            <div class="modal-header">
+                <h3>@Titulo</h3>
+                <button class="btn-ghost" @onclick="Cancelar"><LucideIcon Name="x" Size="18" /></button>
+            </div>
+            <div class="modal-body">
+                <p>@Mensaje</p>
+            </div>
+            <div class="modal-footer">
+                <GlassButton Variant="ghost" OnClick="Cancelar">@TextoCancelar</GlassButton>
+                <GlassButton Variant="@TipoBoton" OnClick="Confirmar">@TextoConfirmar</GlassButton>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string Titulo { get; set; } = "Confirmar acción";
+    [Parameter] public string Mensaje { get; set; } = "¿Está seguro?";
+    [Parameter] public string TextoConfirmar { get; set; } = "Confirmar";
+    [Parameter] public string TextoCancelar { get; set; } = "Cancelar";
+    [Parameter] public string Tipo { get; set; } = "primary"; // primary, danger
+    [Parameter] public EventCallback OnConfirm { get; set; }
+
+    private bool _visible;
+
+    private string TipoBoton => Tipo == "danger" ? "danger" : "primary";
+
+    public void Show() { _visible = true; StateHasChanged(); }
+    public void Hide() { _visible = false; StateHasChanged(); }
+
+    private async Task Confirmar()
+    {
+        _visible = false;
+        await OnConfirm.InvokeAsync();
+    }
+
+    private void Cancelar() => Hide();
+}

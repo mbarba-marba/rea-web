@@ -1,0 +1,106 @@
+@typeparam TItem
+
+<div class="glass-card" style="overflow:auto;">
+    <table class="data-table">
+        <thead>
+            <tr>
+                @foreach (var col in Columns)
+                {
+                    <th style="cursor:pointer;white-space:nowrap;" @onclick="() => Sort(col)">
+                        @col.Title
+                        @if (_sortColumn == col.Field)
+                        {
+                            <span style="margin-left:4px;">@(_sortAsc ? "▲" : "▼")</span>
+                        }
+                    </th>
+                }
+                @if (HasActions)
+                {
+                    <th style="width:60px;"></th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in PagedItems)
+            {
+                <tr>
+                    @foreach (var col in Columns)
+                    {
+                        <td>@col.Value(item)</td>
+                    }
+                    @if (HasActions)
+                    {
+                        <td>@Actions(item)</td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @if (TotalPages > 1)
+    {
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-top:1px solid var(--border-glass);">
+            <span style="font-size:12px;color:var(--text-secondary);">
+                @((_page - 1) * PageSize + 1)-@Math.Min(_page * PageSize, Items.Count) de @Items.Count
+            </span>
+            <div style="display:flex;gap:4px;">
+                <GlassButton Variant="ghost" OnClick="() => GoToPage(1)" Disabled="@(_page == 1)">
+                    <LucideIcon Name="chevrons-left" Size="14" />
+                </GlassButton>
+                <GlassButton Variant="ghost" OnClick="() => GoToPage(_page - 1)" Disabled="@(_page == 1)">
+                    <LucideIcon Name="chevron-left" Size="14" />
+                </GlassButton>
+                <span style="padding:4px 8px;font-size:12px;">@_page / @TotalPages</span>
+                <GlassButton Variant="ghost" OnClick="() => GoToPage(_page + 1)" Disabled="@(_page >= TotalPages)">
+                    <LucideIcon Name="chevron-right" Size="14" />
+                </GlassButton>
+                <GlassButton Variant="ghost" OnClick="() => GoToPage(TotalPages)" Disabled="@(_page >= TotalPages)">
+                    <LucideIcon Name="chevrons-right" Size="14" />
+                </GlassButton>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public List<TItem> Items { get; set; } = new();
+    [Parameter] public List<ColumnDef<TItem>> Columns { get; set; } = new();
+    [Parameter] public RenderFragment<TItem>? Actions { get; set; }
+    [Parameter] public int PageSize { get; set; } = 10;
+
+    private int _page = 1;
+    private string? _sortColumn;
+    private bool _sortAsc = true;
+    private bool HasActions => Actions != null;
+
+    private List<TItem> SortedItems
+    {
+        get
+        {
+            if (_sortColumn == null) return Items;
+            var col = Columns.FirstOrDefault(c => c.Field == _sortColumn);
+            if (col?.Comparer == null) return Items;
+            var sorted = _sortAsc
+                ? Items.OrderBy(x => col.Comparer(x))
+                : Items.OrderByDescending(x => col.Comparer(x));
+            return sorted.ToList();
+        }
+    }
+
+    private List<TItem> PagedItems => SortedItems.Skip((_page - 1) * PageSize).Take(PageSize).ToList();
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(Items.Count / (double)PageSize));
+
+    private void Sort(ColumnDef<TItem> col)
+    {
+        if (_sortColumn == col.Field) _sortAsc = !_sortAsc;
+        else { _sortColumn = col.Field; _sortAsc = true; }
+        _page = 1;
+    }
+
+    private void GoToPage(int page) { _page = Math.Clamp(page, 1, TotalPages); }
+
+    protected override void OnParametersSet()
+    {
+        if (_page > TotalPages) _page = TotalPages;
+    }
+}

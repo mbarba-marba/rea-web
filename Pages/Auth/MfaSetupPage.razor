@@ -1,0 +1,136 @@
+@page "/auth/mfa-setup"
+@using REA.Web.Models
+@using REA.Web.Services
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<div class="login-page animate-fade-in">
+    <div class="login-card glass-elevation-2" style="max-width:500px;">
+        <div class="login-logo">
+            <span style="font-size:28px;font-weight:700;color:var(--accent);font-family:var(--font-mono);">REA</span>
+        </div>
+
+        <h1 class="login-title">Configurar MFA</h1>
+        <p class="login-subtitle">Escanea el código QR con tu app autenticadora</p>
+
+        @if (_cargando)
+        {
+            <div style="text-align:center;padding:20px;">Generando configuración...</div>
+        }
+        else if (_setupData != null)
+        {
+            <div style="text-align:center;margin:16px 0;">
+                <img src="@_qrSrc" alt="QR MFA" style="width:200px;height:200px;border-radius:12px;background:white;padding:8px;" />
+                <p class="caption" style="margin-top:8px;word-break:break-all;font-size:10px;color:var(--text-secondary);">
+                    @_setupData.SecretoTotp
+                </p>
+                <button class="btn btn-secondary" @onclick="CopiarSecreto" style="margin-top:4px;">
+                    Copiar secreto
+                </button>
+            </div>
+
+            <EditForm Model="_mfaConfirm" OnValidSubmit="ConfirmarMfa" FormName="mfaconfirm">
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                    <div>
+                        <label class="input-label">Código TOTP (6 dígitos)</label>
+                        <InputText class="input-field" @bind-Value="_mfaConfirm.Codigo" placeholder="123456" maxlength="6" />
+                        <ValidationMessage For="() => _mfaConfirm.Codigo" />
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(_error))
+                    {
+                        <div class="error-banner">@_error</div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(_success))
+                    {
+                        <div style="padding:16px;background:var(--surface-raised);border-radius:8px;margin:8px 0;">
+                            <p style="font-weight:600;color:var(--success);margin-bottom:8px;">Códigos de respaldo (guárdalos):</p>
+                            <div class="mono" style="font-size:11px;display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+                                @foreach (var c in _backupCodes)
+                                {
+                                    <span>@c</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <button type="submit" class="btn btn-primary" style="width:100%;" disabled="@_confirmando">
+                            @(_confirmando ? "Confirmando..." : "Confirmar y Activar")
+                        </button>
+                    }
+                </div>
+            </EditForm>
+        }
+    </div>
+</div>
+
+@code {
+    private MfaSetupResponse? _setupData;
+    private MfaConfirmModel _mfaConfirm = new();
+    private string? _error;
+    private string? _success;
+    private bool _cargando = true;
+    private bool _confirmando;
+    private string _qrSrc = "";
+    private List<string> _backupCodes = new();
+
+    private class MfaConfirmModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Código requerido")]
+        [System.ComponentModel.DataAnnotations.StringLength(6, MinimumLength = 6)]
+        public string Codigo { get; set; } = string.Empty;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var result = await AuthService.SetupMfaAsync();
+            if (result?.Ok == true && result.Data != null)
+            {
+                _setupData = result.Data;
+                _qrSrc = $"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={Uri.EscapeDataString(result.Data.QrUri)}";
+            }
+            else
+            {
+                _error = result?.Error?.Message ?? "Error al configurar MFA";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        _cargando = false;
+    }
+
+    private async Task ConfirmarMfa()
+    {
+        _error = null;
+        _confirmando = true;
+        try
+        {
+            var result = await AuthService.ConfirmMfaAsync(_mfaConfirm.Codigo);
+            if (result?.Ok == true && result.Data != null)
+            {
+                _backupCodes = result.Data.CodigosRespaldo;
+                _success = "MFA activado correctamente";
+            }
+            else
+            {
+                _error = result?.Error?.Message ?? "Código inválido";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        _confirmando = false;
+    }
+
+    private async Task CopiarSecreto()
+    {
+        // Placeholder: navigator.clipboard.writeText via JSInterop
+    }
+}

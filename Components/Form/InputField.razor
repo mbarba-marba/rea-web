@@ -1,0 +1,36 @@
+<div class="form-group">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label class="input-label">@Label</label>
+    }
+    <input @attributes="AdditionalAttributes"
+           class="@InputClass"
+           value="@Value"
+           @onchange="OnValueChanged"
+           placeholder="@Placeholder"
+           disabled="@Disabled"
+           type="@Type" />
+    @if (!string.IsNullOrEmpty(Error))
+    {
+        <span class="input-error">@Error</span>
+    }
+</div>
+
+@code {
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "";
+    [Parameter] public string Type { get; set; } = "text";
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string? Error { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string InputClass => Error != null ? "glass-input input-error" : "glass-input";
+
+    private async Task OnValueChanged(ChangeEventArgs e)
+    {
+        Value = e.Value?.ToString();
+        await ValueChanged.InvokeAsync(Value);
+    }
+}

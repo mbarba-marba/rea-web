@@ -1,0 +1,93 @@
+@page "/clientes/{Id:long}"
+@using Microsoft.AspNetCore.Authorization
+@using REA.Web.Models
+@using REA.Web.Services
+@attribute [Authorize(Roles = "admin,auxiliar")]
+@inject ClienteService ClienteService
+@inject NavigationManager Navigation
+
+<PageHeader Title="@(_cliente?.RazonSocial ?? "Cliente")" Subtitle="@(_cliente?.Rfc)" />
+
+@if (_error != null)
+{
+    <ErrorBanner Message="@_error" OnDismiss="() => _error = null" />
+}
+
+@if (_cargando)
+{
+    <SkeletonLoader />
+}
+else if (_cliente != null)
+{
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="glass-card" style="padding:20px;">
+            <h3 style="margin-bottom:12px;">Información General</h3>
+            <dl class="detail-list">
+                <dt>RFC</dt><dd class="mono">@_cliente.Rfc</dd>
+                <dt>Razón Social</dt><dd>@_cliente.RazonSocial</dd>
+                <dt>Nombre Comercial</dt><dd>@_cliente.NombreComercial</dd>
+                <dt>Clasificación</dt><dd><BadgeCliente Clasificacion="@_cliente.Clasificacion" /></dd>
+                <dt>Régimen Fiscal</dt><dd>@_cliente.RegimenFiscal</dd>
+                <dt>Actividad</dt><dd>@_cliente.Actividad (@_cliente.PorcentajeAct%)</dd>
+            </dl>
+        </div>
+
+        <div class="glass-card" style="padding:20px;">
+            <h3 style="margin-bottom:12px;">Contacto</h3>
+            <dl class="detail-list">
+                <dt>Email</dt><dd>@_cliente.Email</dd>
+                <dt>Teléfono</dt><dd>@_cliente.Telefono</dd>
+                <dt>Dirección</dt><dd>@_cliente.Direccion</dd>
+            </dl>
+
+            <h3 style="margin:16px 0 12px;">E-Firma</h3>
+            <dl class="detail-list">
+                <dt>Vigencia Inicio</dt><dd>@(_cliente.EFirmaVigenciaInicio?.ToString("dd/MM/yyyy") ?? "—")</dd>
+                <dt>Vigencia Fin</dt><dd>@(_cliente.EFirmaVigenciaFin?.ToString("dd/MM/yyyy") ?? "—")</dd>
+                <dt>Estatus</dt><dd><BadgeEstado Estado="@(_cliente.EstatusEfirma?.ToLower() ?? "pendiente")" /></dd>
+            </dl>
+        </div>
+
+        <div class="glass-card" style="padding:20px;grid-column:1/-1;">
+            <h3 style="margin-bottom:12px;">Auxiliares Asignados</h3>
+            @if (_cliente.Asignaciones.Count == 0)
+            {
+                <p style="color:var(--text-secondary);">Sin auxiliares asignados</p>
+            }
+            else
+            {
+                foreach (var a in _cliente.Asignaciones)
+                {
+                    <div style="padding:8px 12px;background:var(--surface-raised);border-radius:8px;margin-bottom:4px;">
+                        @a.AuxiliarNombre
+                    </div>
+                }
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public long Id { get; set; }
+
+    private ClienteDto? _cliente;
+    private bool _cargando = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var result = await ClienteService.ObtenerAsync(Id);
+            if (result?.Ok == true)
+                _cliente = result.Data;
+            else
+                _error = result?.Error?.Message;
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        _cargando = false;
+    }
+}

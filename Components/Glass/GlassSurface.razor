@@ -1,0 +1,17 @@
+<div class="glass-surface @ElevationClass" style="@Style">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public int Elevation { get; set; } = 1;
+    [Parameter] public string? Style { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string ElevationClass => Elevation switch
+    {
+        2 => "glass-elevation-2",
+        3 => "glass-elevation-3",
+        4 => "glass-elevation-4",
+        _ => "glass-elevation-1"
+    };
+}
