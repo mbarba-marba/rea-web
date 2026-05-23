@@ -55,14 +55,22 @@ public class ReaAuthStateProvider : AuthenticationStateProvider
             using var doc = JsonDocument.Parse(json);
             var claims = new List<Claim>();
 
-            if (doc.RootElement.TryGetProperty(ClaimTypes.NameIdentifier.Replace("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/", ""), out var nameId))
-                claims.Add(new Claim(ClaimTypes.NameIdentifier, nameId.GetString()!));
-            if (doc.RootElement.TryGetProperty(ClaimTypes.Email.Replace("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/", ""), out var email))
-                claims.Add(new Claim(ClaimTypes.Email, email.GetString()!));
-            if (doc.RootElement.TryGetProperty(ClaimTypes.Role.Replace("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/", ""), out var role))
-                claims.Add(new Claim(ClaimTypes.Role, role.GetString()!));
-            if (doc.RootElement.TryGetProperty(ClaimTypes.Name.Replace("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/", ""), out var name))
-                claims.Add(new Claim(ClaimTypes.Name, name.GetString()!));
+            foreach (var prop in doc.RootElement.EnumerateObject())
+            {
+                var value = prop.Value.GetString();
+                if (string.IsNullOrEmpty(value)) continue;
+
+                var claimType = prop.Name switch
+                {
+                    "sub" or "nameid" => ClaimTypes.NameIdentifier,
+                    "email" or "emailaddress" => ClaimTypes.Email,
+                    "role" or "http://schemas.microsoft.com/ws/2008/06/identity/claims/role" => ClaimTypes.Role,
+                    "name" or "unique_name" => ClaimTypes.Name,
+                    _ => prop.Name
+                };
+
+                claims.Add(new Claim(claimType, value));
+            }
 
             return claims.ToArray();
         }

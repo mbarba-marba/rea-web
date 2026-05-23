@@ -6,14 +6,14 @@
         <Found Context="routeData">
             <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
                 <NotAuthorized>
-                    <AuthLayout>
-                        <p class="auth-message">Debe iniciar sesión para acceder.</p>
-                    </AuthLayout>
+                    <LayoutView Layout="@typeof(AuthLayout)">
+                        <p class="auth-message">Debe iniciar sesion para acceder.</p>
+                    </LayoutView>
                 </NotAuthorized>
                 <Authorizing>
-                    <AuthLayout>
-                        <p class="auth-message">Verificando sesión...</p>
-                    </AuthLayout>
+                    <LayoutView Layout="@typeof(AuthLayout)">
+                        <p class="auth-message">Verificando sesion...</p>
+                    </LayoutView>
                 </Authorizing>
             </AuthorizeRouteView>
             <FocusOnNavigate RouteData="@routeData" Selector="h1" />
