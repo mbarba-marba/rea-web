@@ -1,0 +1,143 @@
+/* ============================================================================
+   REA — Micro-interacciones y animaciones
+   Duración max 300ms, easing estándar, sin distracciones.
+   ============================================================================ */
+
+/* === Keyframes === */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(100%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideOutRight {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(100%); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes scaleOut {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(0.95); }
+}
+
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 0.6; }
+  50%      { opacity: 1.0; }
+}
+
+@keyframes progressFill {
+  from { width: 0%; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* === Clases de utilidad === */
+
+.animate-fade-in {
+  animation: fadeIn var(--duration-normal) var(--easing) both;
+}
+
+.animate-fade-out {
+  animation: fadeOut var(--duration-normal) var(--easing) both;
+}
+
+.animate-slide-up {
+  animation: slideUp var(--duration-slow) var(--easing) both;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight var(--duration-slow) var(--easing) both;
+}
+
+.animate-slide-out-right {
+  animation: slideOutRight var(--duration-normal) var(--easing) both;
+}
+
+.animate-scale-in {
+  animation: scaleIn 250ms var(--easing) both;
+}
+
+.animate-scale-out {
+  animation: scaleOut 200ms var(--easing) both;
+}
+
+/* === Transiciones reutilizables === */
+
+.transition-hover {
+  transition: transform var(--duration-normal) var(--easing),
+              box-shadow var(--duration-normal) var(--easing),
+              border-color var(--duration-normal) var(--easing);
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-mid);
+}
+
+.hover-glow:hover {
+  border-color: var(--accent);
+}
+
+/* === Skeleton loader === */
+
+.skeleton {
+  background: linear-gradient(90deg, rgba(0,0,0,0.04) 25%, rgba(0,0,0,0.08) 50%, rgba(0,0,0,0.04) 75%);
+  background-size: 200% 100%;
+  animation: skeletonPulse 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* === Progress bar === */
+
+.progress-bar {
+  height: 4px;
+  background: var(--pending);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  animation: progressFill 600ms var(--easing) both;
+}
+
+.progress-bar-fill.success { background: var(--success); }
+.progress-bar-fill.warning { background: var(--warning); }
+
+/* === Page transition === */
+
+.page-enter {
+  animation: fadeIn var(--duration-normal) var(--easing) both;
+}
+
+/* === Toggle spin (checklist paso) === */
+
+.toggle-spin {
+  transition: transform var(--duration-normal) var(--easing),
+              color var(--duration-normal) var(--easing);
+}

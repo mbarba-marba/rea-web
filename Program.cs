@@ -22,6 +22,15 @@ builder.Services.AddScoped<ChecklistService>();
 builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<XmlService>();
 
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://rea-interno-production.up.railway.app") });
+builder.Services.AddScoped<AuthDelegatingHandler>();
+builder.Services.AddScoped(sp =>
+{
+    var handler = sp.GetRequiredService<AuthDelegatingHandler>();
+    handler.InnerHandler = new HttpClientHandler();
+    return new HttpClient(handler)
+    {
+        BaseAddress = new Uri("https://rea-interno-production.up.railway.app")
+    };
+});
 
 await builder.Build().RunAsync();
