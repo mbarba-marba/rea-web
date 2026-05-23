@@ -16,43 +16,35 @@
             Dashboard
         </NavLink>
 
-        <AuthorizeView Roles="admin,auxiliar">
-            <NavLink href="/clientes" Match="NavLinkMatch.Prefix" class="nav-item">
-                <span class="nav-item-icon"><LucideIcon Name="users" /></span>
-                Clientes
-            </NavLink>
-        </AuthorizeView>
+        <NavLink href="/clientes" Match="NavLinkMatch.Prefix" class="nav-item">
+            <span class="nav-item-icon"><LucideIcon Name="users" /></span>
+            Clientes
+        </NavLink>
 
         <NavLink href="/checklists" Match="NavLinkMatch.Prefix" class="nav-item">
             <span class="nav-item-icon"><LucideIcon Name="list-checks" /></span>
             Checklist
         </NavLink>
 
-        <AuthorizeView Roles="admin,auxiliar">
-            <NavLink href="/xml" Match="NavLinkMatch.Prefix" class="nav-item">
-                <span class="nav-item-icon"><LucideIcon Name="file-archive" /></span>
-                XML
-            </NavLink>
-        </AuthorizeView>
+        <NavLink href="/xml" Match="NavLinkMatch.Prefix" class="nav-item">
+            <span class="nav-item-icon"><LucideIcon Name="file-archive" /></span>
+            XML
+        </NavLink>
 
-        <AuthorizeView Roles="admin,auxiliar">
-            <NavLink href="/calculos" Match="NavLinkMatch.Prefix" class="nav-item">
-                <span class="nav-item-icon"><LucideIcon Name="shield-check" /></span>
-                Cálculos
-            </NavLink>
-        </AuthorizeView>
+        <NavLink href="/calculos" Match="NavLinkMatch.Prefix" class="nav-item">
+            <span class="nav-item-icon"><LucideIcon Name="shield-check" /></span>
+            Cálculos
+        </NavLink>
 
         <NavLink href="/reportes" Match="NavLinkMatch.Prefix" class="nav-item">
             <span class="nav-item-icon"><LucideIcon Name="scroll-text" /></span>
             Reportes
         </NavLink>
 
-        <AuthorizeView Roles="admin">
-            <NavLink href="/usuarios" Match="NavLinkMatch.Prefix" class="nav-item">
-                <span class="nav-item-icon"><LucideIcon Name="shield-check" /></span>
-                Usuarios
-            </NavLink>
-        </AuthorizeView>
+        <NavLink href="/usuarios" Match="NavLinkMatch.Prefix" class="nav-item">
+            <span class="nav-item-icon"><LucideIcon Name="shield-check" /></span>
+            Usuarios
+        </NavLink>
     </nav>
 
     <div class="sidebar-footer">
