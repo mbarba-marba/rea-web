@@ -1,0 +1,11 @@
+@inject NavigationManager Navigation
+@implements IDisposable
+
+@code {
+    protected override void OnInitialized()
+    {
+        Navigation.NavigateTo("/login", forceLoad: false);
+    }
+
+    void IDisposable.Dispose() { }
+}

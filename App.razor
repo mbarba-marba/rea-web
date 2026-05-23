@@ -1,27 +1,43 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using REA.Web.Layout
 
-<CascadingAuthenticationState>
-    <Router AppAssembly="@typeof(App).Assembly">
-        <Found Context="routeData">
-            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
-                <NotAuthorized>
+@inject NavigationManager Navigation
+
+<ErrorBoundary>
+    <ChildContent>
+        <CascadingAuthenticationState>
+            <Router AppAssembly="@typeof(App).Assembly">
+                <Found Context="routeData">
+                    <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                        <NotAuthorized>
+                            <RedirectToLogin />
+                        </NotAuthorized>
+                        <Authorizing>
+                            <AuthLayout />
+                        </Authorizing>
+                    </AuthorizeRouteView>
+                    <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+                </Found>
+                <NotFound>
                     <LayoutView Layout="@typeof(AuthLayout)">
-                        <p class="auth-message">Debe iniciar sesion para acceder.</p>
+                        <REA.Web.Pages.Error.NotFoundPage />
                     </LayoutView>
-                </NotAuthorized>
-                <Authorizing>
-                    <LayoutView Layout="@typeof(AuthLayout)">
-                        <p class="auth-message">Verificando sesion...</p>
-                    </LayoutView>
-                </Authorizing>
-            </AuthorizeRouteView>
-            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
-        </Found>
-        <NotFound>
-            <LayoutView Layout="@typeof(AuthLayout)">
-                <REA.Web.Pages.Error.NotFoundPage />
-            </LayoutView>
-        </NotFound>
-    </Router>
-</CascadingAuthenticationState>
+                </NotFound>
+            </Router>
+        </CascadingAuthenticationState>
+    </ChildContent>
+    <ErrorContent>
+        <AuthLayout>
+            <div class="error-banner" style="max-width:400px;margin:40px auto;text-align:center;">
+                <LucideIcon Name="circle-alert" Size="48" />
+                <h2 style="margin:12px 0 4px;">Algo salio mal</h2>
+                <p style="color:var(--text-secondary);margin-bottom:16px;">Error al cargar la aplicacion</p>
+                <button class="btn btn-primary" @onclick="Recargar">Recargar</button>
+            </div>
+        </AuthLayout>
+    </ErrorContent>
+</ErrorBoundary>
+
+@code {
+    private void Recargar() => Navigation.NavigateTo("/", forceLoad: true);
+}
