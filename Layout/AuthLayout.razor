@@ -1,7 +1,17 @@
 @inherits LayoutComponentBase
 
 <div class="auth-layout">
-    @Body
+    @if (Body != null)
+    {
+        @Body
+    }
+    else
+    {
+        <div class="loading-spinner-container">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">REA</p>
+        </div>
+    }
 </div>
 
 @code {
