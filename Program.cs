@@ -11,16 +11,16 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddAuthorizationCore();
 
-builder.Services.AddSingleton<ILocalStorageService, LocalStorageService>();
-builder.Services.AddSingleton<TokenService>();
-builder.Services.AddSingleton<ApiClient>();
+builder.Services.AddScoped<ILocalStorageService, LocalStorageService>();
+builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<ApiClient>();
 builder.Services.AddScoped<AuthenticationStateProvider, ReaAuthStateProvider>();
 
-builder.Services.AddSingleton<AuthService>();
-builder.Services.AddSingleton<ClienteService>();
-builder.Services.AddSingleton<ChecklistService>();
-builder.Services.AddSingleton<DashboardService>();
-builder.Services.AddSingleton<XmlService>();
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<ClienteService>();
+builder.Services.AddScoped<ChecklistService>();
+builder.Services.AddScoped<DashboardService>();
+builder.Services.AddScoped<XmlService>();
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://rea-interno-production.up.railway.app") });
 
