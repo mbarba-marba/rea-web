@@ -1,4 +1,4 @@
-ï»¿@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @using REA.Web.Layout
 
 <CascadingAuthenticationState>
@@ -7,12 +7,12 @@
             <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
                 <NotAuthorized>
                     <AuthLayout>
-                        <p class="auth-message">Debe iniciar sesiÃ³n para acceder.</p>
+                        <p class="auth-message">Debe iniciar sesión para acceder.</p>
                     </AuthLayout>
                 </NotAuthorized>
                 <Authorizing>
                     <AuthLayout>
-                        <p class="auth-message">Verificando sesiÃ³n...</p>
+                        <p class="auth-message">Verificando sesión...</p>
                     </AuthLayout>
                 </Authorizing>
             </AuthorizeRouteView>

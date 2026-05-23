@@ -59,7 +59,7 @@ else
     {
         try
         {
-            var result = await Http.GetFromJsonAsync<ApiResponse<List<ReporteDto>>>("http://localhost:5000/api/v1/reportes");
+            var result = await Http.GetFromJsonAsync<ApiResponse<List<ReporteDto>>>("api/v1/reportes");
             if (result?.Ok == true)
                 _reportes = result.Data ?? new();
         }

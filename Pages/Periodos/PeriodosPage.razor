@@ -98,7 +98,7 @@ else
         _cargando = true;
         try
         {
-            var r = await Http.GetFromJsonAsync<ApiResponse<List<PeriodoDto>>>($"http://localhost:5000/api/v1/periodos?anio={_anio}");
+            var r = await Http.GetFromJsonAsync<ApiResponse<List<PeriodoDto>>>($"api/v1/periodos?anio={_anio}");
             if (r?.Ok == true) _periodos = r.Data ?? new();
         }
         catch { }
@@ -110,7 +110,7 @@ else
         _error = null; _msg = null;
         try
         {
-            var r = await Http.PostAsJsonAsync("http://localhost:5000/api/v1/periodos", new { anio = _anio, mes = _mes });
+            var r = await Http.PostAsJsonAsync("api/v1/periodos", new { anio = _anio, mes = _mes });
             if (r.IsSuccessStatusCode) { _msg = "Período creado"; await Cargar(); }
             else _error = "Error al crear período";
         }
@@ -122,7 +122,7 @@ else
         _error = null;
         try
         {
-            var r = await Http.PostAsync($"http://localhost:5000/api/v1/periodos/{id}/cerrar", null);
+            var r = await Http.PostAsync($"api/v1/periodos/{id}/cerrar", null);
             if (r.IsSuccessStatusCode) await Cargar();
             else _error = "Error al cerrar período";
         }

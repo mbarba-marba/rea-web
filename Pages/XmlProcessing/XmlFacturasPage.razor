@@ -80,7 +80,7 @@ else
         _cargando = true;
         try
         {
-            var query = $"http://localhost:5000/api/v1/xml/facturas?limit=50";
+            var query = $"api/v1/xml/facturas?limit=50";
             if (!string.IsNullOrEmpty(_uuid)) query += $"&uuid={_uuid}";
             if (!string.IsNullOrEmpty(_rfc)) query += $"&rfcEmisor={_rfc}";
 

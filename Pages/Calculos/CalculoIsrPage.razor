@@ -65,7 +65,7 @@ else if (_calculo != null)
     {
         try
         {
-            var r = await Http.GetFromJsonAsync<ApiResponse<CalculoIsrData>>($"http://localhost:5000/api/v1/calculos/isr");
+            var r = await Http.GetFromJsonAsync<ApiResponse<CalculoIsrData>>($"api/v1/calculos/isr");
             _calculo = r?.Data;
         }
         catch { }

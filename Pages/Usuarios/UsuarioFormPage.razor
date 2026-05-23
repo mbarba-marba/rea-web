@@ -63,7 +63,7 @@
         {
             try
             {
-                var r = await Http.GetFromJsonAsync<ApiResponse<UsuarioInfo>>($"http://localhost:5000/api/v1/usuarios/{Id}");
+                var r = await Http.GetFromJsonAsync<ApiResponse<UsuarioInfo>>($"api/v1/usuarios/{Id}");
                 if (r?.Ok == true && r.Data != null)
                 {
                     _nombre = r.Data.Nombre;
@@ -84,9 +84,9 @@
         {
             HttpResponseMessage r;
             if (EsEdicion)
-                r = await Http.PutAsJsonAsync($"http://localhost:5000/api/v1/usuarios/{Id}", new { nombre = _nombre, apellidos = _apellidos });
+                r = await Http.PutAsJsonAsync($"api/v1/usuarios/{Id}", new { nombre = _nombre, apellidos = _apellidos });
             else
-                r = await Http.PostAsJsonAsync("http://localhost:5000/api/v1/usuarios", new { email = _email, nombre = _nombre, apellidos = _apellidos, password = _password, rol = _rol });
+                r = await Http.PostAsJsonAsync("api/v1/usuarios", new { email = _email, nombre = _nombre, apellidos = _apellidos, password = _password, rol = _rol });
             if (r.IsSuccessStatusCode) Navigation.NavigateTo("/usuarios");
             else _error = "Error al guardar";
         }

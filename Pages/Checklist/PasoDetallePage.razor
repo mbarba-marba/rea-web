@@ -69,7 +69,7 @@ else if (_paso != null)
                                 <div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">@e.NombreArchivo</div>
                                 <div style="font-size:10px;color:var(--text-secondary);">@FormatearTamano(e.TamanoBytes)</div>
                             </div>
-                            <a href="http://localhost:5000/api/v1/checklists/evidencias/@e.EvidenciaId/descargar" class="btn-ghost" target="_blank">
+                            <a href="https://rea-interno-production.up.railway.app/api/v1/checklists/evidencias/@e.EvidenciaId/descargar" class="btn-ghost" target="_blank">
                                 <LucideIcon Name="download" Size="14" />
                             </a>
                         </div>
@@ -179,7 +179,7 @@ else if (_paso != null)
             fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(_archivo.ContentType);
             content.Add(fileContent, "archivo", _archivo.Name);
 
-            var r = await Http.PostAsync($"http://localhost:5000/api/v1/checklists/{ChecklistId}/pasos/{PasoId}/evidencias", content);
+            var r = await Http.PostAsync($"api/v1/checklists/{ChecklistId}/pasos/{PasoId}/evidencias", content);
             if (r.IsSuccessStatusCode)
             {
                 _archivo = null;

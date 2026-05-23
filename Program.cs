@@ -22,6 +22,6 @@ builder.Services.AddSingleton<ChecklistService>();
 builder.Services.AddSingleton<DashboardService>();
 builder.Services.AddSingleton<XmlService>();
 
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("http://localhost:5000") });
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://rea-interno-production.up.railway.app") });
 
 await builder.Build().RunAsync();

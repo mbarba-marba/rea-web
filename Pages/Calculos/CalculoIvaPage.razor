@@ -50,7 +50,7 @@ else if (_calculo != null)
     {
         try
         {
-            var r = await Http.GetFromJsonAsync<ApiResponse<CalculoIvaData>>($"http://localhost:5000/api/v1/calculos/iva");
+            var r = await Http.GetFromJsonAsync<ApiResponse<CalculoIvaData>>($"api/v1/calculos/iva");
             _calculo = r?.Data;
         }
         catch { }

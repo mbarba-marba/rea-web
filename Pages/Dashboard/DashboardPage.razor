@@ -125,7 +125,7 @@
 
             try
             {
-                var mapResult = await Http.GetFromJsonAsync<ApiResponse<List<EstadoClienteDto>>>("http://localhost:5000/api/v1/dashboard/clientes-por-estado");
+                var mapResult = await Http.GetFromJsonAsync<ApiResponse<List<EstadoClienteDto>>>("api/v1/dashboard/clientes-por-estado");
                 if (mapResult?.Ok == true)
                     _estadosClientes = mapResult.Data ?? new();
             }
