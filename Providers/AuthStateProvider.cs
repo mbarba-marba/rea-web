@@ -24,7 +24,7 @@ public class ReaAuthStateProvider : AuthenticationStateProvider
         if (claims.Length == 0)
             return Anonymous;
 
-        var identity = new ClaimsIdentity(claims, "jwt");
+        var identity = new ClaimsIdentity(claims, "jwt", ClaimsIdentity.DefaultNameClaimType, ClaimTypes.Role);
         var user = new ClaimsPrincipal(identity);
         return new AuthenticationState(user);
     }
@@ -33,7 +33,7 @@ public class ReaAuthStateProvider : AuthenticationStateProvider
     {
         await _storage.SetAsync("rea_access_token", accessToken);
         var claims = ParseClaimsFromJwt(accessToken);
-        var identity = new ClaimsIdentity(claims, "jwt");
+        var identity = new ClaimsIdentity(claims, "jwt", ClaimsIdentity.DefaultNameClaimType, ClaimTypes.Role);
         var user = new ClaimsPrincipal(identity);
         NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(user)));
     }

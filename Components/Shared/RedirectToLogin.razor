@@ -1,11 +1,12 @@
 @inject NavigationManager Navigation
-@implements IDisposable
 
 @code {
     protected override void OnInitialized()
     {
-        Navigation.NavigateTo("/login", forceLoad: false);
+        var uri = new Uri(Navigation.Uri);
+        if (!uri.AbsolutePath.Equals("/login", StringComparison.OrdinalIgnoreCase))
+        {
+            Navigation.NavigateTo("/login", forceLoad: false);
+        }
     }
-
-    void IDisposable.Dispose() { }
 }
