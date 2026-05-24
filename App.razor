@@ -10,7 +10,21 @@
                 <Found Context="routeData">
                     <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
                         <NotAuthorized>
-                            <RedirectToLogin />
+                            <AuthorizeView>
+                                <Authorized Context="auth">
+                                    <LayoutView Layout="@typeof(AuthLayout)">
+                                        <div class="login-card glass-elevation-2" style="text-align:center;max-width:440px;margin:60px auto;">
+                                            <LucideIcon Name="shield-off" Size="48" />
+                                            <h2 style="margin:12px 0 4px;">Acceso denegado</h2>
+                                            <p style="color:var(--text-secondary);margin-bottom:20px;">No tienes permisos para acceder a esta sección.</p>
+                                            <button class="btn btn-primary" @onclick="IrDashboard">Ir al Dashboard</button>
+                                        </div>
+                                    </LayoutView>
+                                </Authorized>
+                                <NotAuthorized Context="anon">
+                                    <RedirectToLogin />
+                                </NotAuthorized>
+                            </AuthorizeView>
                         </NotAuthorized>
                         <Authorizing>
                             <AuthLayout />
@@ -39,4 +53,5 @@
 
 @code {
     private void Recargar() => Navigation.NavigateTo("/", forceLoad: true);
+    private void IrDashboard() => Navigation.NavigateTo("/");
 }
