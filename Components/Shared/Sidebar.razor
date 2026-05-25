@@ -34,21 +34,12 @@
             <span class="@LabelCls">Dashboard</span>
         </NavLink>
 
-        <AuthorizeView Roles="admin">
-            <NavLink href="/clientes" Match="NavLinkMatch.Prefix" title="Clientes"
-                     class="@NavCls">
-                <span class="@IconCls"><LucideIcon Name="users" Size="18" /></span>
-                <span class="@LabelCls">Clientes</span>
-            </NavLink>
-        </AuthorizeView>
-
-        <AuthorizeView Roles="admin">
-            <NavLink href="/asignaciones" Match="NavLinkMatch.Prefix" title="Asignaciones"
-                     class="@NavCls">
-                <span class="@IconCls"><LucideIcon Name="link" Size="18" /></span>
-                <span class="@LabelCls">Asignaciones</span>
-            </NavLink>
-        </AuthorizeView>
+        <div class="mt-2 mb-1 px-2">
+            <span class="@(_collapsed ? "hidden" : "block text-[10px] font-semibold uppercase tracking-widest text-gray-400")">
+                OperaciÃ³n
+            </span>
+            <div class="@(_collapsed ? "block h-px bg-black/[0.06] mx-1" : "hidden")"></div>
+        </div>
 
         <NavLink href="/checklists" Match="NavLinkMatch.Prefix" title="Libro de Trabajo"
                  class="@NavCls">
@@ -81,7 +72,26 @@
         <AuthorizeView Roles="admin">
             <div class="mt-2 mb-1 px-2">
                 <span class="@(_collapsed ? "hidden" : "block text-[10px] font-semibold uppercase tracking-widest text-gray-400")">
-                    Admin
+                    GestiÃ³n
+                </span>
+                <div class="@(_collapsed ? "block h-px bg-black/[0.06] mx-1" : "hidden")"></div>
+            </div>
+
+            <NavLink href="/clientes" Match="NavLinkMatch.Prefix" title="Clientes"
+                     class="@NavCls">
+                <span class="@IconCls"><LucideIcon Name="users" Size="18" /></span>
+                <span class="@LabelCls">Clientes</span>
+            </NavLink>
+
+            <NavLink href="/asignaciones" Match="NavLinkMatch.Prefix" title="Asignaciones"
+                     class="@NavCls">
+                <span class="@IconCls"><LucideIcon Name="link" Size="18" /></span>
+                <span class="@LabelCls">Asignaciones</span>
+            </NavLink>
+
+            <div class="mt-2 mb-1 px-2">
+                <span class="@(_collapsed ? "hidden" : "block text-[10px] font-semibold uppercase tracking-widest text-gray-400")">
+                    AdministraciÃ³n
                 </span>
                 <div class="@(_collapsed ? "block h-px bg-black/[0.06] mx-1" : "hidden")"></div>
             </div>
