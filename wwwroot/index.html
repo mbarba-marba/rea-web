@@ -10,7 +10,23 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/tailwind.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        corePlugins: { preflight: false },
+        theme: {
+          extend: {
+            colors: {
+              accent: { DEFAULT: '#076280', light: '#bbe7ef', hover: '#054a62' }
+            },
+            fontFamily: {
+              ui:   ['Inter', 'sans-serif'],
+              mono: ['JetBrains Mono', 'monospace']
+            }
+          }
+        }
+      }
+    </script>
     <link rel="stylesheet" href="css/app.css" />
     <link rel="stylesheet" href="css/glassmorphism.css" />
     <link rel="stylesheet" href="css/typography.css" />
