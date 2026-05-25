@@ -51,29 +51,28 @@
             </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:start;">
-            <div class="glass-card" style="padding:20px;background:rgba(255,255,255,0.82);">
+        <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:stretch;">
+            <div class="glass-card" style="padding:20px;background:rgba(255,255,255,0.82);height:100%;">
                 <h3 style="margin-bottom:14px;">Informacion General</h3>
-                <dl class="detail-list">
-                    <dt>RFC</dt><dd class="mono">@_cliente.Rfc</dd>
-                    <dt>Razon Social</dt><dd>@_cliente.RazonSocial</dd>
-                    <dt>Nombre Comercial</dt><dd>@(string.IsNullOrWhiteSpace(_cliente.NombreComercial) ? "-" : _cliente.NombreComercial)</dd>
-                    <dt>Clasificacion</dt><dd><BadgeCliente Clasificacion="@_cliente.Clasificacion" /></dd>
-                    <dt>Regimen Fiscal</dt><dd>@(string.IsNullOrWhiteSpace(_cliente.RegimenFiscal) ? "-" : _cliente.RegimenFiscal)</dd>
-                    <dt>Actividad</dt><dd>@(string.IsNullOrWhiteSpace(_cliente.Actividad) ? "-" : _cliente.Actividad)</dd>
-                    <dt>% Actividad</dt><dd>@(_cliente.PorcentajeAct?.ToString("0.##") ?? "-")%</dd>
-                </dl>
+                <div style="display:grid;gap:12px;">
+                    <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">RFC</div><div class="mono" style="font-size:16px;font-weight:600;color:var(--text-primary);">@_cliente.Rfc</div></div>
+                    <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Razon Social</div><div style="font-size:18px;font-weight:600;color:var(--text-primary);">@_cliente.RazonSocial</div></div>
+                    <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Nombre Comercial</div><div style="font-size:16px;font-weight:500;color:var(--text-primary);">@(string.IsNullOrWhiteSpace(_cliente.NombreComercial) ? "-" : _cliente.NombreComercial)</div></div>
+                    <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Clasificacion</div><div style="margin-top:2px;"><BadgeCliente Clasificacion="@_cliente.Clasificacion" /></div></div>
+                    <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Regimen Fiscal</div><div style="font-size:16px;font-weight:500;color:var(--text-primary);">@(string.IsNullOrWhiteSpace(_cliente.RegimenFiscal) ? "-" : _cliente.RegimenFiscal)</div></div>
+                    <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Actividad</div><div style="font-size:16px;font-weight:500;color:var(--text-primary);">@(string.IsNullOrWhiteSpace(_cliente.Actividad) ? "-" : _cliente.Actividad)</div></div>
+                    <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">% Actividad</div><div style="font-size:16px;font-weight:600;color:var(--text-primary);">@(_cliente.PorcentajeAct?.ToString("0.##") ?? "-")%</div></div>
+                </div>
             </div>
 
-            <div class="glass-card" style="padding:20px;background:rgba(255,255,255,0.82);">
+            <div class="glass-card" style="padding:20px;background:rgba(255,255,255,0.82);height:100%;">
                 <h3 style="margin-bottom:12px;">Contacto y Estado</h3>
-                <dl class="detail-list">
-                    <dt>Email</dt><dd>@(string.IsNullOrWhiteSpace(_cliente.Email) ? "-" : _cliente.Email)</dd>
-                    <dt>Telefono</dt><dd>@(string.IsNullOrWhiteSpace(_cliente.Telefono) ? "-" : _cliente.Telefono)</dd>
-                    <dt>Direccion</dt><dd>@(string.IsNullOrWhiteSpace(_cliente.Direccion) ? "-" : _cliente.Direccion)</dd>
-                    <dt>Estatus E-Firma</dt><dd><BadgeEstado Estado="@(_cliente.EstatusEfirma?.ToLower() ?? "pendiente")" /></dd>
-                    <dt>Activo</dt>
-                    <dd>
+                <div style="display:grid;gap:12px;">
+                    <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Email</div><div style="font-size:16px;font-weight:500;color:var(--text-primary);">@(string.IsNullOrWhiteSpace(_cliente.Email) ? "-" : _cliente.Email)</div></div>
+                    <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Telefono</div><div style="font-size:16px;font-weight:500;color:var(--text-primary);">@(string.IsNullOrWhiteSpace(_cliente.Telefono) ? "-" : _cliente.Telefono)</div></div>
+                    <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Direccion</div><div style="font-size:16px;font-weight:500;color:var(--text-primary);">@(string.IsNullOrWhiteSpace(_cliente.Direccion) ? "-" : _cliente.Direccion)</div></div>
+                    <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Estatus E-Firma</div><div style="margin-top:2px;"><BadgeEstado Estado="@(_cliente.EstatusEfirma?.ToLower() ?? "pendiente")" /></div></div>
+                    <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Activo</div><div style="margin-top:2px;">
                         @if (_cliente.Activo)
                         {
                             <span class="badge badge-success">Activo</span>
@@ -82,8 +81,8 @@
                         {
                             <span class="badge badge-muted">Inactivo</span>
                         }
-                    </dd>
-                </dl>
+                    </div></div>
+                </div>
             </div>
 
             <div class="glass-card" style="padding:20px;background:rgba(255,255,255,0.82);grid-column:1/-1;">
