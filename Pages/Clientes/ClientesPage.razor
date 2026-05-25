@@ -27,15 +27,13 @@
     <ErrorBanner Message="@_error" OnDismiss="() => _error = null" />
 
     <div class="glass-card" style="margin-bottom:16px;padding:18px 20px;">
+        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">Buscar cliente</div>
         <div style="display:grid;grid-template-columns:minmax(280px,1fr) 220px auto;gap:12px;align-items:center;">
-            <div>
-                <label class="input-label">Buscar cliente</label>
-                <input type="text"
-                       class="input-field"
-                       @bind="_busqueda"
-                       @bind:event="oninput"
-                       placeholder="RFC, razon social o nombre comercial" />
-            </div>
+            <input type="text"
+                   class="input-field"
+                   @bind="_busqueda"
+                   @bind:event="oninput"
+                   placeholder="RFC, razon social o nombre comercial" />
             <select @bind="_clasificacion" class="select-field" style="height:40px;">
                 <option value="">Todas las clasificaciones</option>
                 <option value="activo">Activos</option>
