@@ -78,7 +78,7 @@
                             <th>Nombre Comercial</th>
                             <th>Clasificacion</th>
                             <th>E-Firma</th>
-                            <th style="width:80px;"></th>
+                            <th style="width:96px;"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -90,10 +90,24 @@
                                 <td>@(string.IsNullOrWhiteSpace(c.NombreComercial) ? "-" : c.NombreComercial)</td>
                                 <td><BadgeCliente Clasificacion="@c.Clasificacion" /></td>
                                 <td><BadgeEstado Estado="@(c.EstatusEfirma?.ToLower() ?? "pendiente")" /></td>
-                                <td>
-                                    <button class="btn btn-ghost btn-sm btn-icon" @onclick:stopPropagation @onclick="() => Editar(c.ClienteId)">
-                                        <LucideIcon Name="pencil" Size="14" />
+                                <td style="position:relative;">
+                                    <button class="btn btn-ghost btn-sm btn-icon"
+                                            title="Acciones"
+                                            @onclick:stopPropagation
+                                            @onclick="() => ToggleAcciones(c.ClienteId)">
+                                        <LucideIcon Name="ellipsis" Size="14" />
                                     </button>
+                                    @if (_menuAccionesClienteId == c.ClienteId)
+                                    {
+                                        <div @onclick:stopPropagation
+                                             style="position:absolute;right:12px;top:38px;z-index:30;background:var(--glass-bg-primary);border:1px solid var(--glass-border);border-radius:8px;box-shadow:var(--shadow-mid);min-width:120px;padding:6px;">
+                                            <button class="btn btn-ghost btn-sm"
+                                                    style="width:100%;justify-content:flex-start;color:var(--text-primary);"
+                                                    @onclick="() => EditarDesdeMenu(c.ClienteId)">
+                                                <LucideIcon Name="pencil" Size="14" /> Editar
+                                            </button>
+                                        </div>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -116,6 +130,7 @@
     private string _clasificacion = "";
     private bool _cargando = true;
     private string? _error;
+    private long? _menuAccionesClienteId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -152,4 +167,10 @@
     private void VerCliente(long id) => Navigation.NavigateTo($"/clientes/{id}");
     private void IrANuevo() => Navigation.NavigateTo("/clientes/nuevo");
     private void IrAAsignaciones() => Navigation.NavigateTo("/asignaciones");
+    private void ToggleAcciones(long id) => _menuAccionesClienteId = _menuAccionesClienteId == id ? null : id;
+    private void EditarDesdeMenu(long id)
+    {
+        _menuAccionesClienteId = null;
+        Editar(id);
+    }
 }
