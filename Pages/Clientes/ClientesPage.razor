@@ -1,84 +1,116 @@
 @page "/clientes"
 @using Microsoft.AspNetCore.Authorization
+@using REA.Web.Components.Shared
 @using REA.Web.Models
 @using REA.Web.Services
 @attribute [Authorize(Roles = "admin")]
 @inject ClienteService ClienteService
 @inject NavigationManager Navigation
 
-<PageHeader Title="Clientes" />
-<ErrorBanner Message="@_error" OnDismiss="() => _error = null" />
-
-<div class="glass-card" style="margin-bottom:24px;padding:16px 20px;">
-    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-        <div class="search-field">
-            <LucideIcon Name="search" Size="16" />
-            <input type="text" @bind="_busqueda" @bind:event="oninput" placeholder="Buscar por RFC o razón social..." style="border:none;background:transparent;color:var(--text-primary);outline:none;width:260px;" />
+<div class="page-container animate-fade-in">
+    <div class="page-header" style="margin-bottom:16px;">
+        <div class="page-header-left">
+            <h1>Clientes</h1>
+            <Breadcrumb Items="@_breadcrumb" />
+            <p class="body-small text-muted" style="margin-top:6px;">Alta y gestion de clientes del despacho</p>
         </div>
-        <select @bind="_clasificacion" style="background:var(--surface-raised);color:var(--text-primary);border:1px solid var(--border-glass);border-radius:8px;padding:8px 12px;">
-            <option value="">Todas las clasificaciones</option>
-            <option value="activo">Activos</option>
-            <option value="irregular">Irregulares</option>
-        </select>
-        <GlassButton Variant="primary" OnClick="Buscar">Buscar</GlassButton>
-        <AuthorizeView Roles="admin">
+        <div style="display:flex;gap:10px;align-items:center;">
             <GlassButton Variant="secondary" OnClick="IrAAsignaciones">
                 <LucideIcon Name="link" Size="16" /> Asignaciones
             </GlassButton>
-        </AuthorizeView>
-        <GlassButton Variant="primary" OnClick="IrANuevo" style="margin-left:auto;">
-            <LucideIcon Name="plus" Size="16" /> Nuevo Cliente
-        </GlassButton>
+            <GlassButton Variant="primary" OnClick="IrANuevo">
+                <LucideIcon Name="plus" Size="16" /> Nuevo Cliente
+            </GlassButton>
+        </div>
     </div>
+
+    <ErrorBanner Message="@_error" OnDismiss="() => _error = null" />
+
+    <div class="glass-card" style="margin-bottom:16px;padding:18px 20px;">
+        <div style="display:grid;grid-template-columns:minmax(280px,1fr) 220px auto;gap:12px;align-items:center;">
+            <div class="search-field" style="height:40px;">
+                <LucideIcon Name="search" Size="16" />
+                <input type="text"
+                       @bind="_busqueda"
+                       @bind:event="oninput"
+                       placeholder="Buscar por RFC, razon social o nombre comercial..."
+                       style="border:none;background:transparent;color:var(--text-primary);outline:none;width:100%;" />
+            </div>
+            <select @bind="_clasificacion" class="select-field" style="height:40px;">
+                <option value="">Todas las clasificaciones</option>
+                <option value="activo">Activos</option>
+                <option value="irregular">Irregulares</option>
+            </select>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <GlassButton Variant="secondary" OnClick="Limpiar">Limpiar</GlassButton>
+                <GlassButton Variant="primary" OnClick="Buscar">Aplicar filtros</GlassButton>
+            </div>
+        </div>
+    </div>
+
+    @if (_cargando)
+    {
+        <div class="glass-card" style="text-align:center;padding:56px;">
+            <span style="color:var(--text-secondary);">Cargando clientes...</span>
+        </div>
+    }
+    else if (_clientes.Count == 0)
+    {
+        <div class="glass-card empty-state" style="padding:56px 32px;">
+            <LucideIcon Name="users" Size="44" />
+            <p class="empty-state-heading">No hay clientes para mostrar</p>
+            <p class="empty-state-body">Ajusta los filtros o registra un cliente nuevo para comenzar.</p>
+        </div>
+    }
+    else
+    {
+        <div class="glass-card" style="padding:0;overflow:hidden;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border-subtle);">
+                <span style="font-size:12px;color:var(--text-secondary);text-transform:uppercase;">Listado</span>
+                <span style="font-size:13px;color:var(--text-muted);">@_clientes.Count clientes</span>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>RFC</th>
+                            <th>Razon Social</th>
+                            <th>Nombre Comercial</th>
+                            <th>Clasificacion</th>
+                            <th>E-Firma</th>
+                            <th style="width:80px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var c in _clientes)
+                        {
+                            <tr style="cursor:pointer" @onclick="() => VerCliente(c.ClienteId)">
+                                <td class="mono">@c.Rfc</td>
+                                <td style="font-weight:500;">@c.RazonSocial</td>
+                                <td>@(string.IsNullOrWhiteSpace(c.NombreComercial) ? "-" : c.NombreComercial)</td>
+                                <td><BadgeCliente Clasificacion="@c.Clasificacion" /></td>
+                                <td><BadgeEstado Estado="@(c.EstatusEfirma?.ToLower() ?? "pendiente")" /></td>
+                                <td>
+                                    <button class="btn-ghost" @onclick:stopPropagation @onclick="() => Editar(c.ClienteId)">
+                                        <LucideIcon Name="pencil" Size="14" />
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
 </div>
 
-@if (_cargando)
-{
-    <div style="text-align:center;padding:40px;color:var(--text-secondary);">Cargando...</div>
-}
-else if (_clientes.Count == 0)
-{
-    <div class="empty-state">
-        <LucideIcon Name="users" Size="48" />
-        <p>No se encontraron clientes</p>
-    </div>
-}
-else
-{
-    <div class="glass-card">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>RFC</th>
-                    <th>Razón Social</th>
-                    <th>Nombre Comercial</th>
-                    <th>Clasificación</th>
-                    <th>E-Firma</th>
-                    <th style="width:80px;"></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var c in _clientes)
-                {
-                    <tr style="cursor:pointer" @onclick="() => VerCliente(c.ClienteId)">
-                        <td class="mono">@c.Rfc</td>
-                        <td>@c.RazonSocial</td>
-                        <td>@c.NombreComercial</td>
-                        <td><BadgeCliente Clasificacion="@c.Clasificacion" /></td>
-                        <td><BadgeEstado Estado="@(c.EstatusEfirma?.ToLower() ?? "pendiente")" /></td>
-                        <td>
-                            <button class="btn-ghost" @onclick:stopPropagation @onclick="() => Editar(c.ClienteId)">
-                                <LucideIcon Name="pencil" Size="14" />
-                            </button>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-}
-
 @code {
+    private readonly List<BreadcrumbItem> _breadcrumb = new()
+    {
+        new() { Text = "Inicio", Url = "/" },
+        new() { Text = "Clientes", Url = "/clientes" }
+    };
+
     private List<ClienteDto> _clientes = new();
     private string _busqueda = "";
     private string _clasificacion = "";
@@ -107,6 +139,13 @@ else
             _error = ex.Message;
         }
         _cargando = false;
+    }
+
+    private async Task Limpiar()
+    {
+        _busqueda = "";
+        _clasificacion = "";
+        await Buscar();
     }
 
     private void Editar(long id) => Navigation.NavigateTo($"/clientes/{id}/editar");
