@@ -95,7 +95,8 @@ body {
   min-height: 100vh;
 }
 
-body[data-theme="dark"] {
+body[data-theme="dark"],
+.app-layout.theme-dark {
   --bg-base: #0f1720;
   --accent: #38b6cf;
   --accent-light: rgba(56, 182, 207, 0.18);

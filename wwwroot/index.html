@@ -46,6 +46,16 @@
           document.body.removeAttribute('data-theme');
         }
       };
+
+      window.reaLayout = {
+        setSidebarCollapsed: function (collapsed) {
+          if (collapsed) {
+            document.body.setAttribute('data-sidebar', 'collapsed');
+            return;
+          }
+          document.body.removeAttribute('data-sidebar');
+        }
+      };
     </script>
     <link rel="stylesheet" href="css/app.css" />
     <link rel="stylesheet" href="css/glassmorphism.css" />

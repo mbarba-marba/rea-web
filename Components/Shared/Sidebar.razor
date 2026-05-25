@@ -8,9 +8,10 @@
 
 @code {
     [Parameter] public EventCallback<bool> CollapsedChanged { get; set; }
+    [Parameter] public EventCallback<bool> ThemeChanged { get; set; }
 }
 
-<aside class="fixed left-0 top-0 bottom-0 z-[100] flex flex-col
+<aside class="rea-sidebar fixed left-0 top-0 bottom-0 z-[100] flex flex-col
               bg-white/60 backdrop-blur-xl border-r border-white/40
               shadow-[4px_0_24px_rgba(0,0,0,0.04)]
               transition-[width] duration-[280ms] ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden
@@ -221,9 +222,11 @@
         var saved = await LocalStorage.GetAsync("rea_sidebar_collapsed");
         _collapsed = saved == "true";
         await CollapsedChanged.InvokeAsync(_collapsed);
+        await ApplySidebarLayoutAsync(_collapsed);
 
         var savedTheme = await LocalStorage.GetAsync("rea_theme");
         _isDarkMode = savedTheme == "dark";
+        await ThemeChanged.InvokeAsync(_isDarkMode);
         await ApplyThemeAsync(_isDarkMode);
 
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -243,6 +246,7 @@
         _collapsed = !_collapsed;
         await LocalStorage.SetAsync("rea_sidebar_collapsed", _collapsed ? "true" : "false");
         await CollapsedChanged.InvokeAsync(_collapsed);
+        await ApplySidebarLayoutAsync(_collapsed);
     }
 
     private void AbrirConfig() => _modalConfig = true;
@@ -252,12 +256,18 @@
     {
         _isDarkMode = !_isDarkMode;
         await LocalStorage.SetAsync("rea_theme", _isDarkMode ? "dark" : "light");
+        await ThemeChanged.InvokeAsync(_isDarkMode);
         await ApplyThemeAsync(_isDarkMode);
     }
 
     private async Task ApplyThemeAsync(bool darkMode)
     {
         await JS.InvokeVoidAsync("reaTheme.apply", darkMode ? "dark" : "light");
+    }
+
+    private async Task ApplySidebarLayoutAsync(bool collapsed)
+    {
+        await JS.InvokeVoidAsync("reaLayout.setSidebarCollapsed", collapsed);
     }
 
     private void IrAPerfil()        { _modalConfig = false; Navigation.NavigateTo("/perfil"); }

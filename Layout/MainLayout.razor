@@ -1,7 +1,7 @@
 @inherits LayoutComponentBase
 
 <div class="@LayoutClass">
-    <Sidebar CollapsedChanged="OnSidebarCollapsedChanged" />
+    <Sidebar CollapsedChanged="OnSidebarCollapsedChanged" ThemeChanged="OnThemeChanged" />
     <TopBar />
     <main class="main-content page-enter">
         @Body
@@ -10,13 +10,34 @@
 
 @code {
     private bool _sidebarCollapsed;
+    private bool _darkTheme;
 
-    private string LayoutClass => _sidebarCollapsed
-        ? "app-layout sidebar-collapsed"
-        : "app-layout";
+    private string LayoutClass
+    {
+        get
+        {
+            var classes = "app-layout";
+            if (_sidebarCollapsed)
+            {
+                classes += " sidebar-collapsed";
+            }
+
+            if (_darkTheme)
+            {
+                classes += " theme-dark";
+            }
+
+            return classes;
+        }
+    }
 
     private void OnSidebarCollapsedChanged(bool collapsed)
     {
         _sidebarCollapsed = collapsed;
+    }
+
+    private void OnThemeChanged(bool darkTheme)
+    {
+        _darkTheme = darkTheme;
     }
 }
