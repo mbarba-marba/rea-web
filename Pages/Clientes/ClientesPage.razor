@@ -26,7 +26,7 @@
 
     <ErrorBanner Message="@_error" OnDismiss="() => _error = null" />
 
-    <div class="glass-card" style="margin-bottom:16px;padding:18px 20px;background:rgba(255,255,255,0.84);">
+    <div class="glass-card" style="margin-bottom:16px;padding:18px 20px;background:color-mix(in srgb, var(--glass-bg-primary) 82%, var(--bg-base) 18%);">
         <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">Buscar cliente</div>
         <div style="display:grid;grid-template-columns:minmax(280px,1fr) 220px auto;gap:12px;align-items:center;">
             <input type="text"
@@ -48,13 +48,13 @@
 
     @if (_cargando)
     {
-        <div class="glass-card" style="text-align:center;padding:56px;background:rgba(255,255,255,0.84);">
+        <div class="glass-card" style="text-align:center;padding:56px;background:color-mix(in srgb, var(--glass-bg-primary) 82%, var(--bg-base) 18%);">
             <span style="color:var(--text-secondary);">Cargando clientes...</span>
         </div>
     }
     else if (_clientes.Count == 0)
     {
-        <div class="glass-card empty-state" style="padding:56px 32px;background:rgba(255,255,255,0.84);">
+        <div class="glass-card empty-state" style="padding:56px 32px;background:color-mix(in srgb, var(--glass-bg-primary) 82%, var(--bg-base) 18%);">
             <LucideIcon Name="users" Size="44" />
             <p class="empty-state-heading">No hay clientes para mostrar</p>
             <p class="empty-state-body">Ajusta los filtros o registra un cliente nuevo para comenzar.</p>
@@ -62,10 +62,10 @@
     }
     else
     {
-        <div class="glass-card" style="padding:0;overflow:hidden;background:rgba(255,255,255,0.84);">
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border-subtle);background:rgba(255,255,255,0.94);">
+        <div class="glass-card" style="padding:0;overflow:hidden;background:color-mix(in srgb, var(--glass-bg-primary) 84%, var(--bg-base) 16%);">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border-subtle);background:color-mix(in srgb, var(--glass-bg-primary) 72%, var(--bg-base) 28%);">
                 <span style="font-size:12px;color:var(--text-secondary);text-transform:uppercase;">Listado</span>
-                <span style="font-size:13px;color:var(--text-muted);">@_clientes.Count clientes</span>
+                <span style="font-size:13px;color:var(--text-secondary);">@_clientes.Count clientes</span>
             </div>
             <div style="overflow-x:auto;">
                 <table class="data-table">
