@@ -1,6 +1,6 @@
 @inject NavigationManager Navigation
 
-<header class="topbar">
+<header class="topbar" style="@TopBarStyle">
     <div class="topbar-search">
         <div style="position:relative;">
             <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);display:flex;">
@@ -25,6 +25,12 @@
 </header>
 
 @code {
+    [Parameter] public bool SidebarCollapsed { get; set; }
+
     private string searchText = string.Empty;
     private string userInitials = "AU";
+
+    private string TopBarStyle => SidebarCollapsed
+        ? "left:64px;"
+        : "left:256px;";
 }

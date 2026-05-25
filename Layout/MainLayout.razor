@@ -2,7 +2,7 @@
 
 <div class="@LayoutClass">
     <Sidebar CollapsedChanged="OnSidebarCollapsedChanged" ThemeChanged="OnThemeChanged" />
-    <TopBar />
+    <TopBar SidebarCollapsed="_sidebarCollapsed" />
     <main class="main-content page-enter">
         @Body
     </main>
