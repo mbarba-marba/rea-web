@@ -1003,3 +1003,56 @@ body:has(aside.w-16) nav button[title]:hover::before {
   background: var(--bg-base);
   transition: margin-left 280ms cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* === Dark Theme Overrides === */
+
+body[data-theme="dark"] .card,
+body[data-theme="dark"] .modal-container,
+body[data-theme="dark"] .toast,
+body[data-theme="dark"] .error-banner,
+body[data-theme="dark"] .login-card {
+  background: var(--glass-bg-primary);
+  border-color: var(--glass-border);
+}
+
+body[data-theme="dark"] .topbar,
+body[data-theme="dark"] .sidebar {
+  background: var(--glass-bg-secondary);
+  border-color: var(--glass-border);
+}
+
+body[data-theme="dark"] .input-field,
+body[data-theme="dark"] .select-field {
+  background: rgba(15, 23, 32, 0.62);
+  border-color: rgba(148, 163, 184, 0.32);
+  color: var(--text-primary);
+}
+
+body[data-theme="dark"] .input-field::placeholder {
+  color: var(--text-muted);
+}
+
+body[data-theme="dark"] .btn-secondary {
+  background: rgba(15, 23, 32, 0.62);
+  border-color: rgba(148, 163, 184, 0.32);
+  color: var(--text-primary);
+}
+
+body[data-theme="dark"] .btn-secondary:hover {
+  background: rgba(30, 41, 59, 0.78);
+}
+
+body[data-theme="dark"] .data-table th,
+body[data-theme="dark"] .data-table td,
+body[data-theme="dark"] .paso-nombre,
+body[data-theme="dark"] .modal-title {
+  color: var(--text-primary);
+}
+
+body[data-theme="dark"] .data-table tbody tr:hover,
+body[data-theme="dark"] .paso-row:hover,
+body[data-theme="dark"] .nav-item:hover,
+body[data-theme="dark"] .config-option:hover,
+body[data-theme="dark"] .btn-ghost:hover {
+  background: rgba(56, 182, 207, 0.16);
+}

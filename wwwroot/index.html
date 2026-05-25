@@ -27,6 +27,26 @@
         }
       }
     </script>
+    <script>
+      (function () {
+        var savedTheme = localStorage.getItem('rea_theme');
+        if (savedTheme === 'dark') {
+          document.addEventListener('DOMContentLoaded', function () {
+            document.body.setAttribute('data-theme', 'dark');
+          });
+        }
+      })();
+
+      window.reaTheme = {
+        apply: function (mode) {
+          if (mode === 'dark') {
+            document.body.setAttribute('data-theme', 'dark');
+            return;
+          }
+          document.body.removeAttribute('data-theme');
+        }
+      };
+    </script>
     <link rel="stylesheet" href="css/app.css" />
     <link rel="stylesheet" href="css/glassmorphism.css" />
     <link rel="stylesheet" href="css/typography.css" />

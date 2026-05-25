@@ -4,6 +4,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject AuthService AuthService
 @inject ILocalStorageService LocalStorage
+@inject IJSRuntime JS
 
 @code {
     [Parameter] public EventCallback<bool> CollapsedChanged { get; set; }
@@ -150,6 +151,13 @@
 
             @* Options *@
             <div class="p-3 flex flex-col gap-0.5">
+                <button @onclick="ToggleTheme"
+                        class="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-gray-600
+                               hover:bg-[#076280]/[0.06] hover:text-[#076280] transition-colors
+                               border-0 bg-transparent outline-none cursor-pointer text-left">
+                    <LucideIcon Name="@(_isDarkMode ? "sun" : "moon")" Size="16" />
+                    <span>@(_isDarkMode ? "Modo claro" : "Modo oscuro")</span>
+                </button>
                 <button @onclick="IrAPerfil"
                         class="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-gray-600
                                hover:bg-[#076280]/[0.06] hover:text-[#076280] transition-colors
@@ -184,6 +192,7 @@
 @code {
     private bool _collapsed;
     private bool _modalConfig;
+    private bool _isDarkMode;
     private string _userName = "";
     private string _userEmail = "";
     private string _userInitial = "U";
@@ -215,6 +224,10 @@
         _collapsed = saved == "true";
         await CollapsedChanged.InvokeAsync(_collapsed);
 
+        var savedTheme = await LocalStorage.GetAsync("rea_theme");
+        _isDarkMode = savedTheme == "dark";
+        await ApplyThemeAsync(_isDarkMode);
+
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         if (user.Identity?.IsAuthenticated == true)
@@ -236,6 +249,18 @@
 
     private void AbrirConfig() => _modalConfig = true;
     private void CerrarConfig() => _modalConfig = false;
+
+    private async Task ToggleTheme()
+    {
+        _isDarkMode = !_isDarkMode;
+        await LocalStorage.SetAsync("rea_theme", _isDarkMode ? "dark" : "light");
+        await ApplyThemeAsync(_isDarkMode);
+    }
+
+    private async Task ApplyThemeAsync(bool darkMode)
+    {
+        await JS.InvokeVoidAsync("reaTheme.apply", darkMode ? "dark" : "light");
+    }
 
     private void IrAPerfil()        { _modalConfig = false; Navigation.NavigateTo("/perfil"); }
     private void IrAPerfilPassword() { _modalConfig = false; Navigation.NavigateTo("/perfil"); }
