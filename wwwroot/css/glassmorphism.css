@@ -10,6 +10,23 @@
   border-radius: var(--radius-lg);
 }
 
+/* Base utility surfaces used across pages */
+.glass-card {
+  background: var(--glass-bg-primary);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-low);
+}
+
+.glass-input {
+  background: color-mix(in srgb, var(--glass-bg-primary) 86%, white 14%);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+}
+
 /* Elevaciones */
 .glass-elevation-0 {
   /* Sin glass — fondo base */
