@@ -67,6 +67,13 @@
                 <span class="nav-item-label">Usuarios</span>
             </NavLink>
         </AuthorizeView>
+
+        <AuthorizeView Roles="admin">
+            <NavLink href="/asignaciones" Match="NavLinkMatch.Prefix" class="nav-item" title="Asignaciones">
+                <span class="nav-item-icon"><LucideIcon Name="link" /></span>
+                <span class="nav-item-label">Asignaciones</span>
+            </NavLink>
+        </AuthorizeView>
     </nav>
 
     <div class="sidebar-footer">

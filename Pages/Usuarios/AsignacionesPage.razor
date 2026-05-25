@@ -1,0 +1,273 @@
+@page "/asignaciones"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "admin")]
+@inject HttpClient Http
+
+<PageHeader Title="Asignaciones de Clientes" Subtitle="Asigna clientes a auxiliares contables" />
+
+@if (_mensaje != null)
+{
+    <div class="alert-banner alert-@(_mensajeError ? "danger" : "success")" style="margin-bottom:16px;">
+        @_mensaje
+        <button @onclick="() => _mensaje = null" style="background:none;border:none;cursor:pointer;float:right;">✕</button>
+    </div>
+}
+
+<div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;">
+    <input class="glass-input" style="height:36px;max-width:280px;"
+           placeholder="Buscar cliente..."
+           @bind="_busqueda" @bind:event="oninput" />
+    <select class="glass-input" style="height:36px;padding:0 10px;width:180px;" @onchange="FiltrarAuxiliar">
+        <option value="">Todos los auxiliares</option>
+        @foreach (var a in _auxiliares)
+        {
+            <option value="@a.UsuarioId">@a.Nombre @a.Apellidos</option>
+        }
+    </select>
+</div>
+
+@if (_cargando)
+{
+    <SkeletonLoader />
+}
+else if (_clientesFiltrados.Count == 0)
+{
+    <div class="glass-card" style="text-align:center;padding:40px;">
+        <LucideIcon Name="users" Size="40" />
+        <p style="margin-top:12px;color:var(--text-secondary);">No hay clientes que coincidan</p>
+    </div>
+}
+else
+{
+    <div class="glass-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>RFC</th>
+                    <th>Razón Social</th>
+                    <th>Auxiliares Asignados</th>
+                    <th style="text-align:right;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in _clientesFiltrados)
+                {
+                    <tr>
+                        <td style="font-family:var(--font-mono);font-size:12px;">@c.Rfc</td>
+                        <td style="font-weight:500;">@c.RazonSocial</td>
+                        <td>
+                            <div style="display:flex;flex-wrap:wrap;gap:4px;">
+                                @foreach (var a in c.Asignaciones)
+                                {
+                                    <span style="display:inline-flex;align-items:center;gap:4px;background:rgba(7,98,128,0.12);color:var(--accent);border-radius:6px;padding:2px 8px;font-size:12px;font-weight:500;">
+                                        @a.AuxiliarNombre
+                                        <button @onclick="() => Remover(c, a)"
+                                                style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0;line-height:1;font-size:14px;"
+                                                title="Remover asignación">×</button>
+                                    </span>
+                                }
+                                @if (c.Asignaciones.Count == 0)
+                                {
+                                    <span style="color:var(--text-muted);font-size:12px;">Sin asignar</span>
+                                }
+                            </div>
+                        </td>
+                        <td>
+                            <div style="display:flex;justify-content:flex-end;">
+                                <button class="btn-icon" title="Asignar auxiliar" @onclick="() => AbrirModal(c)">
+                                    <LucideIcon Name="plus" Size="15" />
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@* Modal Asignar Auxiliar *@
+@if (_modalAsignar && _clienteSeleccionado != null)
+{
+    <div class="modal-backdrop" @onclick="CerrarModal">
+        <div class="modal-container" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Asignar Auxiliar</h3>
+                <button class="btn-icon" @onclick="CerrarModal"><LucideIcon Name="x" Size="16" /></button>
+            </div>
+            <div class="modal-body">
+                <p style="color:var(--text-secondary);margin-bottom:16px;">
+                    Cliente: <strong>@_clienteSeleccionado.RazonSocial</strong>
+                </p>
+                <div class="form-group">
+                    <label>Auxiliar</label>
+                    <select class="glass-input" @bind="_auxiliarSeleccionadoId">
+                        <option value="0">— Seleccionar —</option>
+                        @foreach (var a in _auxiliaresDisponibles)
+                        {
+                            <option value="@a.UsuarioId">@a.Nombre @a.Apellidos</option>
+                        }
+                    </select>
+                </div>
+                @if (_errorModal != null)
+                {
+                    <p style="color:var(--danger);font-size:13px;margin-top:8px;">@_errorModal</p>
+                }
+            </div>
+            <div class="modal-footer">
+                <GlassButton Variant="ghost" OnClick="CerrarModal">Cancelar</GlassButton>
+                <GlassButton Variant="primary" OnClick="Asignar" Disabled="@(_procesando || _auxiliarSeleccionadoId == 0)">
+                    @(_procesando ? "Asignando..." : "Asignar")
+                </GlassButton>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ClienteItem> _clientes = new();
+    private List<AuxiliarItem> _auxiliares = new();
+    private bool _cargando = true;
+    private string? _mensaje;
+    private bool _mensajeError;
+    private string _busqueda = "";
+    private long _filtroAuxiliar;
+
+    private bool _modalAsignar;
+    private ClienteItem? _clienteSeleccionado;
+    private long _auxiliarSeleccionadoId;
+    private string? _errorModal;
+    private bool _procesando;
+
+    private List<ClienteItem> _clientesFiltrados =>
+        _clientes.Where(c =>
+            (string.IsNullOrEmpty(_busqueda) ||
+             c.RazonSocial.Contains(_busqueda, StringComparison.OrdinalIgnoreCase) ||
+             c.Rfc.Contains(_busqueda, StringComparison.OrdinalIgnoreCase)) &&
+            (_filtroAuxiliar == 0 ||
+             c.Asignaciones.Any(a => a.AuxiliarId == _filtroAuxiliar))
+        ).ToList();
+
+    private List<AuxiliarItem> _auxiliaresDisponibles =>
+        _clienteSeleccionado == null ? _auxiliares :
+        _auxiliares.Where(a => _clienteSeleccionado.Asignaciones.All(x => x.AuxiliarId != a.UsuarioId)).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.WhenAll(CargarClientes(), CargarAuxiliares());
+        _cargando = false;
+    }
+
+    private async Task CargarClientes()
+    {
+        try
+        {
+            var r = await Http.GetFromJsonAsync<ApiResponse<List<ClienteItem>>>("api/v1/clientes?limit=500");
+            if (r?.Ok == true) _clientes = r.Data ?? new();
+        }
+        catch { }
+    }
+
+    private async Task CargarAuxiliares()
+    {
+        try
+        {
+            var r = await Http.GetFromJsonAsync<ApiResponse<List<AuxiliarItem>>>("api/v1/usuarios?rol=auxiliar&activo=true&limit=100");
+            if (r?.Ok == true) _auxiliares = r.Data ?? new();
+        }
+        catch { }
+    }
+
+    private void FiltrarAuxiliar(ChangeEventArgs e)
+    {
+        long.TryParse(e.Value?.ToString(), out _filtroAuxiliar);
+    }
+
+    private void AbrirModal(ClienteItem c)
+    {
+        _clienteSeleccionado = c;
+        _auxiliarSeleccionadoId = 0;
+        _errorModal = null;
+        _modalAsignar = true;
+    }
+
+    private void CerrarModal()
+    {
+        _modalAsignar = false;
+        _clienteSeleccionado = null;
+        _errorModal = null;
+    }
+
+    private async Task Asignar()
+    {
+        if (_clienteSeleccionado == null || _auxiliarSeleccionadoId == 0) return;
+        _procesando = true;
+        _errorModal = null;
+        try
+        {
+            var r = await Http.PostAsJsonAsync(
+                $"api/v1/clientes/{_clienteSeleccionado.ClienteId}/asignaciones",
+                new { auxiliarId = _auxiliarSeleccionadoId });
+
+            if (r.IsSuccessStatusCode)
+            {
+                var result = await r.Content.ReadFromJsonAsync<ApiResponse<AsignacionItem>>();
+                if (result?.Ok == true && result.Data != null)
+                {
+                    _clienteSeleccionado.Asignaciones.Add(result.Data);
+                    _mensaje = $"Auxiliar asignado a {_clienteSeleccionado.RazonSocial}";
+                    _mensajeError = false;
+                    CerrarModal();
+                }
+            }
+            else if (r.StatusCode == System.Net.HttpStatusCode.Conflict)
+            {
+                _errorModal = "Este auxiliar ya está asignado a este cliente";
+            }
+            else
+            {
+                _errorModal = "Error al asignar";
+            }
+        }
+        catch (Exception ex) { _errorModal = ex.Message; }
+        _procesando = false;
+    }
+
+    private async Task Remover(ClienteItem cliente, AsignacionItem asignacion)
+    {
+        try
+        {
+            var r = await Http.DeleteAsync(
+                $"api/v1/clientes/{cliente.ClienteId}/asignaciones/{asignacion.AsignacionId}");
+            if (r.IsSuccessStatusCode)
+            {
+                cliente.Asignaciones.Remove(asignacion);
+                _mensaje = "Asignación removida";
+                _mensajeError = false;
+            }
+        }
+        catch { }
+    }
+
+    private class ClienteItem
+    {
+        public long ClienteId { get; set; }
+        public string Rfc { get; set; } = "";
+        public string RazonSocial { get; set; } = "";
+        public List<AsignacionItem> Asignaciones { get; set; } = new();
+    }
+
+    private class AuxiliarItem
+    {
+        public long UsuarioId { get; set; }
+        public string Nombre { get; set; } = "";
+        public string Apellidos { get; set; } = "";
+    }
+
+    private class AsignacionItem
+    {
+        public long AsignacionId { get; set; }
+        public long AuxiliarId { get; set; }
+        public string AuxiliarNombre { get; set; } = "";
+    }
+}

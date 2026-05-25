@@ -1,0 +1,21 @@
+<span class="badge @GetClass()">@Label</span>
+
+@code {
+    [Parameter] public string Rol { get; set; } = "";
+
+    private string Label => Rol.ToLower() switch
+    {
+        "admin"    => "Administrador",
+        "auxiliar" => "Auxiliar",
+        "cliente"  => "Cliente",
+        _          => Rol
+    };
+
+    private string GetClass() => Rol.ToLower() switch
+    {
+        "admin"    => "badge-danger",
+        "auxiliar" => "badge-warning",
+        "cliente"  => "badge-muted",
+        _          => "badge-muted"
+    };
+}
