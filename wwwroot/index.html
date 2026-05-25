@@ -135,6 +135,7 @@
           setSidebarCollapsed: function (collapsed) {
             localStorage.setItem('rea_sidebar_collapsed', collapsed ? 'true' : 'false');
             applyLayout(collapsed);
+            applyTheme(localStorage.getItem('rea_theme') === 'dark' ? 'dark' : 'light');
           }
         };
 

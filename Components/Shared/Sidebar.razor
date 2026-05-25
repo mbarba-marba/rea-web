@@ -272,11 +272,8 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender)
-        {
-            return;
-        }
-
+        // Re-apply chrome state after every render so recreated DOM nodes
+        // (like collapsed/expanded sidebar) keep the active theme/layout.
         await ApplySidebarLayoutAsync(_collapsed);
         await ApplyThemeAsync(_isDarkMode);
     }
