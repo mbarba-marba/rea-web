@@ -33,28 +33,28 @@
     <nav class="flex-1 flex flex-col gap-0.5 p-2 overflow-y-auto overflow-x-hidden">
 
         <NavLink href="/" Match="NavLinkMatch.All" title="Dashboard"
-                 class="@NavCls [&.active]:bg-[#076280]/10 [&.active]:text-[#076280] [&.active]:font-medium [&.active]:border-l-2 [&.active]:border-[#076280] [&.active]:pl-[calc(0.5rem-2px)]">
+                 class="@NavCls">
             <span class="@IconCls"><LucideIcon Name="layout-dashboard" Size="18" /></span>
             <span class="@LabelCls">Dashboard</span>
         </NavLink>
 
         <AuthorizeView Roles="admin,auxiliar">
             <NavLink href="/clientes" Match="NavLinkMatch.Prefix" title="Clientes"
-                     class="@NavCls [&.active]:bg-[#076280]/10 [&.active]:text-[#076280] [&.active]:font-medium [&.active]:border-l-2 [&.active]:border-[#076280] [&.active]:pl-[calc(0.5rem-2px)]">
+                     class="@NavCls">
                 <span class="@IconCls"><LucideIcon Name="users" Size="18" /></span>
                 <span class="@LabelCls">Clientes</span>
             </NavLink>
         </AuthorizeView>
 
         <NavLink href="/checklists" Match="NavLinkMatch.Prefix" title="Libro de Trabajo"
-                 class="@NavCls [&.active]:bg-[#076280]/10 [&.active]:text-[#076280] [&.active]:font-medium [&.active]:border-l-2 [&.active]:border-[#076280] [&.active]:pl-[calc(0.5rem-2px)]">
+                 class="@NavCls">
             <span class="@IconCls"><LucideIcon Name="list-checks" Size="18" /></span>
             <span class="@LabelCls">Libro de Trabajo</span>
         </NavLink>
 
         <AuthorizeView Roles="admin,auxiliar">
             <NavLink href="/xml" Match="NavLinkMatch.Prefix" title="XML &amp; Facturas"
-                     class="@NavCls [&.active]:bg-[#076280]/10 [&.active]:text-[#076280] [&.active]:font-medium [&.active]:border-l-2 [&.active]:border-[#076280] [&.active]:pl-[calc(0.5rem-2px)]">
+                     class="@NavCls">
                 <span class="@IconCls"><LucideIcon Name="file-archive" Size="18" /></span>
                 <span class="@LabelCls">XML &amp; Facturas</span>
             </NavLink>
@@ -62,40 +62,40 @@
 
         <AuthorizeView Roles="admin,auxiliar">
             <NavLink href="/calculos" Match="NavLinkMatch.Prefix" title="Cálculos ISR/IVA"
-                     class="@NavCls [&.active]:bg-[#076280]/10 [&.active]:text-[#076280] [&.active]:font-medium [&.active]:border-l-2 [&.active]:border-[#076280] [&.active]:pl-[calc(0.5rem-2px)]">
+                     class="@NavCls">
                 <span class="@IconCls"><LucideIcon Name="calculator" Size="18" /></span>
                 <span class="@LabelCls">Cálculos ISR/IVA</span>
             </NavLink>
         </AuthorizeView>
 
         <NavLink href="/reportes" Match="NavLinkMatch.Prefix" title="Reportes"
-                 class="@NavCls [&.active]:bg-[#076280]/10 [&.active]:text-[#076280] [&.active]:font-medium [&.active]:border-l-2 [&.active]:border-[#076280] [&.active]:pl-[calc(0.5rem-2px)]">
+                 class="@NavCls">
             <span class="@IconCls"><LucideIcon Name="scroll-text" Size="18" /></span>
             <span class="@LabelCls">Reportes</span>
         </NavLink>
 
         <AuthorizeView Roles="admin">
             <div class="mt-2 mb-1 px-2">
-                <span class="@(_collapsed ? "hidden" : "block") text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                <span class="@(_collapsed ? "hidden" : "block text-[10px] font-semibold uppercase tracking-widest text-gray-400")">
                     Admin
                 </span>
-                <div class="@(_collapsed ? "block" : "hidden") h-px bg-black/[0.06] mx-1"></div>
+                <div class="@(_collapsed ? "block h-px bg-black/[0.06] mx-1" : "hidden")"></div>
             </div>
 
             <NavLink href="/periodos" Match="NavLinkMatch.Prefix" title="Periodos Fiscales"
-                     class="@NavCls [&.active]:bg-[#076280]/10 [&.active]:text-[#076280] [&.active]:font-medium [&.active]:border-l-2 [&.active]:border-[#076280] [&.active]:pl-[calc(0.5rem-2px)]">
+                     class="@NavCls">
                 <span class="@IconCls"><LucideIcon Name="calendar-range" Size="18" /></span>
                 <span class="@LabelCls">Periodos Fiscales</span>
             </NavLink>
 
             <NavLink href="/usuarios" Match="NavLinkMatch.Prefix" title="Usuarios"
-                     class="@NavCls [&.active]:bg-[#076280]/10 [&.active]:text-[#076280] [&.active]:font-medium [&.active]:border-l-2 [&.active]:border-[#076280] [&.active]:pl-[calc(0.5rem-2px)]">
+                     class="@NavCls">
                 <span class="@IconCls"><LucideIcon Name="shield-check" Size="18" /></span>
                 <span class="@LabelCls">Usuarios</span>
             </NavLink>
 
             <NavLink href="/asignaciones" Match="NavLinkMatch.Prefix" title="Asignaciones"
-                     class="@NavCls [&.active]:bg-[#076280]/10 [&.active]:text-[#076280] [&.active]:font-medium [&.active]:border-l-2 [&.active]:border-[#076280] [&.active]:pl-[calc(0.5rem-2px)]">
+                     class="@NavCls">
                 <span class="@IconCls"><LucideIcon Name="link" Size="18" /></span>
                 <span class="@LabelCls">Asignaciones</span>
             </NavLink>
@@ -106,7 +106,7 @@
     @* Footer *@
     <div class="p-2 border-t border-black/[0.06]">
         <button @onclick="AbrirConfig" title="Configuración"
-                class="@NavCls border-0 bg-transparent outline-none w-full text-left">
+                class="@BtnNavCls">
             <span class="@IconCls"><LucideIcon Name="settings" Size="18" /></span>
             <span class="@LabelCls">Configuración</span>
         </button>
@@ -191,8 +191,8 @@
 
     // Computed class strings — defined once, reused across every nav item
     private string NavCls => _collapsed
-        ? "flex items-center justify-center h-10 w-10 rounded-lg text-gray-500 no-underline transition-colors duration-150 hover:bg-[#076280]/[0.06] hover:text-[#076280] cursor-pointer overflow-hidden"
-        : "flex items-center gap-2.5 h-10 px-2 rounded-lg text-sm text-gray-500 no-underline transition-colors duration-150 hover:bg-[#076280]/[0.06] hover:text-[#076280] cursor-pointer w-full overflow-hidden";
+        ? "flex items-center justify-center h-10 w-10 rounded-lg text-gray-500 no-underline transition-colors duration-150 hover:bg-[#076280]/[0.06] hover:text-[#076280] cursor-pointer overflow-hidden [&.active]:bg-[#076280]/10 [&.active]:text-[#076280] [&.active]:font-medium"
+        : "flex items-center gap-2.5 h-10 px-2 rounded-lg text-sm text-gray-500 no-underline transition-colors duration-150 hover:bg-[#076280]/[0.06] hover:text-[#076280] cursor-pointer w-full overflow-hidden [&.active]:bg-[#076280]/10 [&.active]:text-[#076280] [&.active]:font-medium [&.active]:border-l-2 [&.active]:border-[#076280] [&.active]:pl-[calc(0.5rem-2px)]";
 
     private string IconCls => _collapsed
         ? "w-5 h-5 flex items-center justify-center flex-shrink-0"
@@ -201,6 +201,11 @@
     private string LabelCls => _collapsed
         ? "hidden"
         : "truncate text-[13.5px]";
+
+    private string BtnNavCls => (_collapsed
+        ? "flex items-center justify-center h-10 w-10 rounded-lg text-gray-500 transition-colors duration-150 hover:bg-[#076280]/[0.06] hover:text-[#076280] cursor-pointer overflow-hidden"
+        : "flex items-center gap-2.5 h-10 px-2 rounded-lg text-sm text-gray-500 transition-colors duration-150 hover:bg-[#076280]/[0.06] hover:text-[#076280] cursor-pointer w-full overflow-hidden")
+        + " border-0 bg-transparent outline-none text-left";
 
     protected override async Task OnInitializedAsync()
     {
