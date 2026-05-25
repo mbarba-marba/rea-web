@@ -30,6 +30,18 @@
   border-color: var(--accent-light);
 }
 
+/* Reusable surface: dashboard-like rounded panel, theme-aware */
+.surface-panel {
+  background: color-mix(in srgb, var(--glass-bg-primary) 82%, var(--bg-base) 18%);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+}
+
+.surface-panel-header {
+  background: color-mix(in srgb, var(--glass-bg-primary) 72%, var(--bg-base) 28%);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
 /* === Tabla de datos === */
 
 .data-table {
