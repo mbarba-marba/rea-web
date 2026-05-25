@@ -7,3 +7,4 @@ obj/
 *.DotSettings.user
 node_modules/
 wwwroot/css/app.css.gz
+wwwroot/css/tailwind.css
