@@ -1,12 +1,14 @@
 @page "/"
 @page "/dashboard"
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @using REA.Web.Models
 @using REA.Web.Services
 @attribute [Authorize]
 @inject DashboardService DashboardService
 @inject ClienteService ClienteService
 @inject HttpClient Http
+@inject AuthenticationStateProvider AuthStateProvider
 
 <div class="page-container animate-fade-in">
     <div class="page-header">
@@ -107,21 +109,26 @@
     private List<EstadoClienteDto> _estadosClientes = new();
     private bool _cargando = true;
     private string? _error;
+    private bool _esAdmin;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            var dashTask = DashboardService.ObtenerResumenAsync();
-            var clientesTask = ClienteService.ListarAsync(page: 1, limit: 5);
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            _esAdmin = authState.User.IsInRole("admin");
 
+            var dashTask = DashboardService.ObtenerResumenAsync();
             var dashResult = await dashTask;
             if (dashResult?.Ok == true)
                 _dashboard = dashResult.Data;
 
-            var clientesResult = await clientesTask;
-            if (clientesResult?.Ok == true)
-                _clientes = clientesResult.Data ?? new();
+            if (_esAdmin)
+            {
+                var clientesResult = await ClienteService.ListarAsync(page: 1, limit: 5);
+                if (clientesResult?.Ok == true)
+                    _clientes = clientesResult.Data ?? new();
+            }
 
             try
             {
