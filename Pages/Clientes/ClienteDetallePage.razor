@@ -1,71 +1,102 @@
 @page "/clientes/{Id:long}"
 @using Microsoft.AspNetCore.Authorization
+@using REA.Web.Components.Shared
 @using REA.Web.Models
 @using REA.Web.Services
 @attribute [Authorize(Roles = "admin,auxiliar")]
 @inject ClienteService ClienteService
 @inject NavigationManager Navigation
 
-<PageHeader Title="@(_cliente?.RazonSocial ?? "Cliente")" Subtitle="@(_cliente?.Rfc)" />
-
-@if (_error != null)
-{
-    <ErrorBanner Message="@_error" OnDismiss="() => _error = null" />
-}
-
-@if (_cargando)
-{
-    <SkeletonLoader />
-}
-else if (_cliente != null)
-{
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="glass-card" style="padding:20px;">
-            <h3 style="margin-bottom:12px;">Información General</h3>
-            <dl class="detail-list">
-                <dt>RFC</dt><dd class="mono">@_cliente.Rfc</dd>
-                <dt>Razón Social</dt><dd>@_cliente.RazonSocial</dd>
-                <dt>Nombre Comercial</dt><dd>@_cliente.NombreComercial</dd>
-                <dt>Clasificación</dt><dd><BadgeCliente Clasificacion="@_cliente.Clasificacion" /></dd>
-                <dt>Régimen Fiscal</dt><dd>@_cliente.RegimenFiscal</dd>
-                <dt>Actividad</dt><dd>@_cliente.Actividad (@_cliente.PorcentajeAct%)</dd>
-            </dl>
+<div class="page-container animate-fade-in">
+    <div class="page-header" style="margin-bottom:16px;">
+        <div class="page-header-left">
+            <h1>@(_cliente?.RazonSocial ?? "Cliente")</h1>
+            <Breadcrumb Items="@_breadcrumb" />
+            <p class="body-small text-muted" style="margin-top:6px;">Detalle operativo del cliente</p>
         </div>
-
-        <div class="glass-card" style="padding:20px;">
-            <h3 style="margin-bottom:12px;">Contacto</h3>
-            <dl class="detail-list">
-                <dt>Email</dt><dd>@_cliente.Email</dd>
-                <dt>Teléfono</dt><dd>@_cliente.Telefono</dd>
-                <dt>Dirección</dt><dd>@_cliente.Direccion</dd>
-            </dl>
-
-            <h3 style="margin:16px 0 12px;">E-Firma</h3>
-            <dl class="detail-list">
-                <dt>Vigencia Inicio</dt><dd>@(_cliente.EFirmaVigenciaInicio?.ToString("dd/MM/yyyy") ?? "—")</dd>
-                <dt>Vigencia Fin</dt><dd>@(_cliente.EFirmaVigenciaFin?.ToString("dd/MM/yyyy") ?? "—")</dd>
-                <dt>Estatus</dt><dd><BadgeEstado Estado="@(_cliente.EstatusEfirma?.ToLower() ?? "pendiente")" /></dd>
-            </dl>
-        </div>
-
-        <div class="glass-card" style="padding:20px;grid-column:1/-1;">
-            <h3 style="margin-bottom:12px;">Auxiliares Asignados</h3>
-            @if (_cliente.Asignaciones.Count == 0)
-            {
-                <p style="color:var(--text-secondary);">Sin auxiliares asignados</p>
-            }
-            else
-            {
-                foreach (var a in _cliente.Asignaciones)
-                {
-                    <div style="padding:8px 12px;background:var(--surface-raised);border-radius:8px;margin-bottom:4px;">
-                        @a.AuxiliarNombre
-                    </div>
-                }
-            }
+        <div style="display:flex;gap:10px;align-items:center;">
+            <GlassButton Variant="secondary" OnClick="Volver">
+                <LucideIcon Name="arrow-left" Size="16" /> Volver
+            </GlassButton>
+            <GlassButton Variant="primary" OnClick="EditarActual">
+                <LucideIcon Name="pencil" Size="16" /> Editar
+            </GlassButton>
         </div>
     </div>
-}
+
+    <ErrorBanner Message="@_error" OnDismiss="() => _error = null" />
+
+    @if (_cargando)
+    {
+        <SkeletonLoader />
+    }
+    else if (_cliente != null)
+    {
+        <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;">
+            <div class="glass-card" style="padding:20px;">
+                <h3 style="margin-bottom:12px;">Informacion General</h3>
+                <dl class="detail-list">
+                    <dt>RFC</dt><dd class="mono">@_cliente.Rfc</dd>
+                    <dt>Razon Social</dt><dd>@_cliente.RazonSocial</dd>
+                    <dt>Nombre Comercial</dt><dd>@(string.IsNullOrWhiteSpace(_cliente.NombreComercial) ? "-" : _cliente.NombreComercial)</dd>
+                    <dt>Clasificacion</dt><dd><BadgeCliente Clasificacion="@_cliente.Clasificacion" /></dd>
+                    <dt>Regimen Fiscal</dt><dd>@(string.IsNullOrWhiteSpace(_cliente.RegimenFiscal) ? "-" : _cliente.RegimenFiscal)</dd>
+                    <dt>Actividad</dt><dd>@(string.IsNullOrWhiteSpace(_cliente.Actividad) ? "-" : _cliente.Actividad)</dd>
+                    <dt>% Actividad</dt><dd>@(_cliente.PorcentajeAct?.ToString("0.##") ?? "-")%</dd>
+                </dl>
+            </div>
+
+            <div class="glass-card" style="padding:20px;">
+                <h3 style="margin-bottom:12px;">Contacto y Estado</h3>
+                <dl class="detail-list">
+                    <dt>Email</dt><dd>@(string.IsNullOrWhiteSpace(_cliente.Email) ? "-" : _cliente.Email)</dd>
+                    <dt>Telefono</dt><dd>@(string.IsNullOrWhiteSpace(_cliente.Telefono) ? "-" : _cliente.Telefono)</dd>
+                    <dt>Direccion</dt><dd>@(string.IsNullOrWhiteSpace(_cliente.Direccion) ? "-" : _cliente.Direccion)</dd>
+                    <dt>Estatus E-Firma</dt><dd><BadgeEstado Estado="@(_cliente.EstatusEfirma?.ToLower() ?? "pendiente")" /></dd>
+                    <dt>Activo</dt>
+                    <dd>
+                        @if (_cliente.Activo)
+                        {
+                            <span class="badge badge-success">Activo</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-muted">Inactivo</span>
+                        }
+                    </dd>
+                </dl>
+            </div>
+
+            <div class="glass-card" style="padding:20px;">
+                <h3 style="margin-bottom:12px;">Vigencias</h3>
+                <dl class="detail-list">
+                    <dt>E-Firma Inicio</dt><dd>@FmtDate(_cliente.EFirmaVigenciaInicio)</dd>
+                    <dt>E-Firma Fin</dt><dd>@FmtDate(_cliente.EFirmaVigenciaFin)</dd>
+                    <dt>CIEE Inicio</dt><dd>@FmtDate(_cliente.CieeVigenciaInicio)</dd>
+                    <dt>CIEE Fin</dt><dd>@FmtDate(_cliente.CieeVigenciaFin)</dd>
+                    <dt>Alta</dt><dd>@_cliente.CreatedAt.ToString("dd/MM/yyyy HH:mm")</dd>
+                </dl>
+            </div>
+
+            <div class="glass-card" style="padding:20px;">
+                <h3 style="margin-bottom:12px;">Auxiliares Asignados</h3>
+                @if (_cliente.Asignaciones.Count == 0)
+                {
+                    <p style="color:var(--text-secondary);">Sin auxiliares asignados</p>
+                }
+                else
+                {
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                        @foreach (var a in _cliente.Asignaciones)
+                        {
+                            <span class="badge badge-accent">@a.AuxiliarNombre</span>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
 
 @code {
     [Parameter] public long Id { get; set; }
@@ -73,16 +104,32 @@ else if (_cliente != null)
     private ClienteDto? _cliente;
     private bool _cargando = true;
     private string? _error;
+    private List<BreadcrumbItem> _breadcrumb = new();
 
     protected override async Task OnInitializedAsync()
+    {
+        await Cargar();
+    }
+
+    private async Task Cargar()
     {
         try
         {
             var result = await ClienteService.ObtenerAsync(Id);
-            if (result?.Ok == true)
+            if (result?.Ok == true && result.Data != null)
+            {
                 _cliente = result.Data;
+                _breadcrumb = new()
+                {
+                    new() { Text = "Inicio", Url = "/" },
+                    new() { Text = "Clientes", Url = "/clientes" },
+                    new() { Text = _cliente.Rfc, Url = $"/clientes/{Id}" }
+                };
+            }
             else
-                _error = result?.Error?.Message;
+            {
+                _error = result?.Error?.Message ?? "No se pudo cargar el cliente";
+            }
         }
         catch (Exception ex)
         {
@@ -90,4 +137,8 @@ else if (_cliente != null)
         }
         _cargando = false;
     }
+
+    private static string FmtDate(DateOnly? date) => date?.ToString("dd/MM/yyyy") ?? "-";
+    private void Volver() => Navigation.NavigateTo("/clientes");
+    private void EditarActual() => Navigation.NavigateTo($"/clientes/{Id}/editar");
 }
