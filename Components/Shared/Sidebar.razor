@@ -3,63 +3,99 @@
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
 @inject AuthService AuthService
+@inject ILocalStorageService LocalStorage
 
-<aside class="sidebar">
+<aside class="sidebar @(_collapsed ? "sidebar--collapsed" : "")">
     <div class="sidebar-brand">
-        <img src="images/logo.svg" alt="REA" onerror="this.style.display='none'" />
-        <span style="font-weight:600;font-size:16px;color:var(--text-primary)">REA</span>
+        @if (!_collapsed)
+        {
+            <img src="images/logo.svg" alt="REA" onerror="this.style.display='none'" />
+            <span class="sidebar-brand-text">REA</span>
+        }
+        <button class="sidebar-toggle" @onclick="ToggleCollapse" title="@(_collapsed ? "Expandir menú" : "Colapsar menú")">
+            <LucideIcon Name="@(_collapsed ? "chevron-right" : "chevron-left")" Size="18" />
+        </button>
     </div>
 
     <nav class="sidebar-nav">
-        <NavLink href="/" Match="NavLinkMatch.All" class="nav-item">
+        <NavLink href="/" Match="NavLinkMatch.All" class="nav-item" title="Dashboard">
             <span class="nav-item-icon"><LucideIcon Name="layout-dashboard" /></span>
-            Dashboard
+            <span class="nav-item-label">Dashboard</span>
         </NavLink>
 
-        <NavLink href="/clientes" Match="NavLinkMatch.Prefix" class="nav-item">
-            <span class="nav-item-icon"><LucideIcon Name="users" /></span>
-            Clientes
-        </NavLink>
+        <AuthorizeView Roles="admin,auxiliar">
+            <NavLink href="/clientes" Match="NavLinkMatch.Prefix" class="nav-item" title="Clientes">
+                <span class="nav-item-icon"><LucideIcon Name="users" /></span>
+                <span class="nav-item-label">Clientes</span>
+            </NavLink>
+        </AuthorizeView>
 
-        <NavLink href="/checklists" Match="NavLinkMatch.Prefix" class="nav-item">
+        <NavLink href="/checklists" Match="NavLinkMatch.Prefix" class="nav-item" title="Libro de Trabajo">
             <span class="nav-item-icon"><LucideIcon Name="list-checks" /></span>
-            Checklist
+            <span class="nav-item-label">Libro de Trabajo</span>
         </NavLink>
 
-        <NavLink href="/xml" Match="NavLinkMatch.Prefix" class="nav-item">
-            <span class="nav-item-icon"><LucideIcon Name="file-archive" /></span>
-            XML
-        </NavLink>
+        <AuthorizeView Roles="admin,auxiliar">
+            <NavLink href="/xml" Match="NavLinkMatch.Prefix" class="nav-item" title="XML &amp; Facturas">
+                <span class="nav-item-icon"><LucideIcon Name="file-archive" /></span>
+                <span class="nav-item-label">XML &amp; Facturas</span>
+            </NavLink>
+        </AuthorizeView>
 
-        <NavLink href="/calculos" Match="NavLinkMatch.Prefix" class="nav-item">
-            <span class="nav-item-icon"><LucideIcon Name="shield-check" /></span>
-            Cálculos
-        </NavLink>
+        <AuthorizeView Roles="admin,auxiliar">
+            <NavLink href="/calculos" Match="NavLinkMatch.Prefix" class="nav-item" title="Cálculos ISR/IVA">
+                <span class="nav-item-icon"><LucideIcon Name="calculator" /></span>
+                <span class="nav-item-label">Cálculos ISR/IVA</span>
+            </NavLink>
+        </AuthorizeView>
 
-        <NavLink href="/reportes" Match="NavLinkMatch.Prefix" class="nav-item">
+        <NavLink href="/reportes" Match="NavLinkMatch.Prefix" class="nav-item" title="Reportes">
             <span class="nav-item-icon"><LucideIcon Name="scroll-text" /></span>
-            Reportes
+            <span class="nav-item-label">Reportes</span>
         </NavLink>
 
-        <NavLink href="/usuarios" Match="NavLinkMatch.Prefix" class="nav-item">
-            <span class="nav-item-icon"><LucideIcon Name="shield-check" /></span>
-            Usuarios
-        </NavLink>
+        <AuthorizeView Roles="admin">
+            <NavLink href="/periodos" Match="NavLinkMatch.Prefix" class="nav-item" title="Periodos Fiscales">
+                <span class="nav-item-icon"><LucideIcon Name="calendar-range" /></span>
+                <span class="nav-item-label">Periodos Fiscales</span>
+            </NavLink>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="admin">
+            <NavLink href="/usuarios" Match="NavLinkMatch.Prefix" class="nav-item" title="Usuarios">
+                <span class="nav-item-icon"><LucideIcon Name="shield-check" /></span>
+                <span class="nav-item-label">Usuarios</span>
+            </NavLink>
+        </AuthorizeView>
     </nav>
 
     <div class="sidebar-footer">
-        <NavLink href="/perfil" class="nav-item">
+        <NavLink href="/perfil" class="nav-item" title="Mi Perfil">
             <span class="nav-item-icon"><LucideIcon Name="settings" /></span>
-            Perfil
+            <span class="nav-item-label">Mi Perfil</span>
         </NavLink>
-        <button class="nav-item" style="width:100%;border:none;background:none;text-align:left;" @onclick="Logout">
+        <button class="nav-item sidebar-logout" @onclick="Logout" title="Cerrar sesión">
             <span class="nav-item-icon"><LucideIcon Name="log-out" /></span>
-            Cerrar sesión
+            <span class="nav-item-label">Cerrar sesión</span>
         </button>
     </div>
 </aside>
 
 @code {
+    private bool _collapsed;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var saved = await LocalStorage.GetAsync("rea_sidebar_collapsed");
+        _collapsed = saved == "true";
+    }
+
+    private async Task ToggleCollapse()
+    {
+        _collapsed = !_collapsed;
+        await LocalStorage.SetAsync("rea_sidebar_collapsed", _collapsed ? "true" : "false");
+    }
+
     private async Task Logout()
     {
         await AuthService.LogoutAsync();
