@@ -48,6 +48,7 @@ else
                     <th>Razón Social</th>
                     <th>Nombre Comercial</th>
                     <th>Clasificación</th>
+                    <th>Asignado a</th>
                     <th>E-Firma</th>
                     <th style="width:80px;"></th>
                 </tr>
@@ -60,6 +61,18 @@ else
                         <td>@c.RazonSocial</td>
                         <td>@c.NombreComercial</td>
                         <td><BadgeCliente Clasificacion="@c.Clasificacion" /></td>
+                        <td>
+                            @if (c.Asignaciones?.Count > 0)
+                            {
+                                <span style="color:var(--text-secondary);font-size:13px;">
+                                    @string.Join(", ", c.Asignaciones.Select(a => a.AuxiliarNombre))
+                                </span>
+                            }
+                            else
+                            {
+                                <span style="color:var(--text-muted);font-size:13px;">Sin asignar</span>
+                            }
+                        </td>
                         <td><BadgeEstado Estado="@(c.EstatusEfirma?.ToLower() ?? "pendiente")" /></td>
                         <td>
                             <button class="btn-ghost" @onclick:stopPropagation @onclick="() => Editar(c.ClienteId)">
