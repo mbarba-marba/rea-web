@@ -58,8 +58,8 @@
   --radius-lg: 16px;
 
   /* Sidebar */
-  --sidebar-width: 260px;
-  --sidebar-collapsed-width: 64px;
+  --sidebar-width: 256px;   /* matches Tailwind w-64 (16rem) */
+  --sidebar-collapsed-width: 64px; /* matches Tailwind w-16 (4rem) */
 
   /* Tipografía */
   --font-ui: 'Inter', sans-serif;

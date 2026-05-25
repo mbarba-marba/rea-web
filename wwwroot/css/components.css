@@ -884,17 +884,17 @@
   gap: 6px;
 }
 
-/* Layout adjust when sidebar collapsed — using :has() (Chrome 105+, FF 121+) */
-body:has(.sidebar--collapsed) .topbar {
-  left: var(--sidebar-collapsed-width);
+/* Layout adjust when sidebar collapsed — targets aside.w-16 (Tailwind collapsed state) */
+body:has(aside.w-16) .topbar {
+  left: 4rem;
 }
 
-body:has(.sidebar--collapsed) .main-content {
-  margin-left: var(--sidebar-collapsed-width);
+body:has(aside.w-16) .main-content {
+  margin-left: 4rem;
 }
 
-body:has(.sidebar--collapsed) .app-footer {
-  margin-left: var(--sidebar-collapsed-width);
+body:has(aside.w-16) .app-footer {
+  margin-left: 4rem;
 }
 
 /* === Top Bar === */

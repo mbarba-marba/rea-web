@@ -5,82 +5,110 @@
 @inject AuthService AuthService
 @inject ILocalStorageService LocalStorage
 
-<aside class="sidebar @(_collapsed ? "sidebar--collapsed" : "")">
+<aside class="fixed left-0 top-0 bottom-0 z-[100] flex flex-col
+              bg-white/60 backdrop-blur-xl border-r border-white/40
+              shadow-[4px_0_24px_rgba(0,0,0,0.04)]
+              transition-[width] duration-[280ms] ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden
+              @(_collapsed ? "w-16" : "w-64")">
 
-    <div class="sidebar-brand">
-        <div class="sidebar-brand-logo">
-            <span class="sidebar-brand-initials">R</span>
+    @* Brand *@
+    <div class="flex items-center gap-2.5 px-3 border-b border-black/[0.06] flex-shrink-0 h-14 overflow-hidden">
+        <div class="w-7 h-7 rounded-lg bg-[#076280] flex items-center justify-center flex-shrink-0 shadow-sm">
+            <span class="text-white text-[12px] font-bold tracking-wide">R</span>
         </div>
-        <span class="sidebar-brand-text">REA</span>
-        <button class="sidebar-toggle" @onclick="ToggleCollapse"
-                title="@(_collapsed ? "Expandir menú" : "Colapsar menú")">
-            <LucideIcon Name="@(_collapsed ? "chevron-right" : "chevron-left")" Size="16" />
+        <span class="font-semibold text-[15px] text-gray-900 flex-1 whitespace-nowrap overflow-hidden
+                     transition-[max-width,opacity] duration-[280ms] ease-[cubic-bezier(0.4,0,0.2,1)]
+                     @(_collapsed ? "max-w-0 opacity-0" : "max-w-[180px] opacity-100")">REA</span>
+        <button @onclick="ToggleCollapse"
+                title="@(_collapsed ? "Expandir" : "Colapsar")"
+                class="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-md
+                       text-gray-400 hover:text-[#076280] hover:bg-[#076280]/10
+                       border-0 bg-transparent outline-none cursor-pointer transition-colors duration-150
+                       @(_collapsed ? "" : "ml-auto")">
+            <LucideIcon Name="@(_collapsed ? "chevron-right" : "chevron-left")" Size="15" />
         </button>
     </div>
 
-    <nav class="sidebar-nav">
-        <NavLink href="/" Match="NavLinkMatch.All" class="nav-item" title="Dashboard">
-            <span class="nav-item-icon"><LucideIcon Name="layout-dashboard" Size="18" /></span>
-            <span class="nav-item-label">Dashboard</span>
+    @* Nav *@
+    <nav class="flex-1 flex flex-col gap-0.5 p-2 overflow-y-auto overflow-x-hidden">
+
+        <NavLink href="/" Match="NavLinkMatch.All" title="Dashboard"
+                 class="@NavCls [&.active]:bg-[#076280]/10 [&.active]:text-[#076280] [&.active]:font-medium [&.active]:border-l-2 [&.active]:border-[#076280] [&.active]:pl-[calc(0.5rem-2px)]">
+            <span class="@IconCls"><LucideIcon Name="layout-dashboard" Size="18" /></span>
+            <span class="@LabelCls">Dashboard</span>
         </NavLink>
 
         <AuthorizeView Roles="admin,auxiliar">
-            <NavLink href="/clientes" Match="NavLinkMatch.Prefix" class="nav-item" title="Clientes">
-                <span class="nav-item-icon"><LucideIcon Name="users" Size="18" /></span>
-                <span class="nav-item-label">Clientes</span>
+            <NavLink href="/clientes" Match="NavLinkMatch.Prefix" title="Clientes"
+                     class="@NavCls [&.active]:bg-[#076280]/10 [&.active]:text-[#076280] [&.active]:font-medium [&.active]:border-l-2 [&.active]:border-[#076280] [&.active]:pl-[calc(0.5rem-2px)]">
+                <span class="@IconCls"><LucideIcon Name="users" Size="18" /></span>
+                <span class="@LabelCls">Clientes</span>
             </NavLink>
         </AuthorizeView>
 
-        <NavLink href="/checklists" Match="NavLinkMatch.Prefix" class="nav-item" title="Libro de Trabajo">
-            <span class="nav-item-icon"><LucideIcon Name="list-checks" Size="18" /></span>
-            <span class="nav-item-label">Libro de Trabajo</span>
+        <NavLink href="/checklists" Match="NavLinkMatch.Prefix" title="Libro de Trabajo"
+                 class="@NavCls [&.active]:bg-[#076280]/10 [&.active]:text-[#076280] [&.active]:font-medium [&.active]:border-l-2 [&.active]:border-[#076280] [&.active]:pl-[calc(0.5rem-2px)]">
+            <span class="@IconCls"><LucideIcon Name="list-checks" Size="18" /></span>
+            <span class="@LabelCls">Libro de Trabajo</span>
         </NavLink>
 
         <AuthorizeView Roles="admin,auxiliar">
-            <NavLink href="/xml" Match="NavLinkMatch.Prefix" class="nav-item" title="XML &amp; Facturas">
-                <span class="nav-item-icon"><LucideIcon Name="file-archive" Size="18" /></span>
-                <span class="nav-item-label">XML &amp; Facturas</span>
+            <NavLink href="/xml" Match="NavLinkMatch.Prefix" title="XML &amp; Facturas"
+                     class="@NavCls [&.active]:bg-[#076280]/10 [&.active]:text-[#076280] [&.active]:font-medium [&.active]:border-l-2 [&.active]:border-[#076280] [&.active]:pl-[calc(0.5rem-2px)]">
+                <span class="@IconCls"><LucideIcon Name="file-archive" Size="18" /></span>
+                <span class="@LabelCls">XML &amp; Facturas</span>
             </NavLink>
         </AuthorizeView>
 
         <AuthorizeView Roles="admin,auxiliar">
-            <NavLink href="/calculos" Match="NavLinkMatch.Prefix" class="nav-item" title="Cálculos ISR/IVA">
-                <span class="nav-item-icon"><LucideIcon Name="calculator" Size="18" /></span>
-                <span class="nav-item-label">Cálculos ISR/IVA</span>
+            <NavLink href="/calculos" Match="NavLinkMatch.Prefix" title="Cálculos ISR/IVA"
+                     class="@NavCls [&.active]:bg-[#076280]/10 [&.active]:text-[#076280] [&.active]:font-medium [&.active]:border-l-2 [&.active]:border-[#076280] [&.active]:pl-[calc(0.5rem-2px)]">
+                <span class="@IconCls"><LucideIcon Name="calculator" Size="18" /></span>
+                <span class="@LabelCls">Cálculos ISR/IVA</span>
             </NavLink>
         </AuthorizeView>
 
-        <NavLink href="/reportes" Match="NavLinkMatch.Prefix" class="nav-item" title="Reportes">
-            <span class="nav-item-icon"><LucideIcon Name="scroll-text" Size="18" /></span>
-            <span class="nav-item-label">Reportes</span>
+        <NavLink href="/reportes" Match="NavLinkMatch.Prefix" title="Reportes"
+                 class="@NavCls [&.active]:bg-[#076280]/10 [&.active]:text-[#076280] [&.active]:font-medium [&.active]:border-l-2 [&.active]:border-[#076280] [&.active]:pl-[calc(0.5rem-2px)]">
+            <span class="@IconCls"><LucideIcon Name="scroll-text" Size="18" /></span>
+            <span class="@LabelCls">Reportes</span>
         </NavLink>
 
         <AuthorizeView Roles="admin">
-            <NavLink href="/periodos" Match="NavLinkMatch.Prefix" class="nav-item" title="Periodos Fiscales">
-                <span class="nav-item-icon"><LucideIcon Name="calendar-range" Size="18" /></span>
-                <span class="nav-item-label">Periodos Fiscales</span>
+            <div class="mt-2 mb-1 px-2">
+                <span class="@(_collapsed ? "hidden" : "block") text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                    Admin
+                </span>
+                <div class="@(_collapsed ? "block" : "hidden") h-px bg-black/[0.06] mx-1"></div>
+            </div>
+
+            <NavLink href="/periodos" Match="NavLinkMatch.Prefix" title="Periodos Fiscales"
+                     class="@NavCls [&.active]:bg-[#076280]/10 [&.active]:text-[#076280] [&.active]:font-medium [&.active]:border-l-2 [&.active]:border-[#076280] [&.active]:pl-[calc(0.5rem-2px)]">
+                <span class="@IconCls"><LucideIcon Name="calendar-range" Size="18" /></span>
+                <span class="@LabelCls">Periodos Fiscales</span>
+            </NavLink>
+
+            <NavLink href="/usuarios" Match="NavLinkMatch.Prefix" title="Usuarios"
+                     class="@NavCls [&.active]:bg-[#076280]/10 [&.active]:text-[#076280] [&.active]:font-medium [&.active]:border-l-2 [&.active]:border-[#076280] [&.active]:pl-[calc(0.5rem-2px)]">
+                <span class="@IconCls"><LucideIcon Name="shield-check" Size="18" /></span>
+                <span class="@LabelCls">Usuarios</span>
+            </NavLink>
+
+            <NavLink href="/asignaciones" Match="NavLinkMatch.Prefix" title="Asignaciones"
+                     class="@NavCls [&.active]:bg-[#076280]/10 [&.active]:text-[#076280] [&.active]:font-medium [&.active]:border-l-2 [&.active]:border-[#076280] [&.active]:pl-[calc(0.5rem-2px)]">
+                <span class="@IconCls"><LucideIcon Name="link" Size="18" /></span>
+                <span class="@LabelCls">Asignaciones</span>
             </NavLink>
         </AuthorizeView>
 
-        <AuthorizeView Roles="admin">
-            <NavLink href="/usuarios" Match="NavLinkMatch.Prefix" class="nav-item" title="Usuarios">
-                <span class="nav-item-icon"><LucideIcon Name="shield-check" Size="18" /></span>
-                <span class="nav-item-label">Usuarios</span>
-            </NavLink>
-        </AuthorizeView>
-
-        <AuthorizeView Roles="admin">
-            <NavLink href="/asignaciones" Match="NavLinkMatch.Prefix" class="nav-item" title="Asignaciones">
-                <span class="nav-item-icon"><LucideIcon Name="link" Size="18" /></span>
-                <span class="nav-item-label">Asignaciones</span>
-            </NavLink>
-        </AuthorizeView>
     </nav>
 
-    <div class="sidebar-footer">
-        <button class="nav-item sidebar-settings-btn" @onclick="AbrirConfig" title="Configuración">
-            <span class="nav-item-icon"><LucideIcon Name="settings" Size="18" /></span>
-            <span class="nav-item-label">Configuración</span>
+    @* Footer *@
+    <div class="p-2 border-t border-black/[0.06]">
+        <button @onclick="AbrirConfig" title="Configuración"
+                class="@NavCls border-0 bg-transparent outline-none w-full text-left">
+            <span class="@IconCls"><LucideIcon Name="settings" Size="18" /></span>
+            <span class="@LabelCls">Configuración</span>
         </button>
     </div>
 
@@ -89,48 +117,67 @@
 @* Modal Configuración *@
 @if (_modalConfig)
 {
-    <div class="modal-backdrop" @onclick="CerrarConfig">
-        <div class="modal-container" style="max-width:400px;" @onclick:stopPropagation="true">
-            <div class="modal-header">
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <LucideIcon Name="settings" Size="20" />
-                    <h3 style="margin:0;">Configuración</h3>
+    <div class="fixed inset-0 bg-black/30 backdrop-blur-sm z-[1000] flex items-center justify-center"
+         @onclick="CerrarConfig">
+        <div class="bg-white/90 backdrop-blur-xl border border-white/40 rounded-2xl shadow-2xl
+                    w-[360px] overflow-hidden"
+             @onclick:stopPropagation="true">
+
+            @* Header *@
+            <div class="flex items-center justify-between px-5 py-4 border-b border-black/[0.06]">
+                <div class="flex items-center gap-2 text-gray-800 font-semibold">
+                    <LucideIcon Name="settings" Size="18" />
+                    <span>Configuración</span>
                 </div>
-                <button class="sidebar-settings-btn" style="width:28px;height:28px;" @onclick="CerrarConfig">
-                    <LucideIcon Name="x" Size="16" />
+                <button @onclick="CerrarConfig"
+                        class="w-7 h-7 flex items-center justify-center rounded-lg
+                               text-gray-400 hover:text-gray-700 hover:bg-black/[0.06]
+                               border-0 bg-transparent outline-none cursor-pointer transition-colors">
+                    <LucideIcon Name="x" Size="15" />
                 </button>
             </div>
 
-            <div class="modal-body">
-                @* Usuario actual *@
-                <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-subtle);margin-bottom:16px;">
-                    <div style="width:40px;height:40px;border-radius:50%;background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:16px;flex-shrink:0;">
-                        @(_userInitial)
-                    </div>
-                    <div>
-                        <div style="font-weight:500;font-size:14px;">@_userName</div>
-                        <div style="font-size:12px;color:var(--text-secondary);">@_userEmail</div>
-                    </div>
+            @* User info *@
+            <div class="flex items-center gap-3 px-5 py-4 border-b border-black/[0.06]">
+                <div class="w-10 h-10 rounded-full bg-[#bbe7ef] text-[#076280]
+                            flex items-center justify-center font-bold text-base flex-shrink-0">
+                    @_userInitial
                 </div>
-
-                @* Opciones *@
-                <div style="display:flex;flex-direction:column;gap:4px;">
-                    <button class="config-option" @onclick="IrAPerfil">
-                        <LucideIcon Name="pencil" Size="16" />
-                        <span>Editar perfil</span>
-                    </button>
-                    <button class="config-option" @onclick="IrAPerfilPassword">
-                        <LucideIcon Name="eye" Size="16" />
-                        <span>Cambiar contraseña</span>
-                    </button>
+                <div class="min-w-0">
+                    <div class="font-medium text-sm text-gray-900 truncate">@_userName</div>
+                    <div class="text-xs text-gray-500 truncate">@_userEmail</div>
                 </div>
             </div>
 
-            <div class="modal-footer" style="justify-content:flex-start;">
-                <GlassButton Variant="ghost" OnClick="Logout">
-                    <LucideIcon Name="log-out" Size="15" /> Cerrar sesión
-                </GlassButton>
+            @* Options *@
+            <div class="p-3 flex flex-col gap-0.5">
+                <button @onclick="IrAPerfil"
+                        class="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-gray-600
+                               hover:bg-[#076280]/[0.06] hover:text-[#076280] transition-colors
+                               border-0 bg-transparent outline-none cursor-pointer text-left">
+                    <LucideIcon Name="pencil" Size="16" />
+                    <span>Editar perfil</span>
+                </button>
+                <button @onclick="IrAPerfilPassword"
+                        class="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-gray-600
+                               hover:bg-[#076280]/[0.06] hover:text-[#076280] transition-colors
+                               border-0 bg-transparent outline-none cursor-pointer text-left">
+                    <LucideIcon Name="eye" Size="16" />
+                    <span>Cambiar contraseña</span>
+                </button>
             </div>
+
+            @* Logout *@
+            <div class="px-3 pb-3">
+                <button @onclick="Logout"
+                        class="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-red-500
+                               hover:bg-red-50 transition-colors
+                               border-0 bg-transparent outline-none cursor-pointer text-left font-medium">
+                    <LucideIcon Name="log-out" Size="16" />
+                    <span>Cerrar sesión</span>
+                </button>
+            </div>
+
         </div>
     </div>
 }
@@ -141,6 +188,19 @@
     private string _userName = "";
     private string _userEmail = "";
     private string _userInitial = "U";
+
+    // Computed class strings — defined once, reused across every nav item
+    private string NavCls => _collapsed
+        ? "flex items-center justify-center h-10 w-10 rounded-lg text-gray-500 no-underline transition-colors duration-150 hover:bg-[#076280]/[0.06] hover:text-[#076280] cursor-pointer overflow-hidden"
+        : "flex items-center gap-2.5 h-10 px-2 rounded-lg text-sm text-gray-500 no-underline transition-colors duration-150 hover:bg-[#076280]/[0.06] hover:text-[#076280] cursor-pointer w-full overflow-hidden";
+
+    private string IconCls => _collapsed
+        ? "w-5 h-5 flex items-center justify-center flex-shrink-0"
+        : "w-5 h-5 flex items-center justify-center flex-shrink-0 text-gray-400";
+
+    private string LabelCls => _collapsed
+        ? "hidden"
+        : "truncate text-[13.5px]";
 
     protected override async Task OnInitializedAsync()
     {
@@ -168,17 +228,8 @@
     private void AbrirConfig() => _modalConfig = true;
     private void CerrarConfig() => _modalConfig = false;
 
-    private void IrAPerfil()
-    {
-        _modalConfig = false;
-        Navigation.NavigateTo("/perfil");
-    }
-
-    private void IrAPerfilPassword()
-    {
-        _modalConfig = false;
-        Navigation.NavigateTo("/perfil");
-    }
+    private void IrAPerfil()        { _modalConfig = false; Navigation.NavigateTo("/perfil"); }
+    private void IrAPerfilPassword() { _modalConfig = false; Navigation.NavigateTo("/perfil"); }
 
     private async Task Logout()
     {
