@@ -948,7 +948,7 @@ body:has(aside.w-16) nav button[title]:hover::before {
   left: var(--layout-sidebar-width, var(--sidebar-width));
   right: 0;
   height: 56px;
-  background: rgba(255, 255, 255, 0.70);
+  background: var(--glass-bg-secondary);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--glass-border);

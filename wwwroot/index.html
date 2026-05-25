@@ -103,8 +103,8 @@
             setImportant(el, 'background-color', dark ? darkVars['--bg-base'] : lightVars['--bg-base']);
           });
 
-          document.querySelectorAll('.topbar, .rea-sidebar, aside').forEach(function (el) {
-            setImportant(el, 'background', dark ? darkVars['--glass-bg-secondary'] : 'rgba(255, 255, 255, 0.70)');
+          document.querySelectorAll('.rea-sidebar, aside').forEach(function (el) {
+            setImportant(el, 'background', dark ? darkVars['--glass-bg-secondary'] : lightVars['--glass-bg-secondary']);
             setImportant(el, 'border-color', dark ? darkVars['--glass-border'] : lightVars['--glass-border']);
           });
 
