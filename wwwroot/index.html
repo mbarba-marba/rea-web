@@ -29,33 +29,113 @@
     </script>
     <script>
       (function () {
-        var savedTheme = localStorage.getItem('rea_theme');
-        if (savedTheme === 'dark') {
-          document.addEventListener('DOMContentLoaded', function () {
-            document.body.setAttribute('data-theme', 'dark');
+        var lightVars = {
+          '--bg-base': '#dfe4e8',
+          '--accent': '#076280',
+          '--accent-light': '#bbe7ef',
+          '--accent-hover': '#054a62',
+          '--glass-bg-primary': 'rgba(255, 255, 255, 0.70)',
+          '--glass-bg-secondary': 'rgba(255, 255, 255, 0.50)',
+          '--glass-border': 'rgba(255, 255, 255, 0.30)',
+          '--text-primary': '#1A1A2E',
+          '--text-secondary': '#6B7280',
+          '--text-muted': '#9CA3AF',
+          '--border-subtle': 'rgba(0, 0, 0, 0.06)'
+        };
+
+        var darkVars = {
+          '--bg-base': '#0f1720',
+          '--accent': '#38b6cf',
+          '--accent-light': 'rgba(56, 182, 207, 0.18)',
+          '--accent-hover': '#5bc6da',
+          '--glass-bg-primary': 'rgba(15, 23, 32, 0.78)',
+          '--glass-bg-secondary': 'rgba(15, 23, 32, 0.64)',
+          '--glass-border': 'rgba(148, 163, 184, 0.28)',
+          '--text-primary': '#e6edf5',
+          '--text-secondary': '#c3ced9',
+          '--text-muted': '#9fb0c1',
+          '--border-subtle': 'rgba(148, 163, 184, 0.24)'
+        };
+
+        function setVars(vars) {
+          Object.keys(vars).forEach(function (key) {
+            document.documentElement.style.setProperty(key, vars[key]);
+            if (document.body) {
+              document.body.style.setProperty(key, vars[key]);
+            }
           });
         }
-      })();
 
-      window.reaTheme = {
-        apply: function (mode) {
-          if (mode === 'dark') {
-            document.body.setAttribute('data-theme', 'dark');
-            return;
+        function setImportant(el, prop, value) {
+          if (el) {
+            el.style.setProperty(prop, value, 'important');
           }
-          document.body.removeAttribute('data-theme');
         }
-      };
 
-      window.reaLayout = {
-        setSidebarCollapsed: function (collapsed) {
+        function applyLayout(collapsed) {
+          var width = collapsed ? '64px' : '256px';
           if (collapsed) {
             document.body.setAttribute('data-sidebar', 'collapsed');
-            return;
+          } else {
+            document.body.removeAttribute('data-sidebar');
           }
-          document.body.removeAttribute('data-sidebar');
+
+          document.documentElement.style.setProperty('--layout-sidebar-width', width);
+          document.body.style.setProperty('--layout-sidebar-width', width);
+          setImportant(document.querySelector('.topbar'), 'left', width);
+          setImportant(document.querySelector('.main-content'), 'margin-left', width);
+          setImportant(document.querySelector('.app-footer'), 'margin-left', width);
         }
-      };
+
+        function applyTheme(mode) {
+          var dark = mode === 'dark';
+          if (dark) {
+            document.body.setAttribute('data-theme', 'dark');
+          } else {
+            document.body.removeAttribute('data-theme');
+          }
+
+          document.body.style.colorScheme = dark ? 'dark' : 'light';
+          setVars(dark ? darkVars : lightVars);
+          setImportant(document.body, 'background-color', dark ? darkVars['--bg-base'] : lightVars['--bg-base']);
+
+          document.querySelectorAll('.main-content, .app-footer').forEach(function (el) {
+            setImportant(el, 'background-color', dark ? darkVars['--bg-base'] : lightVars['--bg-base']);
+          });
+
+          document.querySelectorAll('.topbar, .rea-sidebar, aside').forEach(function (el) {
+            setImportant(el, 'background', dark ? darkVars['--glass-bg-secondary'] : 'rgba(255, 255, 255, 0.70)');
+            setImportant(el, 'border-color', dark ? darkVars['--glass-border'] : lightVars['--glass-border']);
+          });
+
+          document.querySelectorAll('.card, .glass-card, .glass-elevation-1, .glass-elevation-2, .glass-elevation-3, .glass-elevation-4, .modal-container, .toast, .error-banner, .login-card').forEach(function (el) {
+            setImportant(el, 'background', dark ? darkVars['--glass-bg-primary'] : 'rgba(255, 255, 255, 0.70)');
+            setImportant(el, 'border-color', dark ? darkVars['--glass-border'] : lightVars['--glass-border']);
+          });
+        }
+
+        window.reaApplyChrome = function () {
+          applyTheme(localStorage.getItem('rea_theme') === 'dark' ? 'dark' : 'light');
+          applyLayout(localStorage.getItem('rea_sidebar_collapsed') === 'true');
+        };
+
+        window.reaTheme = {
+          apply: function (mode) {
+            localStorage.setItem('rea_theme', mode === 'dark' ? 'dark' : 'light');
+            applyTheme(mode);
+          }
+        };
+
+        window.reaLayout = {
+          setSidebarCollapsed: function (collapsed) {
+            localStorage.setItem('rea_sidebar_collapsed', collapsed ? 'true' : 'false');
+            applyLayout(collapsed);
+          }
+        };
+
+        document.addEventListener('DOMContentLoaded', window.reaApplyChrome);
+        window.addEventListener('load', window.reaApplyChrome);
+      })();
     </script>
     <link rel="stylesheet" href="css/app.css" />
     <link rel="stylesheet" href="css/glassmorphism.css" />

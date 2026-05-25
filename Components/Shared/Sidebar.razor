@@ -270,6 +270,17 @@
         await JS.InvokeVoidAsync("reaLayout.setSidebarCollapsed", collapsed);
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        await ApplySidebarLayoutAsync(_collapsed);
+        await ApplyThemeAsync(_isDarkMode);
+    }
+
     private void IrAPerfil()        { _modalConfig = false; Navigation.NavigateTo("/perfil"); }
     private void IrAPerfilPassword() { _modalConfig = false; Navigation.NavigateTo("/perfil"); }
 
