@@ -15,7 +15,7 @@
             <p class="body-small text-muted" style="margin-top:6px;">Alta y gestion de clientes del despacho</p>
         </div>
         <div style="display:flex;gap:10px;align-items:center;">
-            <GlassButton Variant="secondary" OnClick="IrAAsignaciones">
+            <GlassButton Variant="secondary" OnClick="IrAAsignaciones" style="border-color:var(--glass-border);">
                 <LucideIcon Name="link" Size="16" /> Asignaciones
             </GlassButton>
             <GlassButton Variant="primary" OnClick="IrANuevo">
@@ -28,13 +28,13 @@
 
     <div class="glass-card" style="margin-bottom:16px;padding:18px 20px;">
         <div style="display:grid;grid-template-columns:minmax(280px,1fr) 220px auto;gap:12px;align-items:center;">
-            <div class="search-field" style="height:40px;">
-                <LucideIcon Name="search" Size="16" />
+            <div>
+                <label class="input-label">Buscar cliente</label>
                 <input type="text"
+                       class="input-field"
                        @bind="_busqueda"
                        @bind:event="oninput"
-                       placeholder="Buscar por RFC, razon social o nombre comercial..."
-                       style="border:none;background:transparent;color:var(--text-primary);outline:none;width:100%;" />
+                       placeholder="RFC, razon social o nombre comercial" />
             </div>
             <select @bind="_clasificacion" class="select-field" style="height:40px;">
                 <option value="">Todas las clasificaciones</option>
@@ -42,7 +42,7 @@
                 <option value="irregular">Irregulares</option>
             </select>
             <div style="display:flex;gap:10px;justify-content:flex-end;">
-                <GlassButton Variant="secondary" OnClick="Limpiar">Limpiar</GlassButton>
+                <GlassButton Variant="secondary" OnClick="Limpiar" style="border-color:var(--glass-border);">Limpiar</GlassButton>
                 <GlassButton Variant="primary" OnClick="Buscar">Aplicar filtros</GlassButton>
             </div>
         </div>
