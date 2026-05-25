@@ -885,16 +885,19 @@
 }
 
 /* Layout adjust when sidebar collapsed — targets aside.w-16 (Tailwind collapsed state) */
+.app-layout.sidebar-collapsed .topbar,
 body:has(aside.w-16) .topbar {
-  left: 4rem;
+  left: var(--sidebar-collapsed-width);
 }
 
+.app-layout.sidebar-collapsed .main-content,
 body:has(aside.w-16) .main-content {
-  margin-left: 4rem;
+  margin-left: var(--sidebar-collapsed-width);
 }
 
+.app-layout.sidebar-collapsed .app-footer,
 body:has(aside.w-16) .app-footer {
-  margin-left: 4rem;
+  margin-left: var(--sidebar-collapsed-width);
 }
 
 /* Tooltip snip for collapsed nav items */
@@ -952,6 +955,7 @@ body:has(aside.w-16) nav button[title]:hover::before {
   justify-content: space-between;
   padding: 0 var(--space-lg);
   z-index: 90;
+  transition: left 280ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .topbar-search {
@@ -984,6 +988,7 @@ body:has(aside.w-16) nav button[title]:hover::before {
   margin-top: 56px;
   min-height: calc(100vh - 56px);
   background: var(--bg-base);
+  transition: margin-left 280ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* === Footer === */
@@ -996,4 +1001,5 @@ body:has(aside.w-16) nav button[title]:hover::before {
   color: var(--text-muted);
   text-align: center;
   background: var(--bg-base);
+  transition: margin-left 280ms cubic-bezier(0.4, 0, 0.2, 1);
 }

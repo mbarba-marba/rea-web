@@ -5,6 +5,10 @@
 @inject AuthService AuthService
 @inject ILocalStorageService LocalStorage
 
+@code {
+    [Parameter] public EventCallback<bool> CollapsedChanged { get; set; }
+}
+
 <aside class="fixed left-0 top-0 bottom-0 z-[100] flex flex-col
               bg-white/60 backdrop-blur-xl border-r border-white/40
               shadow-[4px_0_24px_rgba(0,0,0,0.04)]
@@ -209,6 +213,7 @@
     {
         var saved = await LocalStorage.GetAsync("rea_sidebar_collapsed");
         _collapsed = saved == "true";
+        await CollapsedChanged.InvokeAsync(_collapsed);
 
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
@@ -226,6 +231,7 @@
     {
         _collapsed = !_collapsed;
         await LocalStorage.SetAsync("rea_sidebar_collapsed", _collapsed ? "true" : "false");
+        await CollapsedChanged.InvokeAsync(_collapsed);
     }
 
     private void AbrirConfig() => _modalConfig = true;
