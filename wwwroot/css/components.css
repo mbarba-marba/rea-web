@@ -745,14 +745,17 @@
   text-decoration: none;
   white-space: nowrap;
   width: 100%;
+  overflow: hidden;
 }
 
 .sidebar--collapsed .nav-item {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   padding: 0;
+  gap: 0;
   justify-content: center;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
 }
 
 .nav-item:hover {
@@ -761,7 +764,7 @@
 }
 
 .nav-item.active {
-  background: var(--accent-light);
+  background: rgba(7, 98, 128, 0.10);
   color: var(--accent);
   font-weight: 500;
   border-left: 3px solid var(--accent);
@@ -771,8 +774,7 @@
 .sidebar--collapsed .nav-item.active {
   border-left: none;
   padding-left: 0;
-  border-bottom: 3px solid var(--accent);
-  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  background: rgba(7, 98, 128, 0.12);
 }
 
 .nav-item-icon {
@@ -812,6 +814,11 @@
   border: none;
   background: none;
   text-align: left;
+  font-family: var(--font-ui);
+}
+
+.sidebar--collapsed .sidebar-logout {
+  width: 40px;
 }
 
 /* Layout adjust when sidebar collapsed — using :has() (Chrome 105+, FF 121+) */
