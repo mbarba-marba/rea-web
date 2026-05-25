@@ -32,9 +32,28 @@
     }
     else if (_cliente != null)
     {
-        <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;">
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px;">
+            <div class="glass-card" style="padding:14px 16px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">RFC</div>
+                <div class="mono" style="font-size:13px;color:var(--text-primary);">@_cliente.Rfc</div>
+            </div>
+            <div class="glass-card" style="padding:14px 16px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Clasificacion</div>
+                <div><BadgeCliente Clasificacion="@_cliente.Clasificacion" /></div>
+            </div>
+            <div class="glass-card" style="padding:14px 16px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">E-Firma</div>
+                <div><BadgeEstado Estado="@(_cliente.EstatusEfirma?.ToLower() ?? "pendiente")" /></div>
+            </div>
+            <div class="glass-card" style="padding:14px 16px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Auxiliares</div>
+                <div style="font-size:20px;font-weight:700;color:var(--text-primary);">@_cliente.Asignaciones.Count</div>
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:start;">
             <div class="glass-card" style="padding:20px;">
-                <h3 style="margin-bottom:12px;">Informacion General</h3>
+                <h3 style="margin-bottom:14px;">Informacion General</h3>
                 <dl class="detail-list">
                     <dt>RFC</dt><dd class="mono">@_cliente.Rfc</dd>
                     <dt>Razon Social</dt><dd>@_cliente.RazonSocial</dd>
@@ -67,18 +86,33 @@
                 </dl>
             </div>
 
-            <div class="glass-card" style="padding:20px;">
+            <div class="glass-card" style="padding:20px;grid-column:1/-1;">
                 <h3 style="margin-bottom:12px;">Vigencias</h3>
-                <dl class="detail-list">
-                    <dt>E-Firma Inicio</dt><dd>@FmtDate(_cliente.EFirmaVigenciaInicio)</dd>
-                    <dt>E-Firma Fin</dt><dd>@FmtDate(_cliente.EFirmaVigenciaFin)</dd>
-                    <dt>CIEE Inicio</dt><dd>@FmtDate(_cliente.CieeVigenciaInicio)</dd>
-                    <dt>CIEE Fin</dt><dd>@FmtDate(_cliente.CieeVigenciaFin)</dd>
-                    <dt>Alta</dt><dd>@_cliente.CreatedAt.ToString("dd/MM/yyyy HH:mm")</dd>
-                </dl>
+                <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;">
+                    <div style="padding:10px 12px;border:1px solid var(--border-subtle);border-radius:10px;">
+                        <div style="font-size:11px;color:var(--text-secondary);">E-Firma Inicio</div>
+                        <div style="font-weight:600;color:var(--text-primary);">@FmtDate(_cliente.EFirmaVigenciaInicio)</div>
+                    </div>
+                    <div style="padding:10px 12px;border:1px solid var(--border-subtle);border-radius:10px;">
+                        <div style="font-size:11px;color:var(--text-secondary);">E-Firma Fin</div>
+                        <div style="font-weight:600;color:var(--text-primary);">@FmtDate(_cliente.EFirmaVigenciaFin)</div>
+                    </div>
+                    <div style="padding:10px 12px;border:1px solid var(--border-subtle);border-radius:10px;">
+                        <div style="font-size:11px;color:var(--text-secondary);">CIEE Inicio</div>
+                        <div style="font-weight:600;color:var(--text-primary);">@FmtDate(_cliente.CieeVigenciaInicio)</div>
+                    </div>
+                    <div style="padding:10px 12px;border:1px solid var(--border-subtle);border-radius:10px;">
+                        <div style="font-size:11px;color:var(--text-secondary);">CIEE Fin</div>
+                        <div style="font-weight:600;color:var(--text-primary);">@FmtDate(_cliente.CieeVigenciaFin)</div>
+                    </div>
+                    <div style="padding:10px 12px;border:1px solid var(--border-subtle);border-radius:10px;">
+                        <div style="font-size:11px;color:var(--text-secondary);">Alta</div>
+                        <div style="font-weight:600;color:var(--text-primary);">@_cliente.CreatedAt.ToString("dd/MM/yyyy")</div>
+                    </div>
+                </div>
             </div>
 
-            <div class="glass-card" style="padding:20px;">
+            <div class="glass-card" style="padding:20px;grid-column:1/-1;">
                 <h3 style="margin-bottom:12px;">Auxiliares Asignados</h3>
                 @if (_cliente.Asignaciones.Count == 0)
                 {
@@ -89,7 +123,7 @@
                     <div style="display:flex;flex-wrap:wrap;gap:8px;">
                         @foreach (var a in _cliente.Asignaciones)
                         {
-                            <span class="badge badge-accent">@a.AuxiliarNombre</span>
+                            <span class="badge badge-accent" style="padding:6px 10px;">@a.AuxiliarNombre</span>
                         }
                     </div>
                 }
