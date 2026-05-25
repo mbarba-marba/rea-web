@@ -12,19 +12,17 @@
               @(_collapsed ? "w-16" : "w-64")">
 
     @* Brand *@
-    <div class="flex items-center gap-2.5 px-3 border-b border-black/[0.06] flex-shrink-0 h-14 overflow-hidden">
-        <div class="w-7 h-7 rounded-lg bg-[#076280] flex items-center justify-center flex-shrink-0 shadow-sm">
-            <span class="text-white text-[12px] font-bold tracking-wide">R</span>
-        </div>
-        <span class="font-semibold text-[15px] text-gray-900 flex-1 whitespace-nowrap overflow-hidden
-                     transition-[max-width,opacity] duration-[280ms] ease-[cubic-bezier(0.4,0,0.2,1)]
-                     @(_collapsed ? "max-w-0 opacity-0" : "max-w-[180px] opacity-100")">REA</span>
+    <div class="flex items-center gap-2.5 px-3 border-b border-black/[0.06] flex-shrink-0 h-14">
+        @if (!_collapsed)
+        {
+            <div class="w-7 h-7 rounded-lg bg-[#076280] flex items-center justify-center flex-shrink-0 shadow-sm">
+                <span class="text-white text-[12px] font-bold tracking-wide">R</span>
+            </div>
+            <span class="font-semibold text-[15px] text-gray-900 flex-1 whitespace-nowrap overflow-hidden truncate">REA</span>
+        }
         <button @onclick="ToggleCollapse"
                 title="@(_collapsed ? "Expandir" : "Colapsar")"
-                class="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-md
-                       text-gray-400 hover:text-[#076280] hover:bg-[#076280]/10
-                       border-0 bg-transparent outline-none cursor-pointer transition-colors duration-150
-                       @(_collapsed ? "" : "ml-auto")">
+                class="@ToggleBtnCls">
             <LucideIcon Name="@(_collapsed ? "chevron-right" : "chevron-left")" Size="15" />
         </button>
     </div>
@@ -201,6 +199,10 @@
     private string LabelCls => _collapsed
         ? "hidden"
         : "truncate text-[13.5px]";
+
+    private string ToggleBtnCls => _collapsed
+        ? "mx-auto w-6 h-6 flex items-center justify-center rounded-md text-gray-400 hover:text-[#076280] hover:bg-[#076280]/10 border-0 bg-transparent outline-none cursor-pointer transition-colors duration-150 flex-shrink-0"
+        : "ml-auto w-6 h-6 flex items-center justify-center rounded-md text-gray-400 hover:text-[#076280] hover:bg-[#076280]/10 border-0 bg-transparent outline-none cursor-pointer transition-colors duration-150 flex-shrink-0";
 
     private string BtnNavCls => (_collapsed
         ? "flex items-center justify-center h-10 w-10 rounded-lg text-gray-500 transition-colors duration-150 hover:bg-[#076280]/[0.06] hover:text-[#076280] cursor-pointer overflow-hidden"
