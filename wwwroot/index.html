@@ -113,10 +113,8 @@
             setImportant(el, 'border-color', dark ? darkVars['--glass-border'] : lightVars['--glass-border']);
           });
 
-          document.querySelectorAll('.card, .glass-card, .glass-elevation-1, .glass-elevation-2, .glass-elevation-3, .glass-elevation-4, .modal-container, .toast, .error-banner, .login-card').forEach(function (el) {
-            setImportant(el, 'background', dark ? darkVars['--glass-bg-primary'] : 'rgba(255, 255, 255, 0.70)');
-            setImportant(el, 'border-color', dark ? darkVars['--glass-border'] : lightVars['--glass-border']);
-          });
+          // Card/surface backgrounds are controlled by CSS variables.
+          // Avoid forcing inline styles here to prevent first-render theme mismatches.
         }
 
         window.reaApplyChrome = function () {
