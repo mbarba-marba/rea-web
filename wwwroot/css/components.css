@@ -652,43 +652,61 @@
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  padding: var(--space-lg);
+  padding: 0 var(--space-md);
   border-bottom: 1px solid var(--border-subtle);
-  min-height: 64px;
+  height: 56px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.sidebar-brand-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
-.sidebar--collapsed .sidebar-brand {
-  padding: var(--space-sm);
-  justify-content: center;
+.sidebar-brand-initials {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
 }
 
 .sidebar-brand-text {
   font-weight: 600;
-  font-size: 16px;
+  font-size: 15px;
   color: var(--text-primary);
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
+  transition: opacity 200ms ease, max-width 280ms cubic-bezier(0.4, 0, 0.2, 1);
+  max-width: 200px;
+  opacity: 1;
 }
 
-.sidebar-brand img {
-  height: 32px;
-  flex-shrink: 0;
+.sidebar--collapsed .sidebar-brand-text {
+  max-width: 0;
+  opacity: 0;
 }
 
 .sidebar-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border: none;
   background: none;
   border-radius: var(--radius-sm);
-  color: var(--text-secondary);
+  color: var(--text-muted);
   cursor: pointer;
   flex-shrink: 0;
+  outline: none;
   transition: background var(--duration-fast) var(--easing),
               color var(--duration-fast) var(--easing);
   margin-left: auto;
@@ -809,16 +827,23 @@
   pointer-events: none;
 }
 
-.sidebar-logout {
-  width: 100%;
+/* Button reset for nav-item used as <button> */
+.nav-item--button {
   border: none;
   background: none;
-  text-align: left;
   font-family: var(--font-ui);
+  outline: none;
+  text-align: left;
 }
 
-.sidebar--collapsed .sidebar-logout {
-  width: 40px;
+.nav-item--button:focus {
+  outline: none;
+}
+
+/* Collapsed brand: logo + toggle fit in 64px */
+.sidebar--collapsed .sidebar-brand {
+  padding: 0 4px;
+  gap: 6px;
 }
 
 /* Layout adjust when sidebar collapsed — using :has() (Chrome 105+, FF 121+) */
