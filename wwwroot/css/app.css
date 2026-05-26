@@ -95,6 +95,7 @@ body {
   min-height: 100vh;
 }
 
+html[data-theme="dark"],
 body[data-theme="dark"],
 .app-layout.theme-dark {
   --bg-base: #0f1720;

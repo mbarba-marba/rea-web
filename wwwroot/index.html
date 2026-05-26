@@ -29,6 +29,17 @@
     </script>
     <script>
       (function () {
+        try {
+          var savedTheme = localStorage.getItem('rea_theme');
+          if (savedTheme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            document.documentElement.style.colorScheme = 'dark';
+          }
+        } catch (_) { }
+      })();
+    </script>
+    <script>
+      (function () {
         var lightVars = {
           '--bg-base': '#dfe4e8',
           '--accent': '#076280',
@@ -89,6 +100,12 @@
 
         function applyTheme(mode) {
           var dark = mode === 'dark';
+          if (dark) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+          } else {
+            document.documentElement.removeAttribute('data-theme');
+          }
+
           if (dark) {
             document.body.setAttribute('data-theme', 'dark');
           } else {
