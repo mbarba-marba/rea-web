@@ -43,7 +43,7 @@
 
             <div class="card" style="padding:16px 18px;">
                 <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Estado</div>
-                <div style="margin-bottom:8px;"><BadgeEstado Estado="@_paso.Estado" /></div>
+                <div style="margin-bottom:8px;"><BadgeEstado Estado="@EstadoActual" /></div>
                 <div class="body-small text-muted">Actualiza el estado segun el avance real.</div>
             </div>
 
@@ -90,7 +90,7 @@
 
                         <div class="card" style="padding:14px 16px;">
                             <div class="body-small text-muted">Estado actual</div>
-                            <div style="margin-top:8px;"><BadgeEstado Estado="@_paso.Estado" /></div>
+                            <div style="margin-top:8px;"><BadgeEstado Estado="@EstadoActual" /></div>
                         </div>
                     </div>
                 </div>
@@ -119,13 +119,13 @@
                                 <LucideIcon Name="save" Size="16" /> @(_guardando ? "Guardando..." : "Guardar notas")
                             </GlassButton>
 
-                            @if (_paso.Estado == "pendiente")
+                            @if (EstadoActual == "pendiente")
                             {
-                                <GlassButton Variant="primary" OnClick="IniciarPaso">
-                                    <LucideIcon Name="play" Size="16" /> Iniciar
+                                <GlassButton Variant="primary" OnClick="CompletarPaso">
+                                    <LucideIcon Name="check" Size="16" /> Completar
                                 </GlassButton>
                             }
-                            else if (_paso.Estado == "en_proceso")
+                            else if (EstadoActual == "en_proceso")
                             {
                                 <GlassButton Variant="primary" OnClick="CompletarPaso">
                                     <LucideIcon Name="check" Size="16" /> Completar
@@ -134,10 +134,13 @@
                                     <LucideIcon Name="pause-circle" Size="16" /> Bloquear
                                 </GlassButton>
                             }
-                            else if (_paso.Estado == "bloqueado")
+                            else if (EstadoActual == "bloqueado")
                             {
                                 <GlassButton Variant="secondary" OnClick="DesbloquearPaso">
                                     <LucideIcon Name="rotate-ccw" Size="16" /> Desbloquear
+                                </GlassButton>
+                                <GlassButton Variant="primary" OnClick="CompletarPaso">
+                                    <LucideIcon Name="check" Size="16" /> Completar
                                 </GlassButton>
                             }
                         </div>
@@ -218,7 +221,7 @@
                         </GlassButton>
                         @if (_siguientePaso != null)
                         {
-                            <GlassButton Variant="primary" OnClick="IrASiguientePaso">
+                            <GlassButton Variant="primary" OnClick='() => Navigation.NavigateTo($"/checklists/{ChecklistId}/paso/{_siguientePaso.PasoId}")'>
                                 <LucideIcon Name="arrow-right" Size="16" /> Abrir paso @_siguientePaso.NumeroPaso
                             </GlassButton>
                         }
@@ -254,6 +257,7 @@
     private string? _error;
     private string? _archivoNombre;
     private IBrowserFile? _archivo;
+    private string EstadoActual => NormalizarEstado(_paso?.Estado);
 
     protected override async Task OnInitializedAsync() => await Cargar();
 
@@ -276,10 +280,7 @@
                     _notas = _paso.Notas ?? "";
                     _titulo = $"Paso {_paso.NumeroPaso}";
                     _subtitulo = _paso.NombrePaso ?? "";
-                    _siguientePaso = result.Data.Pasos
-                        .Where(p => p.NumeroPaso > _paso.NumeroPaso)
-                        .OrderBy(p => p.NumeroPaso)
-                        .FirstOrDefault();
+                    _siguientePaso = ObtenerSiguientePaso(result.Data.Pasos, _paso);
 
                     _breadcrumb[2] = new BreadcrumbItem { Text = _checklist.ClienteNombre, Url = $"/checklists/{ChecklistId}" };
                     _breadcrumb[3] = new BreadcrumbItem { Text = _titulo, Url = $"/checklists/{ChecklistId}/paso/{PasoId}" };
@@ -313,7 +314,7 @@
         var response = await ChecklistService.ActualizarPasoAsync(ChecklistId, PasoId, new UpdatePasoRequest
         {
             Notas = _notas,
-            Estado = _paso.Estado
+            Estado = EstadoActual
         });
 
         if (response?.Ok == true)
@@ -328,7 +329,6 @@
         _guardando = false;
     }
 
-    private async Task IniciarPaso() => await Cambiar("en_proceso");
     private async Task CompletarPaso() => await Cambiar("completado");
     private async Task BloquearPaso() => await Cambiar("bloqueado");
     private async Task DesbloquearPaso() => await Cambiar("en_proceso");
@@ -406,12 +406,32 @@
 
     private void VolverAChecklist() => Navigation.NavigateTo($"/checklists/{ChecklistId}");
 
-    private void IrASiguientePaso()
+    private static PasoDto? ObtenerSiguientePaso(IEnumerable<PasoDto> pasos, PasoDto actual)
     {
-        if (_siguientePaso != null)
+        var lista = pasos.OrderBy(p => p.NumeroPaso).ToList();
+
+        var siguienteDespues = lista.FirstOrDefault(p =>
+            p.NumeroPaso > actual.NumeroPaso &&
+            NormalizarEstado(p.Estado) != "completado");
+
+        if (siguienteDespues != null)
         {
-            Navigation.NavigateTo($"/checklists/{ChecklistId}/paso/{_siguientePaso.PasoId}");
+            return siguienteDespues;
         }
+
+        return lista.FirstOrDefault(p =>
+            p.PasoId != actual.PasoId &&
+            NormalizarEstado(p.Estado) != "completado");
+    }
+
+    private static string NormalizarEstado(string? estado)
+    {
+        if (string.IsNullOrWhiteSpace(estado))
+        {
+            return "pendiente";
+        }
+
+        return estado.Trim().ToLowerInvariant();
     }
 
     private static string FormatearTamano(long bytes) => bytes switch

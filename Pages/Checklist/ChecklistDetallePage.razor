@@ -84,6 +84,7 @@
                 <div style="display:grid;">
                     @foreach (var paso in _checklist.Pasos.OrderBy(x => x.NumeroPaso))
                     {
+                        var estadoPaso = NormalizarEstado(paso.Estado);
                         <div style="padding:16px 20px;border-bottom:1px solid var(--border-subtle);cursor:pointer;" @onclick="() => VerPaso(Id, paso.PasoId)">
                             <div style="display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:16px;align-items:center;">
                                 <div style="width:44px;height:44px;border-radius:12px;border:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--text-primary);background:var(--surface-raised);">
@@ -105,23 +106,22 @@
                                 </div>
 
                                 <div style="display:grid;justify-items:start;gap:8px;">
-                                    <BadgeEstado Estado="@paso.Estado" />
+                                    <BadgeEstado Estado="@estadoPaso" />
                                     <span class="body-small text-muted">@paso.Evidencias.Count evidencia(s)</span>
                                 </div>
 
                                 <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;" @onclick:stopPropagation="true">
-                                    @if (paso.Estado == "pendiente")
+                                    @if (estadoPaso == "pendiente")
                                     {
-                                        <GlassButton Variant="primary" OnClick="() => CambiarEstado(paso, REA.Web.Enums.EstadoPaso.EnProceso)">Iniciar</GlassButton>
+                                        <GlassButton Variant="primary" OnClick="() => VerPaso(Id, paso.PasoId)">Abrir paso</GlassButton>
                                     }
-                                    else if (paso.Estado == "en_proceso")
+                                    else if (estadoPaso == "en_proceso")
                                     {
-                                        <GlassButton Variant="primary" OnClick="() => CambiarEstado(paso, REA.Web.Enums.EstadoPaso.Completado)">Completar</GlassButton>
-                                        <GlassButton Variant="secondary" OnClick="() => CambiarEstado(paso, REA.Web.Enums.EstadoPaso.Bloqueado)">Bloquear</GlassButton>
+                                        <GlassButton Variant="primary" OnClick="() => VerPaso(Id, paso.PasoId)">Continuar</GlassButton>
                                     }
-                                    else if (paso.Estado == "bloqueado")
+                                    else if (estadoPaso == "bloqueado")
                                     {
-                                        <GlassButton Variant="secondary" OnClick="() => CambiarEstado(paso, REA.Web.Enums.EstadoPaso.EnProceso)">Desbloquear</GlassButton>
+                                        <GlassButton Variant="secondary" OnClick="() => VerPaso(Id, paso.PasoId)">Resolver</GlassButton>
                                     }
                                     else
                                     {
@@ -195,13 +195,13 @@
     private bool _cargando = true;
     private string? _error;
 
-    private int PasosCompletados => _checklist?.Pasos.Count(x => x.Estado == "completado") ?? 0;
-    private int PasosEnProceso => _checklist?.Pasos.Count(x => x.Estado == "en_proceso") ?? 0;
+    private int PasosCompletados => _checklist?.Pasos.Count(x => NormalizarEstado(x.Estado) == "completado") ?? 0;
+    private int PasosEnProceso => _checklist?.Pasos.Count(x => NormalizarEstado(x.Estado) == "en_proceso") ?? 0;
     private decimal PorcentajeVisible => CalcularPorcentajeVisible(_checklist);
     private string EstadoChecklist => _checklist == null ? "pendiente" : ObtenerEstadoChecklist(_checklist);
     private PasoDto? SiguientePaso => _checklist?.Pasos
         .OrderBy(x => x.NumeroPaso)
-        .FirstOrDefault(x => x.Estado is "pendiente" or "en_proceso" or "bloqueado");
+        .FirstOrDefault(x => NormalizarEstado(x.Estado) is "pendiente" or "en_proceso" or "bloqueado");
     private string TituloSiguientePaso => SiguientePaso == null ? "Checklist completo" : $"Paso {SiguientePaso.NumeroPaso}: {SiguientePaso.NombrePaso}";
     private string DescripcionSiguientePaso => SiguientePaso == null
         ? "Todos los pasos quedaron concluidos para este periodo."
@@ -240,29 +240,6 @@
         _cargando = false;
     }
 
-    private async Task CambiarEstado(PasoDto paso, REA.Web.Enums.EstadoPaso estado)
-    {
-        _error = null;
-        var estadoStr = estado.ToString().ToLower();
-
-        try
-        {
-            var result = await ChecklistService.ActualizarPasoAsync(Id, paso.PasoId, new UpdatePasoRequest { Estado = estadoStr });
-            if (result?.Ok == true)
-            {
-                await Cargar();
-            }
-            else
-            {
-                _error = result?.Error?.Message;
-            }
-        }
-        catch (Exception ex)
-        {
-            _error = ex.Message;
-        }
-    }
-
     private static string ObtenerEstadoChecklist(ChecklistDto checklist)
     {
         if (checklist.Completado)
@@ -294,10 +271,20 @@
         var totalPasos = pasos.Count;
         if (totalPasos > 0)
         {
-            var completados = pasos.Count(x => x.Estado == "completado");
+            var completados = pasos.Count(x => NormalizarEstado(x.Estado) == "completado");
             return Math.Round((decimal)completados * 100m / totalPasos, 0);
         }
 
         return checklist.PorcentajeAvance;
+    }
+
+    private static string NormalizarEstado(string? estado)
+    {
+        if (string.IsNullOrWhiteSpace(estado))
+        {
+            return "pendiente";
+        }
+
+        return estado.Trim().ToLowerInvariant();
     }
 }
