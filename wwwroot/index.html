@@ -113,6 +113,7 @@
           }
 
           document.body.style.colorScheme = dark ? 'dark' : 'light';
+          localStorage.setItem('rea_theme', dark ? 'dark' : 'light');
           setVars(dark ? darkVars : lightVars);
           setImportant(document.body, 'background-color', dark ? darkVars['--bg-base'] : lightVars['--bg-base']);
 
@@ -130,16 +131,36 @@
             setImportant(el, 'border-color', dark ? darkVars['--glass-border'] : lightVars['--glass-border']);
           });
 
-          // Clear legacy inline card styling so theme-aware CSS classes take over.
+          // Force surface rendering for deploy consistency (avoids stale var timing issues).
           document.querySelectorAll('.card, .glass-card, .glass-elevation-1, .glass-elevation-2, .glass-elevation-3, .glass-elevation-4, .modal-container, .toast, .error-banner, .login-card').forEach(function (el) {
-            el.style.removeProperty('background');
-            el.style.removeProperty('border-color');
+            setImportant(el, 'background', dark ? darkVars['--glass-bg-primary'] : lightVars['--glass-bg-primary']);
+            setImportant(el, 'border-color', dark ? darkVars['--glass-border'] : lightVars['--glass-border']);
           });
         }
 
+        function resolveThemeMode() {
+          var saved = localStorage.getItem('rea_theme');
+          if (saved === 'dark' || saved === 'light') {
+            return saved;
+          }
+
+          if (
+            document.documentElement.getAttribute('data-theme') === 'dark' ||
+            (document.body && document.body.getAttribute('data-theme') === 'dark') ||
+            document.querySelector('.app-layout.theme-dark')
+          ) {
+            return 'dark';
+          }
+
+          return 'light';
+        }
+
         window.reaApplyChrome = function () {
-          applyTheme(localStorage.getItem('rea_theme') === 'dark' ? 'dark' : 'light');
+          applyTheme(resolveThemeMode());
           applyLayout(localStorage.getItem('rea_sidebar_collapsed') === 'true');
+          window.setTimeout(function () {
+            applyTheme(resolveThemeMode());
+          }, 220);
         };
 
         window.reaTheme = {
@@ -161,11 +182,11 @@
         window.addEventListener('load', window.reaApplyChrome);
       })();
     </script>
-    <link rel="stylesheet" href="css/app.css?v=20260526.1" />
-    <link rel="stylesheet" href="css/glassmorphism.css?v=20260526.1" />
-    <link rel="stylesheet" href="css/typography.css?v=20260526.1" />
-    <link rel="stylesheet" href="css/animations.css?v=20260526.1" />
-    <link rel="stylesheet" href="css/components.css?v=20260526.1" />
+    <link rel="stylesheet" href="css/app.css?v=20260526.2" />
+    <link rel="stylesheet" href="css/glassmorphism.css?v=20260526.2" />
+    <link rel="stylesheet" href="css/typography.css?v=20260526.2" />
+    <link rel="stylesheet" href="css/animations.css?v=20260526.2" />
+    <link rel="stylesheet" href="css/components.css?v=20260526.2" />
     <script type="importmap"></script>
 </head>
 
