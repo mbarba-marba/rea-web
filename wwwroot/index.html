@@ -112,6 +112,7 @@
             document.body.removeAttribute('data-theme');
           }
 
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
           document.body.style.colorScheme = dark ? 'dark' : 'light';
           localStorage.setItem('rea_theme', dark ? 'dark' : 'light');
           setVars(dark ? darkVars : lightVars);
@@ -131,11 +132,7 @@
             setImportant(el, 'border-color', dark ? darkVars['--glass-border'] : lightVars['--glass-border']);
           });
 
-          // Force surface rendering for deploy consistency (avoids stale var timing issues).
-          document.querySelectorAll('.card, .glass-card, .glass-elevation-1, .glass-elevation-2, .glass-elevation-3, .glass-elevation-4, .modal-container, .toast, .error-banner, .login-card').forEach(function (el) {
-            setImportant(el, 'background', dark ? darkVars['--glass-bg-primary'] : lightVars['--glass-bg-primary']);
-            setImportant(el, 'border-color', dark ? darkVars['--glass-border'] : lightVars['--glass-border']);
-          });
+          // Let component/theme CSS own card surfaces to avoid stale inline backgrounds.
         }
 
         function resolveThemeMode() {
