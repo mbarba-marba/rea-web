@@ -1,123 +1,216 @@
 @page "/asignaciones"
 @using Microsoft.AspNetCore.Authorization
+@using REA.Web.Components.Shared
 @attribute [Authorize(Roles = "admin")]
 @inject HttpClient Http
 
-<PageHeader Title="Asignaciones de Clientes" Subtitle="Asigna clientes a auxiliares contables" />
+<div class="page-container animate-fade-in">
+    <div class="page-header" style="margin-bottom:20px;align-items:flex-start;gap:16px;">
+        <div class="page-header-left">
+            <h1>Asignaciones</h1>
+            <Breadcrumb Items="@_breadcrumb" />
+            <p class="body-small text-muted" style="margin-top:6px;">Relaciona clientes con auxiliares contables y revisa la carga operativa del despacho.</p>
+        </div>
 
-@if (_mensaje != null)
-{
-    <div class="alert-banner alert-@(_mensajeError ? "danger" : "success")" style="margin-bottom:16px;">
-        @_mensaje
-        <button @onclick="() => _mensaje = null" style="background:none;border:none;cursor:pointer;float:right;">✕</button>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+            <GlassButton Variant="secondary" OnClick="LimpiarFiltros">
+                <LucideIcon Name="rotate-ccw" Size="16" /> Limpiar filtros
+            </GlassButton>
+        </div>
     </div>
-}
 
-<div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;">
-    <input class="glass-input" style="height:36px;max-width:280px;"
-           placeholder="Buscar cliente..."
-           @bind="_busqueda" @bind:event="oninput" />
-    <select class="glass-input" style="height:36px;padding:0 10px;width:180px;" @onchange="FiltrarAuxiliar">
-        <option value="">Todos los auxiliares</option>
-        @foreach (var a in _auxiliares)
-        {
-            <option value="@a.UsuarioId">@a.Nombre @a.Apellidos</option>
-        }
-    </select>
-</div>
-
-@if (_cargando)
-{
-    <SkeletonLoader />
-}
-else if (_clientesFiltrados.Count == 0)
-{
-    <div class="glass-card" style="text-align:center;padding:40px;">
-        <LucideIcon Name="users" Size="40" />
-        <p style="margin-top:12px;color:var(--text-secondary);">No hay clientes que coincidan</p>
-    </div>
-}
-else
-{
-    <div class="glass-card">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>RFC</th>
-                    <th>Razón Social</th>
-                    <th>Auxiliares Asignados</th>
-                    <th style="text-align:right;">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var c in _clientesFiltrados)
-                {
-                    <tr>
-                        <td style="font-family:var(--font-mono);font-size:12px;">@c.Rfc</td>
-                        <td style="font-weight:500;">@c.RazonSocial</td>
-                        <td>
-                            <div style="display:flex;flex-wrap:wrap;gap:4px;">
-                                @foreach (var a in c.Asignaciones)
-                                {
-                                    <span style="display:inline-flex;align-items:center;gap:4px;background:rgba(7,98,128,0.12);color:var(--accent);border-radius:6px;padding:2px 8px;font-size:12px;font-weight:500;">
-                                        @a.AuxiliarNombre
-                                        <button @onclick="() => Remover(c, a)"
-                                                style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0;line-height:1;font-size:14px;"
-                                                title="Remover asignación">×</button>
-                                    </span>
-                                }
-                                @if (c.Asignaciones.Count == 0)
-                                {
-                                    <span style="color:var(--text-muted);font-size:12px;">Sin asignar</span>
-                                }
-                            </div>
-                        </td>
-                        <td>
-                            <div style="display:flex;justify-content:flex-end;">
-                                <button class="btn-icon" title="Asignar auxiliar" @onclick="() => AbrirModal(c)">
-                                    <LucideIcon Name="plus" Size="15" />
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-}
-
-@* Modal Asignar Auxiliar *@
-@if (_modalAsignar && _clienteSeleccionado != null)
-{
-    <div class="modal-backdrop" @onclick="CerrarModal">
-        <div class="modal-container" @onclick:stopPropagation="true">
-            <div class="modal-header">
-                <h3>Asignar Auxiliar</h3>
-                <button class="btn-icon" @onclick="CerrarModal"><LucideIcon Name="x" Size="16" /></button>
+    @if (_mensaje != null)
+    {
+        <div class="card" style="margin-bottom:16px;padding:14px 16px;border-color:@(_mensajeError ? "rgba(239,68,68,0.24)" : "rgba(16,185,129,0.24)");background:@(_mensajeError ? "rgba(239,68,68,0.08)" : "rgba(16,185,129,0.10)");">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <div style="display:flex;align-items:center;gap:10px;color:@(_mensajeError ? "var(--danger)" : "var(--success)")">
+                    <LucideIcon Name="@(_mensajeError ? "alert-circle" : "badge-check")" Size="18" />
+                    <span style="font-weight:600;">@_mensaje</span>
+                </div>
+                <button @onclick="() => _mensaje = null" class="btn btn-secondary btn-icon" title="Cerrar">
+                    <LucideIcon Name="x" Size="14" />
+                </button>
             </div>
-            <div class="modal-body">
-                <p style="color:var(--text-secondary);margin-bottom:16px;">
-                    Cliente: <strong>@_clienteSeleccionado.RazonSocial</strong>
-                </p>
-                <div class="form-group">
-                    <label>Auxiliar</label>
-                    <select class="glass-input" @bind="_auxiliarSeleccionadoId">
-                        <option value="0">— Seleccionar —</option>
-                        @foreach (var a in _auxiliaresDisponibles)
+        </div>
+    }
+
+    @if (_cargando)
+    {
+        <SkeletonLoader />
+    }
+    else
+    {
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:16px;">
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Clientes</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@_clientes.Count</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Base disponible para asignacion operativa.</div>
+            </div>
+
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Auxiliares activos</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@_auxiliares.Count</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Usuarios elegibles para recibir clientes.</div>
+            </div>
+
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Clientes filtrados</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@_clientesFiltrados.Count</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Resultados segun busqueda y auxiliar seleccionado.</div>
+            </div>
+        </div>
+
+        <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+            <div class="surface-panel-header" style="padding:16px 20px;">
+                <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Exploracion</div>
+                <h3 style="margin-top:4px;">Filtra y localiza asignaciones</h3>
+            </div>
+
+            <div style="padding:18px 20px;display:grid;grid-template-columns:minmax(280px,1fr) 260px auto;gap:12px;align-items:end;">
+                <div>
+                    <label class="input-label">Buscar cliente</label>
+                    <input class="input-field"
+                           placeholder="RFC o razon social"
+                           @bind="_busqueda" @bind:event="oninput" />
+                </div>
+
+                <div>
+                    <label class="input-label">Auxiliar</label>
+                    <select class="select-field" @onchange="FiltrarAuxiliar">
+                        <option value="">Todos los auxiliares</option>
+                        @foreach (var a in _auxiliares)
                         {
-                            <option value="@a.UsuarioId">@a.Nombre @a.Apellidos</option>
+                            <option value="@a.UsuarioId">@a.NombreCompleto</option>
                         }
                     </select>
                 </div>
+
+                <div style="display:flex;justify-content:flex-end;">
+                    <div class="badge badge-muted" style="padding:8px 10px;height:40px;display:inline-flex;">
+                        @_clientesFiltrados.Count resultados
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (_clientesFiltrados.Count == 0)
+        {
+            <div class="card empty-state" style="padding:56px 32px;">
+                <LucideIcon Name="users-round" Size="36" />
+                <div class="empty-state-heading">No hay clientes que coincidan con los filtros actuales</div>
+                <div class="empty-state-body">Ajusta la busqueda o cambia el auxiliar para volver a ver resultados.</div>
+            </div>
+        }
+        else
+        {
+            <div class="card" style="padding:0;overflow:hidden;">
+                <div class="surface-panel-header" style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <div>
+                        <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Listado</div>
+                        <h3 style="margin-top:4px;">Clientes y auxiliares asignados</h3>
+                    </div>
+                    <div class="body-small text-muted">@TotalAsignaciones activas en los resultados</div>
+                </div>
+
+                <div style="overflow-x:auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Cliente</th>
+                                <th>RFC</th>
+                                <th>Auxiliares asignados</th>
+                                <th style="text-align:right;width:92px;">Accion</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var c in _clientesFiltrados)
+                            {
+                                <tr>
+                                    <td>
+                                        <div style="font-weight:600;color:var(--text-primary);">@c.RazonSocial</div>
+                                        <div class="body-small text-muted" style="margin-top:2px;">@c.Asignaciones.Count auxiliar(es) vinculados</div>
+                                    </td>
+                                    <td class="mono" style="font-size:12px;">@c.Rfc</td>
+                                    <td>
+                                        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                                            @if (c.Asignaciones.Count == 0)
+                                            {
+                                                <span class="badge badge-muted">Sin asignar</span>
+                                            }
+                                            else
+                                            {
+                                                @foreach (var a in c.Asignaciones)
+                                                {
+                                                    <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;border:1px solid rgba(7,98,128,0.18);background:rgba(7,98,128,0.10);color:var(--accent);font-size:12px;font-weight:600;">
+                                                        @a.AuxiliarNombre
+                                                        <button @onclick="() => Remover(c, a)"
+                                                                style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0;line-height:1;display:inline-flex;"
+                                                                title="Remover asignacion">
+                                                            <LucideIcon Name="x" Size="12" />
+                                                        </button>
+                                                    </span>
+                                                }
+                                            }
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div style="display:flex;justify-content:flex-end;">
+                                            <button class="btn btn-secondary btn-icon" title="Asignar auxiliar" @onclick="() => AbrirModal(c)">
+                                                <LucideIcon Name="plus" Size="15" />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@if (_modalAsignar && _clienteSeleccionado != null)
+{
+    <div class="modal-backdrop" @onclick="CerrarModal">
+        <div class="modal-container" @onclick:stopPropagation="true" style="max-width:520px;">
+            <div class="modal-header">
+                <div>
+                    <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Nueva asignacion</div>
+                    <h3 style="margin-top:4px;">Asignar auxiliar</h3>
+                </div>
+                <button class="btn btn-secondary btn-icon" @onclick="CerrarModal"><LucideIcon Name="x" Size="16" /></button>
+            </div>
+
+            <div style="display:grid;gap:16px;">
+                <div class="card" style="padding:16px;">
+                    <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Cliente seleccionado</div>
+                    <div style="font-size:16px;font-weight:600;color:var(--text-primary);">@_clienteSeleccionado.RazonSocial</div>
+                    <div class="mono" style="font-size:12px;color:var(--text-secondary);margin-top:4px;">@_clienteSeleccionado.Rfc</div>
+                </div>
+
+                <div>
+                    <label class="input-label">Auxiliar disponible</label>
+                    <select class="select-field" @bind="_auxiliarSeleccionadoId">
+                        <option value="0">Selecciona un auxiliar</option>
+                        @foreach (var a in _auxiliaresDisponibles)
+                        {
+                            <option value="@a.UsuarioId">@a.NombreCompleto</option>
+                        }
+                    </select>
+                    <div class="body-small text-muted" style="margin-top:6px;">Solo se muestran auxiliares que aun no estan vinculados a este cliente.</div>
+                </div>
+
                 @if (_errorModal != null)
                 {
-                    <p style="color:var(--danger);font-size:13px;margin-top:8px;">@_errorModal</p>
+                    <div class="body-small" style="color:var(--danger);">@_errorModal</div>
                 }
             </div>
+
             <div class="modal-footer">
-                <GlassButton Variant="ghost" OnClick="CerrarModal">Cancelar</GlassButton>
+                <GlassButton Variant="secondary" OnClick="CerrarModal">Cancelar</GlassButton>
                 <GlassButton Variant="primary" OnClick="Asignar" Disabled="@(_procesando || _auxiliarSeleccionadoId == 0)">
-                    @(_procesando ? "Asignando..." : "Asignar")
+                    @(_procesando ? "Asignando..." : "Asignar auxiliar")
                 </GlassButton>
             </div>
         </div>
@@ -125,6 +218,12 @@ else
 }
 
 @code {
+    private readonly List<BreadcrumbItem> _breadcrumb = new()
+    {
+        new() { Text = "Inicio", Url = "/" },
+        new() { Text = "Asignaciones", Url = "/asignaciones" }
+    };
+
     private List<ClienteItem> _clientes = new();
     private List<AuxiliarItem> _auxiliares = new();
     private bool _cargando = true;
@@ -141,16 +240,19 @@ else
 
     private List<ClienteItem> _clientesFiltrados =>
         _clientes.Where(c =>
-            (string.IsNullOrEmpty(_busqueda) ||
+            (string.IsNullOrWhiteSpace(_busqueda) ||
              c.RazonSocial.Contains(_busqueda, StringComparison.OrdinalIgnoreCase) ||
              c.Rfc.Contains(_busqueda, StringComparison.OrdinalIgnoreCase)) &&
             (_filtroAuxiliar == 0 ||
              c.Asignaciones.Any(a => a.AuxiliarId == _filtroAuxiliar))
         ).ToList();
 
+    private int TotalAsignaciones => _clientesFiltrados.Sum(c => c.Asignaciones.Count);
+
     private List<AuxiliarItem> _auxiliaresDisponibles =>
-        _clienteSeleccionado == null ? _auxiliares :
-        _auxiliares.Where(a => _clienteSeleccionado.Asignaciones.All(x => x.AuxiliarId != a.UsuarioId)).ToList();
+        _clienteSeleccionado == null
+            ? _auxiliares
+            : _auxiliares.Where(a => _clienteSeleccionado.Asignaciones.All(x => x.AuxiliarId != a.UsuarioId)).ToList();
 
     protected override async Task OnInitializedAsync()
     {
@@ -163,9 +265,14 @@ else
         try
         {
             var r = await Http.GetFromJsonAsync<ApiResponse<List<ClienteItem>>>("api/v1/clientes?limit=500");
-            if (r?.Ok == true) _clientes = r.Data ?? new();
+            if (r?.Ok == true)
+            {
+                _clientes = r.Data ?? new();
+            }
         }
-        catch { }
+        catch
+        {
+        }
     }
 
     private async Task CargarAuxiliares()
@@ -173,14 +280,25 @@ else
         try
         {
             var r = await Http.GetFromJsonAsync<ApiResponse<List<AuxiliarItem>>>("api/v1/usuarios?rol=auxiliar&activo=true&limit=100");
-            if (r?.Ok == true) _auxiliares = r.Data ?? new();
+            if (r?.Ok == true)
+            {
+                _auxiliares = r.Data ?? new();
+            }
         }
-        catch { }
+        catch
+        {
+        }
     }
 
     private void FiltrarAuxiliar(ChangeEventArgs e)
     {
         long.TryParse(e.Value?.ToString(), out _filtroAuxiliar);
+    }
+
+    private void LimpiarFiltros()
+    {
+        _busqueda = string.Empty;
+        _filtroAuxiliar = 0;
     }
 
     private void AbrirModal(ClienteItem c)
@@ -195,14 +313,20 @@ else
     {
         _modalAsignar = false;
         _clienteSeleccionado = null;
+        _auxiliarSeleccionadoId = 0;
         _errorModal = null;
     }
 
     private async Task Asignar()
     {
-        if (_clienteSeleccionado == null || _auxiliarSeleccionadoId == 0) return;
+        if (_clienteSeleccionado == null || _auxiliarSeleccionadoId == 0)
+        {
+            return;
+        }
+
         _procesando = true;
         _errorModal = null;
+
         try
         {
             var r = await Http.PostAsJsonAsync(
@@ -218,19 +342,27 @@ else
                     _mensaje = $"Auxiliar asignado a {_clienteSeleccionado.RazonSocial}";
                     _mensajeError = false;
                     CerrarModal();
+                    return;
                 }
             }
-            else if (r.StatusCode == System.Net.HttpStatusCode.Conflict)
+
+            if (r.StatusCode == System.Net.HttpStatusCode.Conflict)
             {
-                _errorModal = "Este auxiliar ya está asignado a este cliente";
+                _errorModal = "Este auxiliar ya esta asignado a este cliente.";
             }
             else
             {
-                _errorModal = "Error al asignar";
+                _errorModal = "No se pudo completar la asignacion.";
             }
         }
-        catch (Exception ex) { _errorModal = ex.Message; }
-        _procesando = false;
+        catch (Exception ex)
+        {
+            _errorModal = ex.Message;
+        }
+        finally
+        {
+            _procesando = false;
+        }
     }
 
     private async Task Remover(ClienteItem cliente, AsignacionItem asignacion)
@@ -239,14 +371,19 @@ else
         {
             var r = await Http.DeleteAsync(
                 $"api/v1/clientes/{cliente.ClienteId}/asignaciones/{asignacion.AsignacionId}");
+
             if (r.IsSuccessStatusCode)
             {
                 cliente.Asignaciones.Remove(asignacion);
-                _mensaje = "Asignación removida";
+                _mensaje = "Asignacion removida.";
                 _mensajeError = false;
             }
         }
-        catch { }
+        catch
+        {
+            _mensaje = "No se pudo remover la asignacion.";
+            _mensajeError = true;
+        }
     }
 
     private class ClienteItem
@@ -262,6 +399,7 @@ else
         public long UsuarioId { get; set; }
         public string Nombre { get; set; } = "";
         public string Apellidos { get; set; } = "";
+        public string NombreCompleto => $"{Nombre} {Apellidos}".Trim();
     }
 
     private class AsignacionItem
