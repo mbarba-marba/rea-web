@@ -447,7 +447,9 @@
 
     private string ObtenerEstado(ChecklistDto checklist)
     {
-        if (checklist.Completado)
+        var avance = ObtenerPorcentajeVisible(checklist);
+
+        if (checklist.Completado || avance >= 100)
         {
             return "completado";
         }
@@ -457,7 +459,7 @@
             return "bloqueado";
         }
 
-        if (ObtenerPorcentajeVisible(checklist) <= 0)
+        if (avance <= 0)
         {
             return "pendiente";
         }
