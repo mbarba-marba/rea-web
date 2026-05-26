@@ -1,0 +1,149 @@
+/* ============================================================================
+   REA runtime theme layer
+   Loaded with a unique filename so deploy/CDN caches cannot serve old theme CSS.
+   ============================================================================ */
+
+:root {
+  --bg-base: #dfe4e8;
+  --accent: #076280;
+  --accent-light: #bbe7ef;
+  --accent-hover: #054a62;
+  --glass-bg-primary: rgba(255, 255, 255, 0.70);
+  --glass-bg-secondary: rgba(255, 255, 255, 0.50);
+  --glass-border: rgba(255, 255, 255, 0.30);
+  --text-primary: #1A1A2E;
+  --text-secondary: #6B7280;
+  --text-muted: #9CA3AF;
+  --border-subtle: rgba(0, 0, 0, 0.06);
+}
+
+html[data-theme="dark"],
+body[data-theme="dark"],
+.app-layout.theme-dark {
+  --bg-base: #0f1720;
+  --accent: #38b6cf;
+  --accent-light: rgba(56, 182, 207, 0.18);
+  --accent-hover: #5bc6da;
+  --glass-bg-primary: rgba(15, 23, 32, 0.72);
+  --glass-bg-secondary: rgba(15, 23, 32, 0.56);
+  --glass-border: rgba(148, 163, 184, 0.26);
+  --text-primary: #e6edf5;
+  --text-secondary: #c3ced9;
+  --text-muted: #9fb0c1;
+  --border-subtle: rgba(148, 163, 184, 0.24);
+  --shadow-low: 0 2px 10px rgba(0, 0, 0, 0.30);
+  --shadow-mid: 0 8px 28px rgba(0, 0, 0, 0.34);
+  --shadow-high: 0 12px 42px rgba(0, 0, 0, 0.40);
+  --shadow-overlay: 0 18px 52px rgba(0, 0, 0, 0.52);
+  color-scheme: dark;
+}
+
+body,
+.main-content,
+.app-footer {
+  background: var(--bg-base);
+  color: var(--text-primary);
+}
+
+.topbar,
+.rea-sidebar,
+aside.rea-sidebar {
+  background: var(--glass-bg-secondary);
+  border-color: var(--glass-border);
+}
+
+.card,
+.glass,
+.glass-card,
+.glass-surface,
+.glass-elevation-2,
+.modal-container,
+.toast,
+.error-banner,
+.login-card {
+  background: var(--glass-bg-primary);
+  border-color: var(--glass-border);
+}
+
+.glass-elevation-1 {
+  background: var(--glass-bg-secondary);
+  border-color: var(--glass-border);
+}
+
+.glass-elevation-3 {
+  background: color-mix(in srgb, var(--glass-bg-primary) 88%, var(--bg-base) 12%);
+  border-color: var(--glass-border);
+}
+
+.glass-elevation-4 {
+  background: color-mix(in srgb, var(--glass-bg-primary) 94%, var(--bg-base) 6%);
+  border-color: var(--glass-border);
+}
+
+.surface-panel {
+  background: color-mix(in srgb, var(--glass-bg-primary) 82%, var(--bg-base) 18%);
+  border-color: var(--glass-border);
+}
+
+.surface-panel-header {
+  background: color-mix(in srgb, var(--glass-bg-primary) 72%, var(--bg-base) 28%);
+  border-color: var(--border-subtle);
+}
+
+.input-field,
+.select-field {
+  background: color-mix(in srgb, var(--glass-bg-primary) 86%, var(--bg-base) 14%);
+  border-color: var(--glass-border);
+  color: var(--text-primary);
+}
+
+.input-field::placeholder {
+  color: var(--text-muted);
+}
+
+.btn-secondary {
+  background: color-mix(in srgb, var(--glass-bg-primary) 82%, var(--bg-base) 18%);
+  border-color: var(--glass-border);
+  color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+  background: color-mix(in srgb, var(--glass-bg-primary) 72%, var(--bg-base) 28%);
+}
+
+html[data-theme="dark"] .input-field,
+body[data-theme="dark"] .input-field,
+.app-layout.theme-dark .input-field,
+html[data-theme="dark"] .select-field,
+body[data-theme="dark"] .select-field,
+.app-layout.theme-dark .select-field,
+html[data-theme="dark"] .btn-secondary,
+body[data-theme="dark"] .btn-secondary,
+.app-layout.theme-dark .btn-secondary {
+  background: rgba(15, 23, 32, 0.62);
+  border-color: rgba(148, 163, 184, 0.32);
+  color: var(--text-primary);
+}
+
+html[data-theme="dark"] .btn-secondary:hover,
+body[data-theme="dark"] .btn-secondary:hover,
+.app-layout.theme-dark .btn-secondary:hover {
+  background: rgba(30, 41, 59, 0.78);
+}
+
+html[data-theme="dark"] .data-table th,
+body[data-theme="dark"] .data-table th,
+.app-layout.theme-dark .data-table th,
+html[data-theme="dark"] .data-table td,
+body[data-theme="dark"] .data-table td,
+.app-layout.theme-dark .data-table td {
+  color: var(--text-primary);
+  border-color: var(--border-subtle);
+}
+
+html[data-theme="dark"] .rea-sidebar .bg-white\/60,
+body[data-theme="dark"] .rea-sidebar .bg-white\/60,
+.app-layout.theme-dark .rea-sidebar.bg-white\/60 {
+  background: var(--glass-bg-secondary);
+}
+
