@@ -1,189 +1,297 @@
 @page "/usuarios"
 @using Microsoft.AspNetCore.Authorization
-@using REA.Web.Services
+@using REA.Web.Components.Shared
 @using REA.Web.Models
+@using REA.Web.Services
 @attribute [Authorize(Roles = "admin")]
 @inject HttpClient Http
 @inject NavigationManager Navigation
 
-<PageHeader Title="Usuarios" Subtitle="Gestión de usuarios del sistema" />
+<div class="page-container animate-fade-in">
+    <div class="page-header" style="margin-bottom:20px;align-items:flex-start;gap:16px;">
+        <div class="page-header-left">
+            <h1>Usuarios</h1>
+            <Breadcrumb Items="@_breadcrumb" />
+            <p class="body-small text-muted" style="margin-top:6px;">Gestiona accesos, roles y estado operativo de los usuarios del sistema.</p>
+        </div>
 
-@if (_mensaje != null)
-{
-    <div class="alert-banner alert-@(_mensajeError ? "danger" : "success")" style="margin-bottom:16px;">
-        @_mensaje
-        <button @onclick="() => _mensaje = null" style="background:none;border:none;cursor:pointer;float:right;">✕</button>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+            <GlassButton Variant="secondary" OnClick='() => Navigation.NavigateTo("/asignaciones")'>
+                <LucideIcon Name="link" Size="16" /> Asignaciones
+            </GlassButton>
+            <GlassButton Variant="primary" OnClick="IrANuevo">
+                <LucideIcon Name="plus" Size="16" /> Nuevo Usuario
+            </GlassButton>
+        </div>
     </div>
-}
 
-<div style="display:flex;gap:12px;margin-bottom:16px;align-items:center;flex-wrap:wrap;">
-    <GlassButton Variant="primary" OnClick="IrANuevo">
-        <LucideIcon Name="plus" Size="16" /> Nuevo Usuario
-    </GlassButton>
-    <GlassButton Variant="secondary" OnClick='() => Navigation.NavigateTo("/asignaciones")'>
-        <LucideIcon Name="users" Size="16" /> Asignaciones de Clientes
-    </GlassButton>
-    <div style="margin-left:auto;display:flex;gap:8px;">
-        <select class="glass-input" style="height:36px;padding:0 10px;width:140px;" @onchange="FiltrarRol">
-            <option value="">Todos los roles</option>
-            <option value="admin">Administrador</option>
-            <option value="auxiliar">Auxiliar</option>
-            <option value="cliente">Cliente</option>
-        </select>
-        <select class="glass-input" style="height:36px;padding:0 10px;width:130px;" @onchange="FiltrarActivo">
-            <option value="">Todos</option>
-            <option value="true">Activos</option>
-            <option value="false">Inactivos</option>
-        </select>
-    </div>
+    @if (_mensaje != null)
+    {
+        <div class="card" style="margin-bottom:16px;padding:14px 16px;border-color:@(_mensajeError ? "rgba(239,68,68,0.24)" : "rgba(16,185,129,0.24)");background:@(_mensajeError ? "rgba(239,68,68,0.08)" : "rgba(16,185,129,0.10)");">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <div style="display:flex;align-items:center;gap:10px;color:@(_mensajeError ? "var(--danger)" : "var(--success)")">
+                    <LucideIcon Name="@(_mensajeError ? "alert-circle" : "badge-check")" Size="18" />
+                    <span style="font-weight:600;">@_mensaje</span>
+                </div>
+                <button @onclick="() => _mensaje = null" class="btn btn-secondary btn-icon" title="Cerrar">
+                    <LucideIcon Name="x" Size="14" />
+                </button>
+            </div>
+        </div>
+    }
+
+    @if (_cargando)
+    {
+        <SkeletonLoader />
+    }
+    else
+    {
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:16px;">
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Usuarios</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@_usuarios.Count</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Resultados con los filtros actuales.</div>
+            </div>
+
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Activos</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@UsuariosActivos</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Cuentas habilitadas para entrar al sistema.</div>
+            </div>
+
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">MFA habilitado</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@UsuariosConMfa</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Proteccion adicional configurada.</div>
+            </div>
+
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Administradores</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@UsuariosAdmin</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Usuarios con permisos de alto nivel.</div>
+            </div>
+        </div>
+
+        <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+            <div class="surface-panel-header" style="padding:16px 20px;">
+                <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Exploracion</div>
+                <h3 style="margin-top:4px;">Filtra por rol y estado</h3>
+            </div>
+
+            <div style="padding:18px 20px;display:grid;grid-template-columns:180px 160px auto;gap:12px;align-items:end;">
+                <div>
+                    <label class="input-label">Rol</label>
+                    <select class="select-field" @onchange="FiltrarRol">
+                        <option value="">Todos los roles</option>
+                        <option value="admin">Administrador</option>
+                        <option value="auxiliar">Auxiliar</option>
+                        <option value="cliente">Cliente</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="input-label">Estado</label>
+                    <select class="select-field" @onchange="FiltrarActivo">
+                        <option value="">Todos</option>
+                        <option value="true">Activos</option>
+                        <option value="false">Inactivos</option>
+                    </select>
+                </div>
+
+                <div style="display:flex;justify-content:flex-end;gap:10px;align-items:center;flex-wrap:wrap;">
+                    <div class="badge badge-muted" style="padding:8px 10px;height:40px;display:inline-flex;">
+                        @_usuarios.Count usuarios
+                    </div>
+                    <GlassButton Variant="secondary" OnClick="LimpiarFiltros">
+                        <LucideIcon Name="rotate-ccw" Size="16" /> Limpiar
+                    </GlassButton>
+                </div>
+            </div>
+        </div>
+
+        @if (_usuarios.Count == 0)
+        {
+            <div class="card empty-state" style="padding:56px 32px;">
+                <LucideIcon Name="users" Size="36" />
+                <div class="empty-state-heading">No hay usuarios con los filtros seleccionados</div>
+                <div class="empty-state-body">Prueba otra combinacion de rol o estado para ver mas resultados.</div>
+            </div>
+        }
+        else
+        {
+            <div class="card" style="padding:0;overflow:hidden;">
+                <div class="surface-panel-header" style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <div>
+                        <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Listado</div>
+                        <h3 style="margin-top:4px;">Accesos y configuracion de usuarios</h3>
+                    </div>
+                    <div class="body-small text-muted">Control de roles, MFA y estado de acceso.</div>
+                </div>
+
+                <div style="overflow-x:auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Email</th>
+                                <th>Rol</th>
+                                <th>MFA</th>
+                                <th>Ultimo acceso</th>
+                                <th>Estado</th>
+                                <th style="text-align:right;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var u in _usuarios)
+                            {
+                                <tr>
+                                    <td>
+                                        <div style="font-weight:600;color:var(--text-primary);">@u.Nombre @u.Apellidos</div>
+                                        <div class="body-small text-muted" style="margin-top:2px;">ID @u.UsuarioId</div>
+                                    </td>
+                                    <td style="font-size:13px;color:var(--text-secondary);">@u.Email</td>
+                                    <td><BadgeRol Rol="@u.Rol" /></td>
+                                    <td>
+                                        @if (u.MfaHabilitado)
+                                        {
+                                            <span class="badge badge-success">Activo</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge badge-muted">Sin configurar</span>
+                                        }
+                                    </td>
+                                    <td style="font-size:12px;color:var(--text-secondary);">
+                                        @(u.UltimoAcceso?.ToString("dd/MM/yy HH:mm") ?? "Nunca")
+                                    </td>
+                                    <td>
+                                        @if (u.Activo)
+                                        {
+                                            <span class="badge badge-success">Activo</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge badge-muted">Inactivo</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div style="display:flex;gap:6px;justify-content:flex-end;">
+                                            <button class="btn btn-secondary btn-icon" title="Editar datos" @onclick="() => IrAEditar(u.UsuarioId)">
+                                                <LucideIcon Name="pencil" Size="15" />
+                                            </button>
+                                            <button class="btn btn-secondary btn-icon" title="Cambiar rol" @onclick="() => AbrirModalRol(u)">
+                                                <LucideIcon Name="shield-check" Size="15" />
+                                            </button>
+                                            <button class="btn btn-secondary btn-icon" title="Resetear contraseña" @onclick="() => AbrirModalPassword(u)">
+                                                <LucideIcon Name="key-round" Size="15" />
+                                            </button>
+                                            @if (u.Activo)
+                                            {
+                                                <button class="btn btn-secondary btn-icon" title="Desactivar" @onclick="() => ToggleActivo(u, false)">
+                                                    <LucideIcon Name="user-x" Size="15" />
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button class="btn btn-secondary btn-icon" title="Activar" @onclick="() => ToggleActivo(u, true)">
+                                                    <LucideIcon Name="user-check" Size="15" />
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    }
 </div>
 
-@if (_cargando)
-{
-    <SkeletonLoader />
-}
-else if (_usuarios.Count == 0)
-{
-    <div class="glass-card" style="text-align:center;padding:40px;">
-        <LucideIcon Name="users" Size="40" />
-        <p style="margin-top:12px;color:var(--text-secondary);">No hay usuarios con los filtros seleccionados</p>
-    </div>
-}
-else
-{
-    <div class="glass-card">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Usuario</th>
-                    <th>Email</th>
-                    <th>Rol</th>
-                    <th>MFA</th>
-                    <th>Último Acceso</th>
-                    <th>Estado</th>
-                    <th style="text-align:right;">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var u in _usuarios)
-                {
-                    <tr>
-                        <td style="font-weight:500;">@u.Nombre @u.Apellidos</td>
-                        <td style="font-size:13px;color:var(--text-secondary);">@u.Email</td>
-                        <td><BadgeRol Rol="@u.Rol" /></td>
-                        <td>
-                            @if (u.MfaHabilitado)
-                            {
-                                <span style="color:var(--success);font-size:12px;font-weight:500;">✓ Activo</span>
-                            }
-                            else
-                            {
-                                <span style="color:var(--text-muted);font-size:12px;">—</span>
-                            }
-                        </td>
-                        <td style="font-size:12px;color:var(--text-secondary);">
-                            @(u.UltimoAcceso?.ToString("dd/MM/yy HH:mm") ?? "Nunca")
-                        </td>
-                        <td>
-                            <span style="font-size:12px;font-weight:500;color:@(u.Activo ? "var(--success)" : "var(--text-muted)");">
-                                @(u.Activo ? "Activo" : "Inactivo")
-                            </span>
-                        </td>
-                        <td>
-                            <div style="display:flex;gap:6px;justify-content:flex-end;">
-                                <button class="btn-icon" title="Editar datos" @onclick="() => IrAEditar(u.UsuarioId)">
-                                    <LucideIcon Name="pencil" Size="15" />
-                                </button>
-                                <button class="btn-icon" title="Cambiar rol" @onclick="() => AbrirModalRol(u)">
-                                    <LucideIcon Name="shield-check" Size="15" />
-                                </button>
-                                <button class="btn-icon" title="Resetear contraseña" @onclick="() => AbrirModalPassword(u)">
-                                    <LucideIcon Name="eye" Size="15" />
-                                </button>
-                                @if (u.Activo)
-                                {
-                                    <button class="btn-icon btn-icon--danger" title="Desactivar" @onclick="() => ToggleActivo(u, false)">
-                                        <LucideIcon Name="x" Size="15" />
-                                    </button>
-                                }
-                                else
-                                {
-                                    <button class="btn-icon btn-icon--success" title="Activar" @onclick="() => ToggleActivo(u, true)">
-                                        <LucideIcon Name="circle-check" Size="15" />
-                                    </button>
-                                }
-                            </div>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-}
-
-@* Modal Cambiar Rol *@
 @if (_modalRol && _usuarioSeleccionado != null)
 {
     <div class="modal-backdrop" @onclick="CerrarModales">
-        <div class="modal-container" @onclick:stopPropagation="true">
+        <div class="modal-container" @onclick:stopPropagation="true" style="max-width:520px;">
             <div class="modal-header">
-                <h3>Cambiar Rol</h3>
-                <button class="btn-icon" @onclick="CerrarModales"><LucideIcon Name="x" Size="16" /></button>
+                <div>
+                    <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Permisos</div>
+                    <h3 style="margin-top:4px;">Cambiar rol</h3>
+                </div>
+                <button class="btn btn-secondary btn-icon" @onclick="CerrarModales"><LucideIcon Name="x" Size="16" /></button>
             </div>
-            <div class="modal-body">
-                <p style="color:var(--text-secondary);margin-bottom:16px;">
-                    Usuario: <strong>@_usuarioSeleccionado.Nombre @_usuarioSeleccionado.Apellidos</strong>
-                </p>
-                <div class="form-group">
-                    <label>Nuevo Rol</label>
-                    <select class="glass-input" @bind="_nuevoRol">
+
+            <div style="display:grid;gap:16px;">
+                <div class="card" style="padding:16px;">
+                    <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Usuario seleccionado</div>
+                    <div style="font-size:16px;font-weight:600;color:var(--text-primary);">@_usuarioSeleccionado.Nombre @_usuarioSeleccionado.Apellidos</div>
+                    <div class="body-small text-muted" style="margin-top:4px;">@_usuarioSeleccionado.Email</div>
+                </div>
+
+                <div>
+                    <label class="input-label">Nuevo rol</label>
+                    <select class="select-field" @bind="_nuevoRol">
                         <option value="admin">Administrador</option>
                         <option value="auxiliar">Auxiliar Contable</option>
                         <option value="cliente">Cliente</option>
                     </select>
                 </div>
+
+                @if (_errorModal != null)
+                {
+                    <div class="body-small" style="color:var(--danger);">@_errorModal</div>
+                }
             </div>
+
             <div class="modal-footer">
-                <GlassButton Variant="ghost" OnClick="CerrarModales">Cancelar</GlassButton>
+                <GlassButton Variant="secondary" OnClick="CerrarModales">Cancelar</GlassButton>
                 <GlassButton Variant="primary" OnClick="GuardarRol" Disabled="@_procesando">
-                    @(_procesando ? "Guardando..." : "Confirmar")
+                    @(_procesando ? "Guardando..." : "Confirmar cambio")
                 </GlassButton>
             </div>
         </div>
     </div>
 }
 
-@* Modal Reset Contraseña *@
 @if (_modalPassword && _usuarioSeleccionado != null)
 {
     <div class="modal-backdrop" @onclick="CerrarModales">
-        <div class="modal-container" @onclick:stopPropagation="true">
+        <div class="modal-container" @onclick:stopPropagation="true" style="max-width:520px;">
             <div class="modal-header">
-                <h3>Resetear Contraseña</h3>
-                <button class="btn-icon" @onclick="CerrarModales"><LucideIcon Name="x" Size="16" /></button>
+                <div>
+                    <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Credenciales</div>
+                    <h3 style="margin-top:4px;">Resetear contraseña</h3>
+                </div>
+                <button class="btn btn-secondary btn-icon" @onclick="CerrarModales"><LucideIcon Name="x" Size="16" /></button>
             </div>
-            <div class="modal-body">
-                <p style="color:var(--text-secondary);margin-bottom:16px;">
-                    Usuario: <strong>@_usuarioSeleccionado.Nombre @_usuarioSeleccionado.Apellidos</strong><br />
-                    <span style="font-size:12px;">El usuario deberá cambiar su contraseña en el próximo acceso.</span>
-                </p>
-                <div class="form-group">
-                    <label>Nueva Contraseña</label>
-                    <input type="password" class="glass-input" @bind="_nuevaPassword" placeholder="Mínimo 8 caracteres" />
+
+            <div style="display:grid;gap:16px;">
+                <div class="card" style="padding:16px;">
+                    <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Usuario seleccionado</div>
+                    <div style="font-size:16px;font-weight:600;color:var(--text-primary);">@_usuarioSeleccionado.Nombre @_usuarioSeleccionado.Apellidos</div>
+                    <div class="body-small text-muted" style="margin-top:4px;">El usuario debera cambiar su contraseña en el proximo acceso.</div>
                 </div>
-                <div class="form-group">
-                    <label>Confirmar Contraseña</label>
-                    <input type="password" class="glass-input" @bind="_confirmarPassword" />
+
+                <div>
+                    <label class="input-label">Nueva contraseña</label>
+                    <input type="password" class="input-field" @bind="_nuevaPassword" placeholder="Minimo 8 caracteres" />
                 </div>
+
+                <div>
+                    <label class="input-label">Confirmar contraseña</label>
+                    <input type="password" class="input-field" @bind="_confirmarPassword" placeholder="Repite la contraseña" />
+                </div>
+
                 @if (_errorModal != null)
                 {
-                    <p style="color:var(--danger);font-size:13px;margin-top:8px;">@_errorModal</p>
+                    <div class="body-small" style="color:var(--danger);">@_errorModal</div>
                 }
             </div>
+
             <div class="modal-footer">
-                <GlassButton Variant="ghost" OnClick="CerrarModales">Cancelar</GlassButton>
+                <GlassButton Variant="secondary" OnClick="CerrarModales">Cancelar</GlassButton>
                 <GlassButton Variant="primary" OnClick="GuardarPassword" Disabled="@_procesando">
-                    @(_procesando ? "Guardando..." : "Resetear")
+                    @(_procesando ? "Guardando..." : "Resetear contraseña")
                 </GlassButton>
             </div>
         </div>
@@ -191,6 +299,12 @@ else
 }
 
 @code {
+    private readonly List<BreadcrumbItem> _breadcrumb = new()
+    {
+        new() { Text = "Inicio", Url = "/" },
+        new() { Text = "Usuarios", Url = "/usuarios" }
+    };
+
     private List<UsuarioDto> _usuarios = new();
     private bool _cargando = true;
     private string? _mensaje;
@@ -207,6 +321,10 @@ else
     private string? _errorModal;
     private bool _procesando;
 
+    private int UsuariosActivos => _usuarios.Count(x => x.Activo);
+    private int UsuariosConMfa => _usuarios.Count(x => x.MfaHabilitado);
+    private int UsuariosAdmin => _usuarios.Count(x => x.Rol == "admin");
+
     protected override async Task OnInitializedAsync() => await Cargar();
 
     private async Task Cargar()
@@ -215,17 +333,46 @@ else
         try
         {
             var url = "api/v1/usuarios?limit=100";
-            if (!string.IsNullOrEmpty(_filtroRol)) url += $"&rol={_filtroRol}";
-            if (!string.IsNullOrEmpty(_filtroActivo)) url += $"&activo={_filtroActivo}";
+            if (!string.IsNullOrEmpty(_filtroRol))
+            {
+                url += $"&rol={_filtroRol}";
+            }
+
+            if (!string.IsNullOrEmpty(_filtroActivo))
+            {
+                url += $"&activo={_filtroActivo}";
+            }
+
             var result = await Http.GetFromJsonAsync<ApiResponse<List<UsuarioDto>>>(url);
-            if (result?.Ok == true) _usuarios = result.Data ?? new();
+            if (result?.Ok == true)
+            {
+                _usuarios = result.Data ?? new();
+            }
         }
-        catch { }
+        catch
+        {
+        }
         _cargando = false;
     }
 
-    private async Task FiltrarRol(ChangeEventArgs e) { _filtroRol = e.Value?.ToString(); await Cargar(); }
-    private async Task FiltrarActivo(ChangeEventArgs e) { _filtroActivo = e.Value?.ToString(); await Cargar(); }
+    private async Task FiltrarRol(ChangeEventArgs e)
+    {
+        _filtroRol = e.Value?.ToString();
+        await Cargar();
+    }
+
+    private async Task FiltrarActivo(ChangeEventArgs e)
+    {
+        _filtroActivo = e.Value?.ToString();
+        await Cargar();
+    }
+
+    private async Task LimpiarFiltros()
+    {
+        _filtroRol = null;
+        _filtroActivo = null;
+        await Cargar();
+    }
 
     private void IrANuevo() => Navigation.NavigateTo("/usuarios/nuevo");
     private void IrAEditar(long id) => Navigation.NavigateTo($"/usuarios/{id}/editar");
@@ -257,7 +404,11 @@ else
 
     private async Task GuardarRol()
     {
-        if (_usuarioSeleccionado == null) return;
+        if (_usuarioSeleccionado == null)
+        {
+            return;
+        }
+
         _procesando = true;
         try
         {
@@ -269,17 +420,37 @@ else
                 CerrarModales();
                 await Cargar();
             }
-            else { _errorModal = "Error al cambiar rol"; }
+            else
+            {
+                _errorModal = "Error al cambiar rol";
+            }
         }
-        catch (Exception ex) { _errorModal = ex.Message; }
+        catch (Exception ex)
+        {
+            _errorModal = ex.Message;
+        }
         _procesando = false;
     }
 
     private async Task GuardarPassword()
     {
-        if (_usuarioSeleccionado == null) return;
-        if (_nuevaPassword.Length < 8) { _errorModal = "Mínimo 8 caracteres"; return; }
-        if (_nuevaPassword != _confirmarPassword) { _errorModal = "Las contraseñas no coinciden"; return; }
+        if (_usuarioSeleccionado == null)
+        {
+            return;
+        }
+
+        if (_nuevaPassword.Length < 8)
+        {
+            _errorModal = "Minimo 8 caracteres";
+            return;
+        }
+
+        if (_nuevaPassword != _confirmarPassword)
+        {
+            _errorModal = "Las contraseñas no coinciden";
+            return;
+        }
+
         _procesando = true;
         try
         {
@@ -291,9 +462,15 @@ else
                 _mensajeError = false;
                 CerrarModales();
             }
-            else { _errorModal = "Error al resetear contraseña"; }
+            else
+            {
+                _errorModal = "Error al resetear contraseña";
+            }
         }
-        catch (Exception ex) { _errorModal = ex.Message; }
+        catch (Exception ex)
+        {
+            _errorModal = ex.Message;
+        }
         _procesando = false;
     }
 
@@ -303,9 +480,13 @@ else
         {
             HttpResponseMessage r;
             if (activar)
+            {
                 r = await Http.PutAsJsonAsync($"api/v1/usuarios/{u.UsuarioId}/activar", new { });
+            }
             else
+            {
                 r = await Http.DeleteAsync($"api/v1/usuarios/{u.UsuarioId}");
+            }
 
             if (r.IsSuccessStatusCode)
             {
@@ -314,7 +495,9 @@ else
                 await Cargar();
             }
         }
-        catch { }
+        catch
+        {
+        }
     }
 
     private class UsuarioDto
