@@ -210,6 +210,7 @@
     private bool _collapsed;
     private bool _modalConfig;
     private bool _isDarkMode;
+    private bool _chromeReady;
     private string _userName = "";
     private string _userEmail = "";
     private string _userInitial = "U";
@@ -246,6 +247,7 @@
         _isDarkMode = savedTheme == "dark";
         await ThemeChanged.InvokeAsync(_isDarkMode);
         await ApplyThemeAsync(_isDarkMode);
+        _chromeReady = true;
 
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
@@ -290,6 +292,11 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!_chromeReady)
+        {
+            return;
+        }
+
         // Re-apply chrome state after every render so recreated DOM nodes
         // (like collapsed/expanded sidebar) keep the active theme/layout.
         await ApplySidebarLayoutAsync(_collapsed);

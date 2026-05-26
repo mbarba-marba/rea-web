@@ -98,7 +98,7 @@
           });
         }
 
-        function applyTheme(mode) {
+        function applyTheme(mode, persist) {
           var dark = mode === 'dark';
           clearInlineThemeState();
 
@@ -116,7 +116,9 @@
 
           document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
           document.body.style.colorScheme = dark ? 'dark' : 'light';
-          localStorage.setItem('rea_theme', dark ? 'dark' : 'light');
+          if (persist) {
+            localStorage.setItem('rea_theme', dark ? 'dark' : 'light');
+          }
         }
 
         function resolveThemeMode() {
@@ -137,17 +139,16 @@
         }
 
         window.reaApplyChrome = function () {
-          applyTheme(resolveThemeMode());
+          applyTheme(resolveThemeMode(), false);
           applyLayout(localStorage.getItem('rea_sidebar_collapsed') === 'true');
           window.setTimeout(function () {
-            applyTheme(resolveThemeMode());
+            applyTheme(resolveThemeMode(), false);
           }, 220);
         };
 
         window.reaTheme = {
           apply: function (mode) {
-            localStorage.setItem('rea_theme', mode === 'dark' ? 'dark' : 'light');
-            applyTheme(mode);
+            applyTheme(mode, true);
           }
         };
 
@@ -155,7 +156,6 @@
           setSidebarCollapsed: function (collapsed) {
             localStorage.setItem('rea_sidebar_collapsed', collapsed ? 'true' : 'false');
             applyLayout(collapsed);
-            applyTheme(localStorage.getItem('rea_theme') === 'dark' ? 'dark' : 'light');
           }
         };
 
@@ -163,11 +163,11 @@
         window.addEventListener('load', window.reaApplyChrome);
       })();
     </script>
-    <link rel="stylesheet" href="css/app.css?v=20260526.3" />
-    <link rel="stylesheet" href="css/glassmorphism.css?v=20260526.3" />
-    <link rel="stylesheet" href="css/typography.css?v=20260526.3" />
-    <link rel="stylesheet" href="css/animations.css?v=20260526.3" />
-    <link rel="stylesheet" href="css/components.css?v=20260526.3" />
+    <link rel="stylesheet" href="css/app.css?v=20260526.4" />
+    <link rel="stylesheet" href="css/glassmorphism.css?v=20260526.4" />
+    <link rel="stylesheet" href="css/typography.css?v=20260526.4" />
+    <link rel="stylesheet" href="css/animations.css?v=20260526.4" />
+    <link rel="stylesheet" href="css/components.css?v=20260526.4" />
     <script type="importmap"></script>
 </head>
 
