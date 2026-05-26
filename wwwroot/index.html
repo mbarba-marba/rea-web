@@ -130,8 +130,11 @@
             setImportant(el, 'border-color', dark ? darkVars['--glass-border'] : lightVars['--glass-border']);
           });
 
-          // Card/surface backgrounds are controlled by CSS variables.
-          // Avoid forcing inline styles here to prevent first-render theme mismatches.
+          // Clear legacy inline card styling so theme-aware CSS classes take over.
+          document.querySelectorAll('.card, .glass-card, .glass-elevation-1, .glass-elevation-2, .glass-elevation-3, .glass-elevation-4, .modal-container, .toast, .error-banner, .login-card').forEach(function (el) {
+            el.style.removeProperty('background');
+            el.style.removeProperty('border-color');
+          });
         }
 
         window.reaApplyChrome = function () {
