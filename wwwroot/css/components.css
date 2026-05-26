@@ -5,7 +5,7 @@
 /* === Cards === */
 
 .card {
-  background: rgba(255, 255, 255, 0.70);
+  background: var(--glass-bg-primary);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
@@ -121,10 +121,10 @@
 /* === Inputs === */
 
 .input-field {
-  background: rgba(255, 255, 255, 0.60);
+  background: color-mix(in srgb, var(--glass-bg-primary) 86%, var(--bg-base) 14%);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(0, 0, 0, 0.10);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   padding: 10px 14px;
   font-family: var(--font-ui);
@@ -169,10 +169,10 @@
 }
 
 .select-field {
-  background: rgba(255, 255, 255, 0.60);
+  background: color-mix(in srgb, var(--glass-bg-primary) 86%, var(--bg-base) 14%);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(0, 0, 0, 0.10);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   padding: 10px 14px;
   font-family: var(--font-ui);
@@ -235,14 +235,14 @@
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.70);
+  background: color-mix(in srgb, var(--glass-bg-primary) 82%, var(--bg-base) 18%);
   color: var(--text-primary);
-  border: 1px solid rgba(0, 0, 0, 0.10);
+  border: 1px solid var(--glass-border);
   backdrop-filter: blur(8px);
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.85);
+  background: color-mix(in srgb, var(--glass-bg-primary) 72%, var(--bg-base) 28%);
 }
 
 .btn-ghost {
