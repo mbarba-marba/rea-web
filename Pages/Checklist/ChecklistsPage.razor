@@ -85,7 +85,7 @@
                 <h3 style="margin-top:4px;">Busca por cliente, periodo o estado</h3>
             </div>
 
-            <div style="padding:18px 20px;display:grid;grid-template-columns:minmax(280px,1fr) 220px auto;gap:12px;align-items:end;">
+            <div style="padding:18px 20px;display:grid;grid-template-columns:minmax(260px,1.2fr) 220px 220px auto;gap:12px;align-items:end;">
                 <div>
                     <label class="input-label">Buscar checklist</label>
                     <input type="text"
@@ -93,6 +93,17 @@
                            @bind="_busqueda"
                            @bind:event="oninput"
                            placeholder="Cliente o periodo" />
+                </div>
+
+                <div>
+                    <label class="input-label">Periodo</label>
+                    <select class="select-field" @bind="_filtroPeriodoId">
+                        <option value="">Todos los periodos</option>
+                        @foreach (var periodo in _periodosDisponibles)
+                        {
+                            <option value="@periodo.PeriodoId">@FormatearPeriodo(periodo)</option>
+                        }
+                    </select>
                 </div>
 
                 <div>
@@ -274,6 +285,7 @@
     private bool _mensajeError;
     private string _busqueda = "";
     private string _filtroEstado = "";
+    private long? _filtroPeriodoId;
     private bool _modalNuevo;
     private long? _nuevoClienteId;
     private long? _nuevoPeriodoId;
@@ -283,6 +295,7 @@
 
     private List<ChecklistDto> ChecklistsFiltrados => _checklists
         .Where(FiltraBusqueda)
+        .Where(FiltraPeriodo)
         .Where(FiltraEstado)
         .OrderByDescending(x => x.CreatedAt)
         .ThenByDescending(x => x.ChecklistId)
@@ -376,10 +389,14 @@
     private bool FiltraEstado(ChecklistDto checklist)
         => string.IsNullOrWhiteSpace(_filtroEstado) || string.Equals(ObtenerEstado(checklist), _filtroEstado, StringComparison.OrdinalIgnoreCase);
 
+    private bool FiltraPeriodo(ChecklistDto checklist)
+        => !_filtroPeriodoId.HasValue || checklist.PeriodoId == _filtroPeriodoId.Value;
+
     private void LimpiarFiltros()
     {
         _busqueda = "";
         _filtroEstado = "";
+        _filtroPeriodoId = null;
     }
 
     private void VerChecklist(long id) => Navigation.NavigateTo($"/checklists/{id}");
