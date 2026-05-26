@@ -1,89 +1,201 @@
 @page "/periodos"
 @using Microsoft.AspNetCore.Authorization
+@using REA.Web.Components.Shared
 @attribute [Authorize(Roles = "admin")]
 @inject HttpClient Http
 @inject NavigationManager Navigation
 
-<PageHeader Title="Períodos Fiscales" Subtitle="Gestión de períodos mensuales" />
+<div class="page-container animate-fade-in">
+    <div class="page-header" style="margin-bottom:20px;align-items:flex-start;gap:16px;">
+        <div class="page-header-left">
+            <h1>Periodos Fiscales</h1>
+            <Breadcrumb Items="@_breadcrumb" />
+            <p class="body-small text-muted" style="margin-top:6px;">Apertura, seguimiento y cierre de periodos mensuales del despacho.</p>
+        </div>
 
-<div class="glass-card" style="margin-bottom:16px;padding:16px 20px;">
-    <div style="display:flex;gap:12px;align-items:center;">
-        <select @bind="_anio" class="glass-input" style="width:120px;">
-            <option value="2024">2024</option>
-            <option value="2025">2025</option>
-            <option value="2026" selected>2026</option>
-            <option value="2027">2027</option>
-        </select>
-        <select @bind="_mes" class="glass-input" style="width:120px;">
-            @for (int i = 1; i <= 12; i++)
-            {
-                <option value="@i">@(new DateTime(2026, i, 1).ToString("MMMM"))</option>
-            }
-        </select>
-        <GlassButton Variant="primary" OnClick="CrearPeriodo">
-            <LucideIcon Name="plus" Size="16" /> Abrir Período
-        </GlassButton>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+            <GlassButton Variant="secondary" OnClick='() => Navigation.NavigateTo("/checklists")'>
+                <LucideIcon Name="list-checks" Size="16" /> Checklists
+            </GlassButton>
+        </div>
     </div>
+
     @if (_msg != null)
     {
-        <div style="margin-top:8px;color:var(--success);">@_msg</div>
+        <div class="card" style="margin-bottom:16px;padding:14px 16px;border-color:rgba(16,185,129,0.24);background:rgba(16,185,129,0.10);">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <div style="display:flex;align-items:center;gap:10px;color:var(--success)">
+                    <LucideIcon Name="badge-check" Size="18" />
+                    <span style="font-weight:600;">@_msg</span>
+                </div>
+                <button @onclick="() => _msg = null" class="btn btn-secondary btn-icon" title="Cerrar">
+                    <LucideIcon Name="x" Size="14" />
+                </button>
+            </div>
+        </div>
     }
+
     @if (_error != null)
     {
         <ErrorBanner Message="@_error" OnDismiss="() => _error = null" />
     }
+
+    @if (_cargando)
+    {
+        <SkeletonLoader />
+    }
+    else
+    {
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:16px;">
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Periodos</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@_periodos.Count</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Registros del anio seleccionado.</div>
+            </div>
+
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Abiertos</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@PeriodosAbiertos</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Disponibles para operar y capturar avance.</div>
+            </div>
+
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Cerrados</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@PeriodosCerrados</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Expedientes fiscales ya concluidos.</div>
+            </div>
+
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Ultimo abierto</div>
+                <div style="font-size:20px;font-weight:700;color:var(--text-primary);">@UltimoPeriodoAbierto</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Referencia operativa mas reciente.</div>
+            </div>
+        </div>
+
+        <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+            <div class="surface-panel-header" style="padding:16px 20px;">
+                <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Administracion</div>
+                <h3 style="margin-top:4px;">Abrir periodo mensual</h3>
+            </div>
+
+            <div style="padding:18px 20px;display:grid;grid-template-columns:140px 180px auto;gap:12px;align-items:end;">
+                <div>
+                    <label class="input-label">Anio</label>
+                    <select @bind="_anio" class="select-field">
+                        @foreach (var anio in _aniosDisponibles)
+                        {
+                            <option value="@anio">@anio</option>
+                        }
+                    </select>
+                </div>
+
+                <div>
+                    <label class="input-label">Mes</label>
+                    <select @bind="_mes" class="select-field">
+                        @for (int i = 1; i <= 12; i++)
+                        {
+                            <option value="@i">@ObtenerNombreMes(i)</option>
+                        }
+                    </select>
+                </div>
+
+                <div style="display:flex;justify-content:flex-end;gap:10px;align-items:center;flex-wrap:wrap;">
+                    <div class="badge badge-muted" style="padding:8px 10px;height:40px;display:inline-flex;">
+                        @(_periodos.Count == 0 ? "Sin registros" : $"{_periodos.Count} en vista")
+                    </div>
+                    <GlassButton Variant="secondary" OnClick="Cargar">
+                        <LucideIcon Name="refresh-cw" Size="16" /> Actualizar
+                    </GlassButton>
+                    <GlassButton Variant="primary" OnClick="CrearPeriodo">
+                        <LucideIcon Name="plus" Size="16" /> Abrir periodo
+                    </GlassButton>
+                </div>
+            </div>
+        </div>
+
+        @if (_periodos.Count == 0)
+        {
+            <div class="card empty-state" style="padding:56px 32px;">
+                <LucideIcon Name="calendar-range" Size="40" />
+                <div class="empty-state-heading">No hay periodos registrados</div>
+                <div class="empty-state-body">Abre un periodo para comenzar a operar el flujo mensual del despacho.</div>
+            </div>
+        }
+        else
+        {
+            <div class="card" style="padding:0;overflow:hidden;">
+                <div class="surface-panel-header" style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <div>
+                        <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Listado</div>
+                        <h3 style="margin-top:4px;">Calendario fiscal del anio @_anio</h3>
+                    </div>
+                    <div class="body-small text-muted">Los periodos abiertos alimentan el trabajo de checklist y cierre mensual.</div>
+                </div>
+
+                <div style="overflow-x:auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Periodo</th>
+                                <th>Mes</th>
+                                <th>Inicio</th>
+                                <th>Fin</th>
+                                <th>Estado</th>
+                                <th style="text-align:right;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var periodo in _periodos.OrderByDescending(x => x.Anio).ThenByDescending(x => x.Mes))
+                            {
+                                <tr>
+                                    <td>
+                                        <div style="font-weight:600;color:var(--text-primary);">@FormatearPeriodo(periodo)</div>
+                                        <div class="body-small text-muted" style="margin-top:2px;">ID @periodo.PeriodoId</div>
+                                    </td>
+                                    <td style="font-size:13px;color:var(--text-secondary);">@ObtenerNombreMes(periodo.Mes)</td>
+                                    <td style="font-size:13px;color:var(--text-secondary);">@periodo.FechaInicio.ToString("dd/MM/yyyy")</td>
+                                    <td style="font-size:13px;color:var(--text-secondary);">@periodo.FechaFin.ToString("dd/MM/yyyy")</td>
+                                    <td>
+                                        @if (periodo.Cerrado)
+                                        {
+                                            <BadgeEstado Estado="completado" />
+                                        }
+                                        else
+                                        {
+                                            <BadgeEstado Estado="en_proceso" />
+                                        }
+                                    </td>
+                                    <td style="text-align:right;">
+                                        @if (!periodo.Cerrado)
+                                        {
+                                            <GlassButton Variant="secondary" OnClick="() => CerrarPeriodo(periodo.PeriodoId)">
+                                                <LucideIcon Name="lock" Size="14" /> Cerrar
+                                            </GlassButton>
+                                        }
+                                        else
+                                        {
+                                            <span class="body-small text-muted">Sin acciones</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    }
 </div>
 
-@if (_cargando)
-{
-    <SkeletonLoader />
-}
-else if (_periodos.Count == 0)
-{
-    <div class="glass-card" style="text-align:center;padding:40px;">
-        <p>No hay períodos registrados</p>
-    </div>
-}
-else
-{
-    <div class="glass-card">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Período</th>
-                    <th>Inicio</th>
-                    <th>Fin</th>
-                    <th>Estado</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var p in _periodos)
-                {
-                    <tr>
-                        <td>@p.Anio-@p.Mes.ToString("D2")</td>
-                        <td>@p.FechaInicio.ToString("dd/MM/yyyy")</td>
-                        <td>@p.FechaFin.ToString("dd/MM/yyyy")</td>
-                        <td>
-                            @if (p.Cerrado) { <BadgeEstado Estado="completado" /> }
-                            else { <BadgeEstado Estado="en_proceso" /> }
-                        </td>
-                        <td>
-                            @if (!p.Cerrado)
-                            {
-                                <GlassButton Variant="secondary" OnClick="() => CerrarPeriodo(p.PeriodoId)">
-                                    Cerrar
-                                </GlassButton>
-                            }
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-}
-
 @code {
+    private readonly List<BreadcrumbItem> _breadcrumb = new()
+    {
+        new() { Text = "Inicio", Url = "/" },
+        new() { Text = "Periodos Fiscales", Url = "/periodos" }
+    };
+
+    private readonly List<int> _aniosDisponibles = new() { 2024, 2025, 2026, 2027 };
+
     private List<PeriodoDto> _periodos = new();
     private int _anio = 2026;
     private int _mes = DateTime.Now.Month;
@@ -91,43 +203,89 @@ else
     private string? _error;
     private string? _msg;
 
+    private int PeriodosAbiertos => _periodos.Count(x => !x.Cerrado);
+    private int PeriodosCerrados => _periodos.Count(x => x.Cerrado);
+    private string UltimoPeriodoAbierto => _periodos
+        .Where(x => !x.Cerrado)
+        .OrderByDescending(x => x.Anio)
+        .ThenByDescending(x => x.Mes)
+        .Select(FormatearPeriodo)
+        .FirstOrDefault() ?? "Sin periodo abierto";
+
     protected override async Task OnInitializedAsync() => await Cargar();
 
     private async Task Cargar()
     {
         _cargando = true;
+        _error = null;
         try
         {
-            var r = await Http.GetFromJsonAsync<ApiResponse<List<PeriodoDto>>>($"api/v1/periodos?anio={_anio}");
-            if (r?.Ok == true) _periodos = r.Data ?? new();
+            var respuesta = await Http.GetFromJsonAsync<ApiResponse<List<PeriodoDto>>>($"api/v1/periodos?anio={_anio}");
+            if (respuesta?.Ok == true)
+            {
+                _periodos = respuesta.Data ?? new();
+            }
+            else
+            {
+                _error = respuesta?.Error?.Message ?? "No se pudieron cargar los periodos.";
+            }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
         _cargando = false;
     }
 
     private async Task CrearPeriodo()
     {
-        _error = null; _msg = null;
+        _error = null;
+        _msg = null;
         try
         {
-            var r = await Http.PostAsJsonAsync("api/v1/periodos", new { anio = _anio, mes = _mes });
-            if (r.IsSuccessStatusCode) { _msg = "Período creado"; await Cargar(); }
-            else _error = "Error al crear período";
+            var respuesta = await Http.PostAsJsonAsync("api/v1/periodos", new { anio = _anio, mes = _mes });
+            if (respuesta.IsSuccessStatusCode)
+            {
+                _msg = $"Periodo {FormatearPeriodo(_anio, _mes)} creado correctamente.";
+                await Cargar();
+            }
+            else
+            {
+                _error = "Error al crear periodo";
+            }
         }
-        catch (Exception ex) { _error = ex.Message; }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
     }
 
     private async Task CerrarPeriodo(long id)
     {
         _error = null;
+        _msg = null;
         try
         {
-            var r = await Http.PostAsync($"api/v1/periodos/{id}/cerrar", null);
-            if (r.IsSuccessStatusCode) await Cargar();
-            else _error = "Error al cerrar período";
+            var respuesta = await Http.PostAsync($"api/v1/periodos/{id}/cerrar", null);
+            if (respuesta.IsSuccessStatusCode)
+            {
+                _msg = "Periodo cerrado correctamente.";
+                await Cargar();
+            }
+            else
+            {
+                _error = "Error al cerrar periodo";
+            }
         }
-        catch (Exception ex) { _error = ex.Message; }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
     }
+
+    private static string ObtenerNombreMes(int mes) => new DateTime(2026, mes, 1).ToString("MMMM");
+    private static string FormatearPeriodo(PeriodoDto periodo) => FormatearPeriodo(periodo.Anio, periodo.Mes);
+    private static string FormatearPeriodo(int anio, int mes) => $"{anio}-{mes:D2}";
 
     private class PeriodoDto
     {
