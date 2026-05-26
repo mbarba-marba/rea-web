@@ -1,100 +1,435 @@
 @page "/checklists"
 @using Microsoft.AspNetCore.Authorization
+@using REA.Web.Components.Shared
 @using REA.Web.Models
 @using REA.Web.Services
 @attribute [Authorize]
 @inject ChecklistService ChecklistService
 @inject ClienteService ClienteService
+@inject HttpClient Http
 @inject NavigationManager Navigation
 
-<PageHeader Title="Checklists" Subtitle="Seleccione cliente y período" />
+<div class="page-container animate-fade-in">
+    <div class="page-header" style="margin-bottom:20px;align-items:flex-start;gap:16px;">
+        <div class="page-header-left">
+            <h1>Checklists</h1>
+            <Breadcrumb Items="@_breadcrumb" />
+            <p class="body-small text-muted" style="margin-top:6px;">Control operativo del cierre mensual por cliente y periodo.</p>
+        </div>
 
-@if (_error != null)
-{
-    <ErrorBanner Message="@_error" OnDismiss="() => _error = null" />
-}
-
-@if (_cargando)
-{
-    <SkeletonLoader />
-}
-else if (_checklists.Count == 0)
-{
-    <div class="glass-card" style="text-align:center;padding:40px;">
-        <LucideIcon Name="list-checks" Size="48" />
-        <p>No hay checklists disponibles</p>
-        <GlassButton Variant="primary" OnClick="CrearNuevo" style="margin-top:12px;">
-            <LucideIcon Name="plus" Size="16" /> Nuevo Checklist
-        </GlassButton>
-    </div>
-}
-else
-{
-    <div class="glass-card" style="margin-bottom:16px;text-align:right;padding:12px 20px;">
-        <GlassButton Variant="primary" OnClick="CrearNuevo">
-            <LucideIcon Name="plus" Size="16" /> Nuevo Checklist
-        </GlassButton>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+            <GlassButton Variant="secondary" OnClick='() => Navigation.NavigateTo("/periodos")'>
+                <LucideIcon Name="calendar-range" Size="16" /> Periodos
+            </GlassButton>
+            <GlassButton Variant="primary" OnClick="AbrirModalNuevo">
+                <LucideIcon Name="plus" Size="16" /> Nuevo Checklist
+            </GlassButton>
+        </div>
     </div>
 
-    <div class="glass-card">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Cliente</th>
-                    <th>Período</th>
-                    <th>Avance</th>
-                    <th>Estado</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var c in _checklists)
+    @if (_mensaje != null)
+    {
+        <div class="card" style="margin-bottom:16px;padding:14px 16px;border-color:@(_mensajeError ? "rgba(239,68,68,0.24)" : "rgba(16,185,129,0.24)");background:@(_mensajeError ? "rgba(239,68,68,0.08)" : "rgba(16,185,129,0.10)");">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <div style="display:flex;align-items:center;gap:10px;color:@(_mensajeError ? "var(--danger)" : "var(--success)")">
+                    <LucideIcon Name="@(_mensajeError ? "alert-circle" : "badge-check")" Size="18" />
+                    <span style="font-weight:600;">@_mensaje</span>
+                </div>
+                <button @onclick="() => _mensaje = null" class="btn btn-secondary btn-icon" title="Cerrar">
+                    <LucideIcon Name="x" Size="14" />
+                </button>
+            </div>
+        </div>
+    }
+
+    @if (_cargando)
+    {
+        <SkeletonLoader />
+    }
+    else
+    {
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:16px;">
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Checklists</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@ChecklistsFiltrados.Count</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Expedientes visibles con los filtros actuales.</div>
+            </div>
+
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">En proceso</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@TotalEnProceso</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Clientes trabajando su cierre mensual.</div>
+            </div>
+
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Completados</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@TotalCompletados</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Checklists cerrados con el flujo terminado.</div>
+            </div>
+
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Avance promedio</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@($"{AvancePromedio:0}%")</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Pulso general del trabajo mensual.</div>
+            </div>
+        </div>
+
+        <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+            <div class="surface-panel-header" style="padding:16px 20px;">
+                <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Exploracion</div>
+                <h3 style="margin-top:4px;">Busca por cliente, periodo o estado</h3>
+            </div>
+
+            <div style="padding:18px 20px;display:grid;grid-template-columns:minmax(280px,1fr) 220px auto;gap:12px;align-items:end;">
+                <div>
+                    <label class="input-label">Buscar checklist</label>
+                    <input type="text"
+                           class="input-field"
+                           @bind="_busqueda"
+                           @bind:event="oninput"
+                           placeholder="Cliente o periodo" />
+                </div>
+
+                <div>
+                    <label class="input-label">Estado</label>
+                    <select class="select-field" @bind="_filtroEstado">
+                        <option value="">Todos los estados</option>
+                        <option value="pendiente">Pendientes</option>
+                        <option value="en_proceso">En proceso</option>
+                        <option value="completado">Completados</option>
+                        <option value="bloqueado">Bloqueados</option>
+                    </select>
+                </div>
+
+                <div style="display:flex;justify-content:flex-end;gap:10px;align-items:center;flex-wrap:wrap;">
+                    <div class="badge badge-muted" style="padding:8px 10px;height:40px;display:inline-flex;">
+                        @ChecklistsFiltrados.Count resultados
+                    </div>
+                    <GlassButton Variant="secondary" OnClick="LimpiarFiltros">
+                        <LucideIcon Name="rotate-ccw" Size="16" /> Limpiar
+                    </GlassButton>
+                </div>
+            </div>
+        </div>
+
+        @if (ChecklistsFiltrados.Count == 0)
+        {
+            <div class="card empty-state" style="padding:56px 32px;">
+                <LucideIcon Name="list-checks" Size="40" />
+                <div class="empty-state-heading">No hay checklists para mostrar</div>
+                <div class="empty-state-body">Ajusta los filtros o crea un checklist nuevo para iniciar el proceso mensual.</div>
+            </div>
+        }
+        else
+        {
+            <div class="card" style="padding:0;overflow:hidden;">
+                <div class="surface-panel-header" style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <div>
+                        <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Listado</div>
+                        <h3 style="margin-top:4px;">Seguimiento por cliente y periodo</h3>
+                    </div>
+                    <div class="body-small text-muted">Cada checklist concentra el avance del flujo mensual de 14 pasos.</div>
+                </div>
+
+                <div style="overflow-x:auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Periodo</th>
+                                <th>Pasos</th>
+                                <th>Avance</th>
+                                <th>Estado</th>
+                                <th>Creado</th>
+                                <th style="text-align:right;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var checklist in ChecklistsFiltrados)
+                            {
+                                <tr style="cursor:pointer;" @onclick="() => VerChecklist(checklist.ChecklistId)">
+                                    <td>
+                                        <div style="font-weight:600;color:var(--text-primary);">@checklist.ClienteNombre</div>
+                                        <div class="body-small text-muted" style="margin-top:2px;">Checklist #@checklist.ChecklistId</div>
+                                    </td>
+                                    <td style="font-size:13px;color:var(--text-secondary);">@checklist.PeriodoNombre</td>
+                                    <td>
+                                        <div style="font-weight:600;color:var(--text-primary);">@ObtenerPasosCompletados(checklist)/14</div>
+                                        <div class="body-small text-muted" style="margin-top:2px;">@ObtenerResumenPasos(checklist)</div>
+                                    </td>
+                                    <td style="min-width:180px;">
+                                        <div style="display:grid;gap:8px;">
+                                            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                                                <span class="body-small text-muted">Progreso</span>
+                                                <span style="font-size:12px;font-weight:600;color:var(--text-primary);">@($"{checklist.PorcentajeAvance:0}%")</span>
+                                            </div>
+                                            <div class="progress-bar" style="height:8px;">
+                                                <div class="progress-fill" style="width:@($"{checklist.PorcentajeAvance}%")"></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td><BadgeEstado Estado="@ObtenerEstado(checklist)" /></td>
+                                    <td style="font-size:12px;color:var(--text-secondary);">@checklist.CreatedAt.ToString("dd/MM/yy")</td>
+                                    <td style="text-align:right;">
+                                        <button class="btn btn-secondary btn-icon" title="Ver checklist" @onclick:stopPropagation @onclick="() => VerChecklist(checklist.ChecklistId)">
+                                            <LucideIcon Name="arrow-up-right" Size="15" />
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@if (_modalNuevo)
+{
+    <div class="modal-backdrop" @onclick="CerrarModalNuevo">
+        <div class="modal-container" @onclick:stopPropagation="true" style="max-width:560px;">
+            <div class="modal-header">
+                <div>
+                    <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Alta</div>
+                    <h3 style="margin-top:4px;">Crear checklist mensual</h3>
+                </div>
+                <button class="btn btn-secondary btn-icon" @onclick="CerrarModalNuevo">
+                    <LucideIcon Name="x" Size="16" />
+                </button>
+            </div>
+
+            <div style="display:grid;gap:16px;">
+                <div class="card" style="padding:16px;">
+                    <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Proceso</div>
+                    <div style="font-size:15px;font-weight:600;color:var(--text-primary);">Selecciona cliente y periodo para abrir el flujo de 14 pasos.</div>
+                    <div class="body-small text-muted" style="margin-top:6px;">Despues podras avanzar paso por paso, adjuntar evidencias y cerrar el periodo.</div>
+                </div>
+
+                <div>
+                    <label class="input-label">Cliente</label>
+                    <select class="select-field" @bind="_nuevoClienteId">
+                        <option value="">Selecciona un cliente</option>
+                        @foreach (var cliente in _clientesDisponibles)
+                        {
+                            <option value="@cliente.ClienteId">@cliente.RazonSocial</option>
+                        }
+                    </select>
+                </div>
+
+                <div>
+                    <label class="input-label">Periodo</label>
+                    <select class="select-field" @bind="_nuevoPeriodoId">
+                        <option value="">Selecciona un periodo</option>
+                        @foreach (var periodo in _periodosDisponibles)
+                        {
+                            <option value="@periodo.PeriodoId">@FormatearPeriodo(periodo)</option>
+                        }
+                    </select>
+                </div>
+
+                @if (_errorModal != null)
                 {
-                    <tr style="cursor:pointer" @onclick="() => VerChecklist(c.ChecklistId)">
-                        <td>@c.ClienteNombre</td>
-                        <td>@c.PeriodoNombre</td>
-                        <td>
-                            <div style="display:flex;align-items:center;gap:8px;">
-                                <span>@c.PorcentajeAvance%</span>
-                                <div class="progress-bar" style="width:80px;">
-                                    <div class="progress-fill" style="width:@(c.PorcentajeAvance)%"></div>
-                                </div>
-                            </div>
-                        </td>
-                        <td>
-                            @if (c.Completado) { <BadgeEstado Estado="completado" /> }
-                            else if (c.Cerrado) { <BadgeEstado Estado="bloqueado" /> }
-                            else { <BadgeEstado Estado="en_proceso" /> }
-                        </td>
-                        <td>
-                            <GlassButton Variant="ghost" OnClick="() => VerChecklist(c.ChecklistId)">
-                                <LucideIcon Name="eye" Size="14" />
-                            </GlassButton>
-                        </td>
-                    </tr>
+                    <div class="body-small" style="color:var(--danger);">@_errorModal</div>
                 }
-            </tbody>
-        </table>
+            </div>
+
+            <div class="modal-footer">
+                <GlassButton Variant="secondary" OnClick="CerrarModalNuevo">Cancelar</GlassButton>
+                <GlassButton Variant="primary" OnClick="CrearNuevo" Disabled="@_creandoNuevo">
+                    @(_creandoNuevo ? "Creando..." : "Crear checklist")
+                </GlassButton>
+            </div>
+        </div>
     </div>
 }
 
 @code {
+    private readonly List<BreadcrumbItem> _breadcrumb = new()
+    {
+        new() { Text = "Inicio", Url = "/" },
+        new() { Text = "Checklists", Url = "/checklists" }
+    };
+
     private List<ChecklistDto> _checklists = new();
+    private List<ClienteDto> _clientesDisponibles = new();
+    private List<PeriodoDto> _periodosDisponibles = new();
     private bool _cargando = true;
     private string? _error;
+    private string? _mensaje;
+    private bool _mensajeError;
+    private string _busqueda = "";
+    private string _filtroEstado = "";
+    private bool _modalNuevo;
+    private long? _nuevoClienteId;
+    private long? _nuevoPeriodoId;
+    private bool _creandoNuevo;
+    private string? _errorModal;
 
-    protected override async Task OnInitializedAsync()
+    private List<ChecklistDto> ChecklistsFiltrados => _checklists
+        .Where(FiltraBusqueda)
+        .Where(FiltraEstado)
+        .OrderByDescending(x => x.CreatedAt)
+        .ThenByDescending(x => x.ChecklistId)
+        .ToList();
+
+    private int TotalEnProceso => ChecklistsFiltrados.Count(x => ObtenerEstado(x) == "en_proceso");
+    private int TotalCompletados => ChecklistsFiltrados.Count(x => ObtenerEstado(x) == "completado");
+    private decimal AvancePromedio => ChecklistsFiltrados.Count == 0 ? 0 : Math.Round(ChecklistsFiltrados.Average(x => x.PorcentajeAvance), 0);
+
+    protected override async Task OnInitializedAsync() => await CargarTodo();
+
+    private async Task CargarTodo()
     {
+        _cargando = true;
+        _error = null;
+
         try
         {
-            var result = await ChecklistService.ListarAsync();
-            if (result?.Ok == true)
-                _checklists = result.Data ?? new();
+            var checklistsTask = ChecklistService.ListarAsync(page: 1, limit: 100);
+            var clientesTask = ClienteService.ListarAsync(page: 1, limit: 100);
+            var periodosTask = Http.GetFromJsonAsync<ApiResponse<List<PeriodoDto>>>($"api/v1/periodos?anio={DateTime.Now.Year}");
+
+            await Task.WhenAll(checklistsTask, clientesTask, periodosTask!);
+
+            var checklistsResult = await checklistsTask;
+            if (checklistsResult?.Ok == true)
+            {
+                _checklists = checklistsResult.Data ?? new();
+            }
+
+            var clientesResult = await clientesTask;
+            if (clientesResult?.Ok == true)
+            {
+                _clientesDisponibles = (clientesResult.Data ?? new())
+                    .Where(x => x.Activo)
+                    .OrderBy(x => x.RazonSocial)
+                    .ToList();
+            }
+
+            var periodosResult = await periodosTask!;
+            if (periodosResult?.Ok == true)
+            {
+                _periodosDisponibles = (periodosResult.Data ?? new())
+                    .OrderByDescending(x => x.Anio)
+                    .ThenByDescending(x => x.Mes)
+                    .ToList();
+            }
         }
-        catch (Exception ex) { _error = ex.Message; }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+
         _cargando = false;
     }
 
+    private bool FiltraBusqueda(ChecklistDto checklist)
+    {
+        if (string.IsNullOrWhiteSpace(_busqueda))
+        {
+            return true;
+        }
+
+        var query = _busqueda.Trim();
+        return checklist.ClienteNombre.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || checklist.PeriodoNombre.Contains(query, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool FiltraEstado(ChecklistDto checklist)
+        => string.IsNullOrWhiteSpace(_filtroEstado) || string.Equals(ObtenerEstado(checklist), _filtroEstado, StringComparison.OrdinalIgnoreCase);
+
+    private void LimpiarFiltros()
+    {
+        _busqueda = "";
+        _filtroEstado = "";
+    }
+
     private void VerChecklist(long id) => Navigation.NavigateTo($"/checklists/{id}");
-    private void CrearNuevo() { /* Modal de selección cliente/período */ }
+
+    private void AbrirModalNuevo()
+    {
+        _modalNuevo = true;
+        _nuevoClienteId = null;
+        _nuevoPeriodoId = null;
+        _errorModal = null;
+    }
+
+    private void CerrarModalNuevo()
+    {
+        _modalNuevo = false;
+        _errorModal = null;
+    }
+
+    private async Task CrearNuevo()
+    {
+        _errorModal = null;
+
+        if (!_nuevoClienteId.HasValue || !_nuevoPeriodoId.HasValue)
+        {
+            _errorModal = "Selecciona cliente y periodo para continuar.";
+            return;
+        }
+
+        _creandoNuevo = true;
+        try
+        {
+            var result = await ChecklistService.CrearAsync(new CreateChecklistRequest
+            {
+                ClienteId = _nuevoClienteId.Value,
+                PeriodoId = _nuevoPeriodoId.Value
+            });
+
+            if (result?.Ok == true && result.Data != null)
+            {
+                _mensaje = "Checklist creado correctamente.";
+                _mensajeError = false;
+                _modalNuevo = false;
+                await CargarTodo();
+                Navigation.NavigateTo($"/checklists/{result.Data.ChecklistId}");
+            }
+            else
+            {
+                _errorModal = result?.Error?.Message ?? "No se pudo crear el checklist.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorModal = ex.Message;
+        }
+
+        _creandoNuevo = false;
+    }
+
+    private string ObtenerEstado(ChecklistDto checklist)
+    {
+        if (checklist.Completado)
+        {
+            return "completado";
+        }
+
+        if (checklist.Cerrado)
+        {
+            return "bloqueado";
+        }
+
+        if (checklist.PorcentajeAvance <= 0)
+        {
+            return "pendiente";
+        }
+
+        return "en_proceso";
+    }
+
+    private static int ObtenerPasosCompletados(ChecklistDto checklist)
+        => (int)Math.Clamp(Math.Round(checklist.PorcentajeAvance * 14m / 100m, MidpointRounding.AwayFromZero), 0m, 14m);
+
+    private static string ObtenerResumenPasos(ChecklistDto checklist)
+    {
+        var completados = ObtenerPasosCompletados(checklist);
+        var restantes = Math.Max(14 - completados, 0);
+        return restantes == 0 ? "Flujo finalizado" : $"{restantes} por cerrar";
+    }
+
+    private static string FormatearPeriodo(PeriodoDto periodo) => $"{periodo.Anio}-{periodo.Mes:D2}";
 }

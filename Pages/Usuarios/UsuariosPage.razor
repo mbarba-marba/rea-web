@@ -179,21 +179,25 @@
                                             <button class="btn btn-secondary btn-icon" title="Editar datos" @onclick="() => IrAEditar(u.UsuarioId)">
                                                 <LucideIcon Name="pencil" Size="15" />
                                             </button>
-                                            <button class="btn btn-secondary btn-icon" title="Cambiar rol" @onclick="() => AbrirModalRol(u)">
-                                                <LucideIcon Name="shield-check" Size="15" />
+                                            <button class="btn btn-secondary btn-icon" title="Cambiar rol" @onclick="() => AbrirModalRol(u)"
+                                                    style="color:var(--accent);border-color:rgba(7,98,128,0.18);background:rgba(7,98,128,0.08);">
+                                                <LucideIcon Name="badge-check" Size="15" />
                                             </button>
-                                            <button class="btn btn-secondary btn-icon" title="Resetear contraseña" @onclick="() => AbrirModalPassword(u)">
-                                                <LucideIcon Name="key-round" Size="15" />
+                                            <button class="btn btn-secondary btn-icon" title="Resetear contraseña" @onclick="() => AbrirModalPassword(u)"
+                                                    style="color:var(--warning);border-color:rgba(245,158,11,0.22);background:rgba(245,158,11,0.10);">
+                                                <LucideIcon Name="lock-keyhole" Size="15" />
                                             </button>
                                             @if (u.Activo)
                                             {
-                                                <button class="btn btn-secondary btn-icon" title="Desactivar" @onclick="() => ToggleActivo(u, false)">
-                                                    <LucideIcon Name="user-x" Size="15" />
+                                                <button class="btn btn-secondary btn-icon" title="Desactivar" @onclick="() => ToggleActivo(u, false)"
+                                                        style="color:var(--danger);border-color:rgba(239,68,68,0.22);background:rgba(239,68,68,0.10);">
+                                                    <LucideIcon Name="user-minus" Size="15" />
                                                 </button>
                                             }
                                             else
                                             {
-                                                <button class="btn btn-secondary btn-icon" title="Activar" @onclick="() => ToggleActivo(u, true)">
+                                                <button class="btn btn-secondary btn-icon" title="Activar" @onclick="() => ToggleActivo(u, true)"
+                                                        style="color:var(--success);border-color:rgba(16,185,129,0.22);background:rgba(16,185,129,0.10);">
                                                     <LucideIcon Name="user-check" Size="15" />
                                                 </button>
                                             }

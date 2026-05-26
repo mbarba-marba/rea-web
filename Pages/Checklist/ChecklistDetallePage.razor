@@ -1,127 +1,241 @@
 @page "/checklists/{Id:long}"
 @using Microsoft.AspNetCore.Authorization
+@using REA.Web.Components.Shared
 @using REA.Web.Models
 @using REA.Web.Services
 @attribute [Authorize(Roles = "admin,auxiliar")]
 @inject ChecklistService ChecklistService
 @inject NavigationManager Navigation
 
-<PageHeader Title="Checklist" Subtitle="@(_checklist?.ClienteNombre ?? "")" />
+<div class="page-container animate-fade-in">
+    <div class="page-header" style="margin-bottom:20px;align-items:flex-start;gap:16px;">
+        <div class="page-header-left">
+            <h1>Checklist</h1>
+            <Breadcrumb Items="@_breadcrumb" />
+            <p class="body-small text-muted" style="margin-top:6px;">Seguimiento puntual del flujo mensual y sus 14 pasos operativos.</p>
+        </div>
 
-@if (_error != null)
-{
-    <ErrorBanner Message="@_error" OnDismiss="() => _error = null" />
-}
-
-@if (_cargando)
-{
-    <div style="text-align:center;padding:40px;">Cargando...</div>
-}
-else if (_checklist != null)
-{
-    <div class="glass-card" style="margin-bottom:16px;padding:16px 20px;display:flex;align-items:center;gap:16px;">
-        <div style="flex:1;">
-            <div style="color:var(--text-secondary);font-size:12px;">Periodo</div>
-            <div style="font-weight:600;">@_checklist.PeriodoNombre</div>
-        </div>
-        <div style="flex:1;text-align:center;">
-            <div style="color:var(--text-secondary);font-size:12px;">Progreso</div>
-            <div style="font-weight:600;">@_checklist.PorcentajeAvance%</div>
-        </div>
-        <div style="width:200px;">
-            <div class="progress-bar">
-                <div class="progress-fill" style="width:@(_checklist.PorcentajeAvance)%"></div>
-            </div>
-        </div>
-        <div>
-            @if (_checklist.Completado)
-            {
-                <BadgeEstado Estado="completado" />
-            }
-            else if (_checklist.Cerrado)
-            {
-                <BadgeEstado Estado="bloqueado" />
-            }
-            else
-            {
-                <BadgeEstado Estado="en_proceso" />
-            }
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+            <GlassButton Variant="secondary" OnClick='() => Navigation.NavigateTo("/checklists")'>
+                <LucideIcon Name="arrow-left" Size="16" /> Volver
+            </GlassButton>
         </div>
     </div>
 
-    <div class="glass-card">
-        @foreach (var paso in _checklist.Pasos)
-        {
-            <div class="paso-row @GetRowClass(paso.Estado)" style="cursor:pointer;" @onclick="() => VerPaso(Id, paso.PasoId)">
-                <div class="paso-numero">
-                    <span class="paso-num">@paso.NumeroPaso</span>
+    @if (_error != null)
+    {
+        <ErrorBanner Message="@_error" OnDismiss="() => _error = null" />
+    }
+
+    @if (_cargando)
+    {
+        <SkeletonLoader />
+    }
+    else if (_checklist != null)
+    {
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:16px;">
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Cliente</div>
+                <div style="font-size:18px;font-weight:700;color:var(--text-primary);">@_checklist.ClienteNombre</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Periodo @_checklist.PeriodoNombre</div>
+            </div>
+
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Avance</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@($"{_checklist.PorcentajeAvance:0}%")</div>
+                <div class="body-small text-muted" style="margin-top:4px;">@PasosCompletados de @_checklist.Pasos.Count pasos completados.</div>
+            </div>
+
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">En proceso</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@PasosEnProceso</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Pasos abiertos en ejecucion.</div>
+            </div>
+
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Estado</div>
+                <div style="margin-bottom:8px;"><BadgeEstado Estado="@EstadoChecklist" /></div>
+                <div class="body-small text-muted">Usa el detalle del paso para adjuntar evidencia y notas.</div>
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:minmax(0,1.65fr) minmax(280px,0.85fr);gap:16px;align-items:start;">
+            <div class="card" style="padding:0;overflow:hidden;">
+                <div class="surface-panel-header" style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <div>
+                        <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Flujo mensual</div>
+                        <h3 style="margin-top:4px;">Pasos del checklist</h3>
+                    </div>
+                    <div class="body-small text-muted">Abre cualquier paso para capturar notas y evidencias.</div>
                 </div>
-                <div class="paso-info">
-                    <div class="paso-nombre">@paso.NombrePaso</div>
-                    @if (!string.IsNullOrEmpty(paso.Notas))
-                    {
-                        <div class="paso-notas">@paso.Notas</div>
-                    }
+
+                <div style="padding:18px 20px;border-bottom:1px solid var(--border-subtle);">
+                    <div style="display:grid;gap:8px;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                            <span class="body-small text-muted">Progreso general</span>
+                            <span style="font-size:12px;font-weight:600;color:var(--text-primary);">@($"{_checklist.PorcentajeAvance:0}%")</span>
+                        </div>
+                        <div class="progress-bar" style="height:9px;">
+                            <div class="progress-fill" style="width:@($"{_checklist.PorcentajeAvance}%")"></div>
+                        </div>
+                    </div>
                 </div>
-                <div class="paso-estado">
-                    <BadgeEstado Estado="@paso.Estado" />
-                </div>
-                <div class="paso-acciones">
-                    @if (paso.Estado == "pendiente")
+
+                <div style="display:grid;">
+                    @foreach (var paso in _checklist.Pasos.OrderBy(x => x.NumeroPaso))
                     {
-                        <GlassButton Variant="primary" OnClick="() => CambiarEstado(paso, estado: EstadoPaso.EnProceso)">Iniciar</GlassButton>
-                    }
-                    else if (paso.Estado == "en_proceso")
-                    {
-                        <GlassButton Variant="primary" OnClick="() => CambiarEstado(paso, estado: EstadoPaso.Completado)">Completar</GlassButton>
-                        <GlassButton Variant="ghost" OnClick="() => CambiarEstado(paso, estado: EstadoPaso.Bloqueado)">Bloquear</GlassButton>
-                    }
-                    else if (paso.Estado == "bloqueado")
-                    {
-                        <GlassButton Variant="secondary" OnClick="() => CambiarEstado(paso, estado: EstadoPaso.EnProceso)">Desbloquear</GlassButton>
-                    }
-                    else
-                    {
-                        <span style="color:var(--text-secondary);font-size:12px;">
-                            @(paso.CompletadoEn?.ToString("dd/MM/yyyy HH:mm") ?? "")
-                        </span>
+                        <div style="padding:16px 20px;border-bottom:1px solid var(--border-subtle);cursor:pointer;" @onclick="() => VerPaso(Id, paso.PasoId)">
+                            <div style="display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:16px;align-items:center;">
+                                <div style="width:44px;height:44px;border-radius:12px;border:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--text-primary);background:var(--surface-raised);">
+                                    @paso.NumeroPaso
+                                </div>
+
+                                <div style="min-width:0;">
+                                    <div style="font-size:15px;font-weight:600;color:var(--text-primary);">@paso.NombrePaso</div>
+                                    <div class="body-small text-muted" style="margin-top:4px;">
+                                        @if (!string.IsNullOrWhiteSpace(paso.Notas))
+                                        {
+                                            @paso.Notas
+                                        }
+                                        else
+                                        {
+                                            <span>Sin notas registradas aun.</span>
+                                        }
+                                    </div>
+                                </div>
+
+                                <div style="display:grid;justify-items:start;gap:8px;">
+                                    <BadgeEstado Estado="@paso.Estado" />
+                                    <span class="body-small text-muted">@paso.Evidencias.Count evidencia(s)</span>
+                                </div>
+
+                                <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;" @onclick:stopPropagation="true">
+                                    @if (paso.Estado == "pendiente")
+                                    {
+                                        <GlassButton Variant="primary" OnClick="() => CambiarEstado(paso, REA.Web.Enums.EstadoPaso.EnProceso)">Iniciar</GlassButton>
+                                    }
+                                    else if (paso.Estado == "en_proceso")
+                                    {
+                                        <GlassButton Variant="primary" OnClick="() => CambiarEstado(paso, REA.Web.Enums.EstadoPaso.Completado)">Completar</GlassButton>
+                                        <GlassButton Variant="secondary" OnClick="() => CambiarEstado(paso, REA.Web.Enums.EstadoPaso.Bloqueado)">Bloquear</GlassButton>
+                                    }
+                                    else if (paso.Estado == "bloqueado")
+                                    {
+                                        <GlassButton Variant="secondary" OnClick="() => CambiarEstado(paso, REA.Web.Enums.EstadoPaso.EnProceso)">Desbloquear</GlassButton>
+                                    }
+                                    else
+                                    {
+                                        <span class="body-small text-muted">@(paso.CompletadoEn?.ToString("dd/MM/yy HH:mm") ?? "Completado")</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
                     }
                 </div>
             </div>
-        }
-    </div>
-}
+
+            <div style="display:grid;gap:16px;">
+                <div class="card" style="padding:18px 20px;">
+                    <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Resumen</div>
+                    <h3 style="margin-top:4px;">Estado del expediente</h3>
+
+                    <div style="display:grid;gap:14px;margin-top:16px;">
+                        <div>
+                            <div class="body-small text-muted">Cliente</div>
+                            <div style="font-weight:600;color:var(--text-primary);margin-top:4px;">@_checklist.ClienteNombre</div>
+                        </div>
+
+                        <div>
+                            <div class="body-small text-muted">Periodo</div>
+                            <div style="font-weight:600;color:var(--text-primary);margin-top:4px;">@_checklist.PeriodoNombre</div>
+                        </div>
+
+                        <div>
+                            <div class="body-small text-muted">Checklist</div>
+                            <div style="font-weight:600;color:var(--text-primary);margin-top:4px;">#@_checklist.ChecklistId</div>
+                        </div>
+
+                        <div>
+                            <div class="body-small text-muted">Estado actual</div>
+                            <div style="margin-top:8px;"><BadgeEstado Estado="@EstadoChecklist" /></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="padding:18px 20px;">
+                    <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Siguiente movimiento</div>
+                    <h3 style="margin-top:4px;">@TituloSiguientePaso</h3>
+                    <p class="body-small text-muted" style="margin-top:8px;">@DescripcionSiguientePaso</p>
+
+                    @if (SiguientePaso != null)
+                    {
+                        <div style="margin-top:16px;">
+                            <GlassButton Variant="primary" OnClick="() => VerPaso(Id, SiguientePaso.PasoId)">
+                                <LucideIcon Name="arrow-up-right" Size="16" /> Abrir paso @SiguientePaso.NumeroPaso
+                            </GlassButton>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
 
 @code {
     [Parameter] public long Id { get; set; }
+
+    private readonly List<BreadcrumbItem> _breadcrumb = new()
+    {
+        new() { Text = "Inicio", Url = "/" },
+        new() { Text = "Checklists", Url = "/checklists" },
+        new() { Text = "Detalle", Url = "#" }
+    };
 
     private ChecklistDto? _checklist;
     private bool _cargando = true;
     private string? _error;
 
+    private int PasosCompletados => _checklist?.Pasos.Count(x => x.Estado == "completado") ?? 0;
+    private int PasosEnProceso => _checklist?.Pasos.Count(x => x.Estado == "en_proceso") ?? 0;
+    private string EstadoChecklist => _checklist == null ? "pendiente" : ObtenerEstadoChecklist(_checklist);
+    private PasoDto? SiguientePaso => _checklist?.Pasos
+        .OrderBy(x => x.NumeroPaso)
+        .FirstOrDefault(x => x.Estado is "pendiente" or "en_proceso" or "bloqueado");
+    private string TituloSiguientePaso => SiguientePaso == null ? "Checklist completo" : $"Paso {SiguientePaso.NumeroPaso}: {SiguientePaso.NombrePaso}";
+    private string DescripcionSiguientePaso => SiguientePaso == null
+        ? "Todos los pasos quedaron concluidos para este periodo."
+        : "Entra al siguiente paso para registrar notas, adjuntar evidencia y continuar el proceso.";
+
     private void VerPaso(long checklistId, long pasoId) => Navigation.NavigateTo($"/checklists/{checklistId}/paso/{pasoId}");
 
-    protected override async Task OnInitializedAsync()
-    {
-        await Cargar();
-    }
+    protected override async Task OnInitializedAsync() => await Cargar();
 
     private async Task Cargar()
     {
         _cargando = true;
         _error = null;
+
         try
         {
             var result = await ChecklistService.ObtenerAsync(Id);
             if (result?.Ok == true)
+            {
                 _checklist = result.Data;
+                if (_checklist != null)
+                {
+                    _breadcrumb[^1] = new BreadcrumbItem { Text = _checklist.ClienteNombre, Url = $"/checklists/{Id}" };
+                }
+            }
             else
+            {
                 _error = result?.Error?.Message ?? "Error al cargar checklist";
+            }
         }
         catch (Exception ex)
         {
             _error = ex.Message;
         }
+
         _cargando = false;
     }
 
@@ -129,13 +243,18 @@ else if (_checklist != null)
     {
         _error = null;
         var estadoStr = estado.ToString().ToLower();
+
         try
         {
             var result = await ChecklistService.ActualizarPasoAsync(Id, paso.PasoId, new UpdatePasoRequest { Estado = estadoStr });
             if (result?.Ok == true)
+            {
                 await Cargar();
+            }
             else
+            {
                 _error = result?.Error?.Message;
+            }
         }
         catch (Exception ex)
         {
@@ -143,11 +262,23 @@ else if (_checklist != null)
         }
     }
 
-    private string GetRowClass(string estado) => estado.ToLower() switch
+    private static string ObtenerEstadoChecklist(ChecklistDto checklist)
     {
-        "completado" => "paso-completado",
-        "en_proceso" => "paso-proceso",
-        "bloqueado" => "paso-bloqueado",
-        _ => ""
-    };
+        if (checklist.Completado)
+        {
+            return "completado";
+        }
+
+        if (checklist.Cerrado)
+        {
+            return "bloqueado";
+        }
+
+        if (checklist.PorcentajeAvance <= 0)
+        {
+            return "pendiente";
+        }
+
+        return "en_proceso";
+    }
 }
