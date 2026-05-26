@@ -21,7 +21,7 @@
 }
 
 .glass-input {
-  background: color-mix(in srgb, var(--glass-bg-primary) 86%, white 14%);
+  background: color-mix(in srgb, var(--glass-bg-primary) 86%, var(--bg-base) 14%);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   color: var(--text-primary);
@@ -34,7 +34,7 @@
 }
 
 .glass-elevation-1 {
-  background: rgba(255, 255, 255, 0.50);
+  background: var(--glass-bg-secondary);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--glass-border);
@@ -43,7 +43,7 @@
 }
 
 .glass-elevation-2 {
-  background: rgba(255, 255, 255, 0.70);
+  background: var(--glass-bg-primary);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
@@ -52,7 +52,7 @@
 }
 
 .glass-elevation-3 {
-  background: rgba(255, 255, 255, 0.80);
+  background: color-mix(in srgb, var(--glass-bg-primary) 88%, var(--bg-base) 12%);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--glass-border);
@@ -61,7 +61,7 @@
 }
 
 .glass-elevation-4 {
-  background: rgba(255, 255, 255, 0.90);
+  background: color-mix(in srgb, var(--glass-bg-primary) 94%, var(--bg-base) 6%);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);

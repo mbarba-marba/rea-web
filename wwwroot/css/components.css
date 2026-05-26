@@ -1020,12 +1020,41 @@ body:has(aside.w-16) nav button[title]:hover::before {
 
 /* === Dark Theme Overrides === */
 
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .glass,
+html[data-theme="dark"] .glass-card,
+html[data-theme="dark"] .glass-surface,
+html[data-theme="dark"] .glass-elevation-1,
+html[data-theme="dark"] .glass-elevation-2,
+html[data-theme="dark"] .glass-elevation-3,
+html[data-theme="dark"] .glass-elevation-4,
+html[data-theme="dark"] .surface-panel,
+html[data-theme="dark"] .modal-container,
+html[data-theme="dark"] .toast,
+html[data-theme="dark"] .error-banner,
+html[data-theme="dark"] .login-card,
 body[data-theme="dark"] .card,
+body[data-theme="dark"] .glass,
+body[data-theme="dark"] .glass-card,
+body[data-theme="dark"] .glass-surface,
+body[data-theme="dark"] .glass-elevation-1,
+body[data-theme="dark"] .glass-elevation-2,
+body[data-theme="dark"] .glass-elevation-3,
+body[data-theme="dark"] .glass-elevation-4,
+body[data-theme="dark"] .surface-panel,
 body[data-theme="dark"] .modal-container,
 body[data-theme="dark"] .toast,
 body[data-theme="dark"] .error-banner,
 body[data-theme="dark"] .login-card,
 .app-layout.theme-dark .card,
+.app-layout.theme-dark .glass,
+.app-layout.theme-dark .glass-card,
+.app-layout.theme-dark .glass-surface,
+.app-layout.theme-dark .glass-elevation-1,
+.app-layout.theme-dark .glass-elevation-2,
+.app-layout.theme-dark .glass-elevation-3,
+.app-layout.theme-dark .glass-elevation-4,
+.app-layout.theme-dark .surface-panel,
 .app-layout.theme-dark .modal-container,
 .app-layout.theme-dark .toast,
 .app-layout.theme-dark .error-banner,
@@ -1034,16 +1063,33 @@ body[data-theme="dark"] .login-card,
   border-color: var(--glass-border);
 }
 
+html[data-theme="dark"] .surface-panel-header,
+body[data-theme="dark"] .surface-panel-header,
+.app-layout.theme-dark .surface-panel-header {
+  background: color-mix(in srgb, var(--glass-bg-primary) 72%, var(--bg-base) 28%);
+  border-color: var(--border-subtle);
+}
+
+html[data-theme="dark"] .glass-elevation-1,
+body[data-theme="dark"] .glass-elevation-1,
+.app-layout.theme-dark .glass-elevation-1 {
+  background: var(--glass-bg-secondary);
+}
+
+html[data-theme="dark"] .topbar,
 body[data-theme="dark"] .topbar,
 .app-layout.theme-dark .topbar,
+html[data-theme="dark"] .rea-sidebar,
 body[data-theme="dark"] .rea-sidebar,
 .app-layout.theme-dark .rea-sidebar {
   background: var(--glass-bg-secondary);
   border-color: var(--glass-border);
 }
 
+html[data-theme="dark"] .input-field,
 body[data-theme="dark"] .input-field,
 .app-layout.theme-dark .input-field,
+html[data-theme="dark"] .select-field,
 body[data-theme="dark"] .select-field,
 .app-layout.theme-dark .select-field {
   background: rgba(15, 23, 32, 0.62);
@@ -1051,11 +1097,13 @@ body[data-theme="dark"] .select-field,
   color: var(--text-primary);
 }
 
+html[data-theme="dark"] .input-field::placeholder,
 body[data-theme="dark"] .input-field::placeholder,
 .app-layout.theme-dark .input-field::placeholder {
   color: var(--text-muted);
 }
 
+html[data-theme="dark"] .btn-secondary,
 body[data-theme="dark"] .btn-secondary,
 .app-layout.theme-dark .btn-secondary {
   background: rgba(15, 23, 32, 0.62);
@@ -1063,6 +1111,7 @@ body[data-theme="dark"] .btn-secondary,
   color: var(--text-primary);
 }
 
+html[data-theme="dark"] .btn-secondary:hover,
 body[data-theme="dark"] .btn-secondary:hover,
 .app-layout.theme-dark .btn-secondary:hover {
   background: rgba(30, 41, 59, 0.78);

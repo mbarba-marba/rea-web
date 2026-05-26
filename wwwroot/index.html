@@ -40,42 +40,19 @@
     </script>
     <script>
       (function () {
-        var lightVars = {
-          '--bg-base': '#dfe4e8',
-          '--accent': '#076280',
-          '--accent-light': '#bbe7ef',
-          '--accent-hover': '#054a62',
-          '--glass-bg-primary': 'rgba(255, 255, 255, 0.70)',
-          '--glass-bg-secondary': 'rgba(255, 255, 255, 0.50)',
-          '--glass-border': 'rgba(255, 255, 255, 0.30)',
-          '--text-primary': '#1A1A2E',
-          '--text-secondary': '#6B7280',
-          '--text-muted': '#9CA3AF',
-          '--border-subtle': 'rgba(0, 0, 0, 0.06)'
-        };
-
-        var darkVars = {
-          '--bg-base': '#0f1720',
-          '--accent': '#38b6cf',
-          '--accent-light': 'rgba(56, 182, 207, 0.18)',
-          '--accent-hover': '#5bc6da',
-          '--glass-bg-primary': 'rgba(15, 23, 32, 0.78)',
-          '--glass-bg-secondary': 'rgba(15, 23, 32, 0.64)',
-          '--glass-border': 'rgba(148, 163, 184, 0.28)',
-          '--text-primary': '#e6edf5',
-          '--text-secondary': '#c3ced9',
-          '--text-muted': '#9fb0c1',
-          '--border-subtle': 'rgba(148, 163, 184, 0.24)'
-        };
-
-        function setVars(vars) {
-          Object.keys(vars).forEach(function (key) {
-            document.documentElement.style.setProperty(key, vars[key]);
-            if (document.body) {
-              document.body.style.setProperty(key, vars[key]);
-            }
-          });
-        }
+        var themeVars = [
+          '--bg-base',
+          '--accent',
+          '--accent-light',
+          '--accent-hover',
+          '--glass-bg-primary',
+          '--glass-bg-secondary',
+          '--glass-border',
+          '--text-primary',
+          '--text-secondary',
+          '--text-muted',
+          '--border-subtle'
+        ];
 
         function setImportant(el, prop, value) {
           if (el) {
@@ -98,8 +75,33 @@
           setImportant(document.querySelector('.app-footer'), 'margin-left', width);
         }
 
+        function clearInlineThemeState() {
+          themeVars.forEach(function (key) {
+            document.documentElement.style.removeProperty(key);
+            if (document.body) {
+              document.body.style.removeProperty(key);
+            }
+          });
+
+          if (document.body) {
+            document.body.style.removeProperty('background-color');
+          }
+
+          document.querySelectorAll('.main-content, .app-footer').forEach(function (el) {
+            el.style.removeProperty('background-color');
+          });
+
+          document.querySelectorAll('.topbar, .rea-sidebar, aside, .card, .glass, .glass-card, .glass-surface, .glass-elevation-1, .glass-elevation-2, .glass-elevation-3, .glass-elevation-4, .modal-container, .toast, .error-banner, .login-card').forEach(function (el) {
+            el.style.removeProperty('background');
+            el.style.removeProperty('background-color');
+            el.style.removeProperty('border-color');
+          });
+        }
+
         function applyTheme(mode) {
           var dark = mode === 'dark';
+          clearInlineThemeState();
+
           if (dark) {
             document.documentElement.setAttribute('data-theme', 'dark');
           } else {
@@ -115,24 +117,6 @@
           document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
           document.body.style.colorScheme = dark ? 'dark' : 'light';
           localStorage.setItem('rea_theme', dark ? 'dark' : 'light');
-          setVars(dark ? darkVars : lightVars);
-          setImportant(document.body, 'background-color', dark ? darkVars['--bg-base'] : lightVars['--bg-base']);
-
-          document.querySelectorAll('.main-content, .app-footer').forEach(function (el) {
-            setImportant(el, 'background-color', dark ? darkVars['--bg-base'] : lightVars['--bg-base']);
-          });
-
-          document.querySelectorAll('.topbar').forEach(function (el) {
-            setImportant(el, 'background', dark ? darkVars['--glass-bg-secondary'] : lightVars['--glass-bg-secondary']);
-            setImportant(el, 'border-color', dark ? darkVars['--glass-border'] : lightVars['--glass-border']);
-          });
-
-          document.querySelectorAll('.rea-sidebar, aside').forEach(function (el) {
-            setImportant(el, 'background', dark ? darkVars['--glass-bg-secondary'] : lightVars['--glass-bg-secondary']);
-            setImportant(el, 'border-color', dark ? darkVars['--glass-border'] : lightVars['--glass-border']);
-          });
-
-          // Let component/theme CSS own card surfaces to avoid stale inline backgrounds.
         }
 
         function resolveThemeMode() {
@@ -179,11 +163,11 @@
         window.addEventListener('load', window.reaApplyChrome);
       })();
     </script>
-    <link rel="stylesheet" href="css/app.css?v=20260526.2" />
-    <link rel="stylesheet" href="css/glassmorphism.css?v=20260526.2" />
-    <link rel="stylesheet" href="css/typography.css?v=20260526.2" />
-    <link rel="stylesheet" href="css/animations.css?v=20260526.2" />
-    <link rel="stylesheet" href="css/components.css?v=20260526.2" />
+    <link rel="stylesheet" href="css/app.css?v=20260526.3" />
+    <link rel="stylesheet" href="css/glassmorphism.css?v=20260526.3" />
+    <link rel="stylesheet" href="css/typography.css?v=20260526.3" />
+    <link rel="stylesheet" href="css/animations.css?v=20260526.3" />
+    <link rel="stylesheet" href="css/components.css?v=20260526.3" />
     <script type="importmap"></script>
 </head>
 
