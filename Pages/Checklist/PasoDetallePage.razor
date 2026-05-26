@@ -1,5 +1,6 @@
 @page "/checklists/{ChecklistId:long}/paso/{PasoId:long}"
 @using Microsoft.AspNetCore.Authorization
+@using REA.Web.Components.Shared
 @using REA.Web.Models
 @using REA.Web.Services
 @attribute [Authorize(Roles = "admin,auxiliar")]
@@ -7,98 +8,242 @@
 @inject HttpClient Http
 @inject NavigationManager Navigation
 
-<PageHeader Title="@_titulo" Subtitle="@_subtitulo" />
-
-@if (_error != null)
-{
-    <ErrorBanner Message="@_error" OnDismiss="() => _error = null" />
-}
-
-@if (_cargando)
-{
-    <SkeletonLoader />
-}
-else if (_paso != null)
-{
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="glass-card" style="padding:20px;">
-            <h3 style="margin-bottom:12px;">Información del Paso</h3>
-            <dl class="detail-list">
-                <dt>Número</dt><dd>@_paso.NumeroPaso de 14</dd>
-                <dt>Estado</dt><dd><BadgeEstado Estado="@_paso.Estado" /></dd>
-                @if (_paso.CompletadoEn.HasValue)
-                {
-                    <dt>Completado</dt><dd>@_paso.CompletadoEn.Value.ToString("dd/MM/yyyy HH:mm")</dd>
-                }
-                <dt>Notas</dt>
-                <dd>
-                    <textarea @bind="_notas" class="glass-input" rows="3" style="width:100%;margin-top:4px;"></textarea>
-                </dd>
-            </dl>
-            <div style="display:flex;gap:8px;margin-top:16px;">
-                <GlassButton Variant="primary" OnClick="GuardarNotas" Disabled="@_guardando">Guardar Notas</GlassButton>
-                @if (_paso.Estado == "pendiente")
-                {
-                    <GlassButton Variant="primary" OnClick="IniciarPaso">Iniciar</GlassButton>
-                }
-                else if (_paso.Estado == "en_proceso")
-                {
-                    <GlassButton Variant="primary" OnClick="CompletarPaso">Completar</GlassButton>
-                    <GlassButton Variant="danger" OnClick="BloquearPaso">Bloquear</GlassButton>
-                }
-                else if (_paso.Estado == "bloqueado")
-                {
-                    <GlassButton Variant="secondary" OnClick="DesbloquearPaso">Desbloquear</GlassButton>
-                }
-            </div>
+<div class="page-container animate-fade-in">
+    <div class="page-header" style="margin-bottom:20px;align-items:flex-start;gap:16px;">
+        <div class="page-header-left">
+            <h1>@_titulo</h1>
+            <Breadcrumb Items="@_breadcrumb" />
+            <p class="body-small text-muted" style="margin-top:6px;">Captura operativa, notas y evidencias del paso actual.</p>
         </div>
 
-        <div class="glass-card" style="padding:20px;">
-            <h3 style="margin-bottom:12px;">Evidencias (@_evidencias.Count)</h3>
-            @if (_evidencias.Count == 0)
-            {
-                <p style="color:var(--text-secondary);padding:20px 0;">Sin documentos adjuntos</p>
-            }
-            else
-            {
-                <div style="display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;">
-                    @foreach (var e in _evidencias)
-                    {
-                        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface-raised);border-radius:8px;">
-                            <div style="overflow:hidden;">
-                                <div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">@e.NombreArchivo</div>
-                                <div style="font-size:10px;color:var(--text-secondary);">@FormatearTamano(e.TamanoBytes)</div>
-                            </div>
-                            <a href="https://rea-interno-production.up.railway.app/api/v1/checklists/evidencias/@e.EvidenciaId/descargar" class="btn-ghost" target="_blank">
-                                <LucideIcon Name="download" Size="14" />
-                            </a>
-                        </div>
-                    }
-                </div>
-            }
-
-            <div style="margin-top:16px;border-top:1px solid var(--border-glass);padding-top:12px;">
-                <p style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">Adjuntar documento</p>
-                <InputFile OnChange="OnArchivoSeleccionado" style="display:none;" @ref="_fileInput" />
-                <GlassButton Variant="secondary" OnClick="AbrirFileDialog" style="width:100%;">
-                    <LucideIcon Name="paperclip" Size="14" /> @(_archivoNombre ?? "Seleccionar archivo")
-                </GlassButton>
-                @if (_archivo != null)
-                {
-                    <GlassButton Variant="primary" OnClick="SubirEvidencia" Disabled="@_subiendo" style="margin-top:8px;width:100%;">
-                        @(_subiendo ? "Subiendo..." : "Subir Archivo")
-                    </GlassButton>
-                }
-            </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+            <GlassButton Variant="secondary" OnClick="VolverAChecklist">
+                <LucideIcon Name="arrow-left" Size="16" /> Volver al checklist
+            </GlassButton>
         </div>
     </div>
-}
+
+    @if (_error != null)
+    {
+        <ErrorBanner Message="@_error" OnDismiss="() => _error = null" />
+    }
+
+    @if (_cargando)
+    {
+        <SkeletonLoader />
+    }
+    else if (_paso != null)
+    {
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:16px;">
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Paso</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@_paso.NumeroPaso</div>
+                <div class="body-small text-muted" style="margin-top:4px;">de 14 pasos del flujo mensual</div>
+            </div>
+
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Estado</div>
+                <div style="margin-bottom:8px;"><BadgeEstado Estado="@_paso.Estado" /></div>
+                <div class="body-small text-muted">Actualiza el estado segun el avance real.</div>
+            </div>
+
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Evidencias</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@_evidencias.Count</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Archivos adjuntos a este paso.</div>
+            </div>
+
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Checklist</div>
+                <div style="font-size:18px;font-weight:700;color:var(--text-primary);">#@ChecklistId</div>
+                <div class="body-small text-muted" style="margin-top:4px;">@(_checklist?.ClienteNombre ?? "Sin cliente") · @(_checklist?.PeriodoNombre ?? "Sin periodo")</div>
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:minmax(0,1.25fr) minmax(320px,0.85fr);gap:16px;align-items:start;">
+            <div style="display:grid;gap:16px;">
+                <div class="card" style="padding:0;overflow:hidden;">
+                    <div class="surface-panel-header" style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                        <div>
+                            <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Contexto</div>
+                            <h3 style="margin-top:4px;">Informacion del paso</h3>
+                        </div>
+                        <div class="body-small text-muted">Paso @_paso.NumeroPaso del flujo mensual.</div>
+                    </div>
+
+                    <div style="padding:18px 20px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;">
+                        <div class="card" style="padding:14px 16px;">
+                            <div class="body-small text-muted">Nombre del paso</div>
+                            <div style="font-weight:700;color:var(--text-primary);margin-top:6px;">@_subtitulo</div>
+                        </div>
+
+                        <div class="card" style="padding:14px 16px;">
+                            <div class="body-small text-muted">Cliente y periodo</div>
+                            <div style="font-weight:700;color:var(--text-primary);margin-top:6px;">@(_checklist?.ClienteNombre ?? "-")</div>
+                            <div class="body-small text-muted" style="margin-top:4px;">@(_checklist?.PeriodoNombre ?? "-")</div>
+                        </div>
+
+                        <div class="card" style="padding:14px 16px;">
+                            <div class="body-small text-muted">Ultima marca de completado</div>
+                            <div style="font-weight:700;color:var(--text-primary);margin-top:6px;">@(_paso.CompletadoEn?.ToString("dd/MM/yyyy HH:mm") ?? "Sin completar aun")</div>
+                        </div>
+
+                        <div class="card" style="padding:14px 16px;">
+                            <div class="body-small text-muted">Estado actual</div>
+                            <div style="margin-top:8px;"><BadgeEstado Estado="@_paso.Estado" /></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="padding:0;overflow:hidden;">
+                    <div class="surface-panel-header" style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                        <div>
+                            <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Captura</div>
+                            <h3 style="margin-top:4px;">Notas del paso</h3>
+                        </div>
+                        <div class="body-small text-muted">Documenta hallazgos, pendientes y contexto operativo.</div>
+                    </div>
+
+                    <div style="padding:18px 20px;display:grid;gap:14px;">
+                        <div>
+                            <label class="input-label">Notas operativas</label>
+                            <textarea @bind="_notas"
+                                      class="input-field"
+                                      rows="6"
+                                      style="width:100%;resize:vertical;min-height:144px;"
+                                      placeholder="Describe que se reviso, pendientes encontrados, dependencias o aclaraciones para el siguiente movimiento."></textarea>
+                        </div>
+
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                            <GlassButton Variant="primary" OnClick="GuardarNotas" Disabled="@_guardando">
+                                <LucideIcon Name="save" Size="16" /> @(_guardando ? "Guardando..." : "Guardar notas")
+                            </GlassButton>
+
+                            @if (_paso.Estado == "pendiente")
+                            {
+                                <GlassButton Variant="primary" OnClick="IniciarPaso">
+                                    <LucideIcon Name="play" Size="16" /> Iniciar
+                                </GlassButton>
+                            }
+                            else if (_paso.Estado == "en_proceso")
+                            {
+                                <GlassButton Variant="primary" OnClick="CompletarPaso">
+                                    <LucideIcon Name="check" Size="16" /> Completar
+                                </GlassButton>
+                                <GlassButton Variant="secondary" OnClick="BloquearPaso">
+                                    <LucideIcon Name="pause-circle" Size="16" /> Bloquear
+                                </GlassButton>
+                            }
+                            else if (_paso.Estado == "bloqueado")
+                            {
+                                <GlassButton Variant="secondary" OnClick="DesbloquearPaso">
+                                    <LucideIcon Name="rotate-ccw" Size="16" /> Desbloquear
+                                </GlassButton>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display:grid;gap:16px;">
+                <div class="card" style="padding:0;overflow:hidden;">
+                    <div class="surface-panel-header" style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                        <div>
+                            <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Documentacion</div>
+                            <h3 style="margin-top:4px;">Evidencias</h3>
+                        </div>
+                        <div class="body-small text-muted">@_evidencias.Count archivo(s)</div>
+                    </div>
+
+                    <div style="padding:18px 20px;display:grid;gap:14px;">
+                        @if (_evidencias.Count == 0)
+                        {
+                            <div class="card empty-state" style="padding:28px 18px;">
+                                <LucideIcon Name="file-stack" Size="28" />
+                                <div class="empty-state-heading" style="font-size:16px;">Sin evidencias adjuntas</div>
+                                <div class="empty-state-body">Sube documentos de respaldo para dejar trazabilidad del paso.</div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div style="display:grid;gap:10px;max-height:360px;overflow-y:auto;padding-right:2px;">
+                                @foreach (var evidencia in _evidencias.OrderByDescending(x => x.CreatedAt))
+                                {
+                                    <div class="card" style="padding:14px 16px;">
+                                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+                                            <div style="min-width:0;">
+                                                <div style="font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@evidencia.NombreArchivo</div>
+                                                <div class="body-small text-muted" style="margin-top:4px;">@FormatearTamano(evidencia.TamanoBytes) · @evidencia.CreatedAt.ToString("dd/MM/yy HH:mm")</div>
+                                            </div>
+                                            <a href="https://rea-interno-production.up.railway.app/api/v1/checklists/evidencias/@evidencia.EvidenciaId/descargar"
+                                               class="btn btn-secondary btn-icon"
+                                               target="_blank"
+                                               title="Descargar evidencia">
+                                                <LucideIcon Name="download" Size="15" />
+                                            </a>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        <div class="card" style="padding:14px 16px;">
+                            <div class="body-small text-muted" style="margin-bottom:10px;">Adjuntar documento</div>
+                            <InputFile OnChange="OnArchivoSeleccionado" class="input-field" />
+
+                            @if (_archivo != null)
+                            {
+                                <div style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+                                    <div>
+                                        <div style="font-weight:600;color:var(--text-primary);">@_archivoNombre</div>
+                                        <div class="body-small text-muted" style="margin-top:4px;">Listo para subir al expediente.</div>
+                                    </div>
+                                    <GlassButton Variant="primary" OnClick="SubirEvidencia" Disabled="@_subiendo">
+                                        <LucideIcon Name="upload" Size="16" /> @(_subiendo ? "Subiendo..." : "Subir archivo")
+                                    </GlassButton>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="padding:18px 20px;">
+                    <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Navegacion</div>
+                    <h3 style="margin-top:4px;">Siguiente contexto</h3>
+                    <p class="body-small text-muted" style="margin-top:8px;">Vuelve al checklist para revisar el avance completo o continua con el siguiente paso operativo.</p>
+
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
+                        <GlassButton Variant="secondary" OnClick="VolverAChecklist">
+                            <LucideIcon Name="layout-list" Size="16" /> Ver checklist
+                        </GlassButton>
+                        @if (_siguientePaso != null)
+                        {
+                            <GlassButton Variant="primary" OnClick="IrASiguientePaso">
+                                <LucideIcon Name="arrow-right" Size="16" /> Abrir paso @_siguientePaso.NumeroPaso
+                            </GlassButton>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
 
 @code {
     [Parameter] public long ChecklistId { get; set; }
     [Parameter] public long PasoId { get; set; }
 
+    private readonly List<BreadcrumbItem> _breadcrumb = new()
+    {
+        new() { Text = "Inicio", Url = "/" },
+        new() { Text = "Checklists", Url = "/checklists" },
+        new() { Text = "Checklist", Url = "#" },
+        new() { Text = "Paso", Url = "#" }
+    };
+
+    private ChecklistDto? _checklist;
     private PasoDto? _paso;
+    private PasoDto? _siguientePaso;
     private List<EvidenciaDto> _evidencias = new();
     private string _titulo = "Paso";
     private string _subtitulo = "";
@@ -109,34 +254,77 @@ else if (_paso != null)
     private string? _error;
     private string? _archivoNombre;
     private IBrowserFile? _archivo;
-    private InputFile? _fileInput;
 
     protected override async Task OnInitializedAsync() => await Cargar();
 
     private async Task Cargar()
     {
         _cargando = true;
+        _error = null;
+
         try
         {
             var result = await ChecklistService.ObtenerAsync(ChecklistId);
             if (result?.Ok == true && result.Data != null)
             {
+                _checklist = result.Data;
                 _paso = result.Data.Pasos.FirstOrDefault(p => p.PasoId == PasoId);
-                _evidencias = _paso?.Evidencias ?? new();
-                _notas = _paso?.Notas ?? "";
-                _titulo = $"Paso {_paso?.NumeroPaso}";
-                _subtitulo = _paso?.NombrePaso ?? "";
+
+                if (_paso != null)
+                {
+                    _evidencias = _paso.Evidencias ?? new();
+                    _notas = _paso.Notas ?? "";
+                    _titulo = $"Paso {_paso.NumeroPaso}";
+                    _subtitulo = _paso.NombrePaso ?? "";
+                    _siguientePaso = result.Data.Pasos
+                        .Where(p => p.NumeroPaso > _paso.NumeroPaso)
+                        .OrderBy(p => p.NumeroPaso)
+                        .FirstOrDefault();
+
+                    _breadcrumb[2] = new BreadcrumbItem { Text = _checklist.ClienteNombre, Url = $"/checklists/{ChecklistId}" };
+                    _breadcrumb[3] = new BreadcrumbItem { Text = _titulo, Url = $"/checklists/{ChecklistId}/paso/{PasoId}" };
+                }
+                else
+                {
+                    _error = "Paso no encontrado";
+                }
+            }
+            else
+            {
+                _error = result?.Error?.Message ?? "Error al cargar el paso";
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+
         _cargando = false;
     }
 
     private async Task GuardarNotas()
     {
+        if (_paso == null)
+        {
+            return;
+        }
+
         _guardando = true;
-        var r = await ChecklistService.ActualizarPasoAsync(ChecklistId, PasoId, new UpdatePasoRequest { Notas = _notas, Estado = _paso!.Estado });
-        if (r?.Ok != true) _error = r?.Error?.Message;
+        var response = await ChecklistService.ActualizarPasoAsync(ChecklistId, PasoId, new UpdatePasoRequest
+        {
+            Notas = _notas,
+            Estado = _paso.Estado
+        });
+
+        if (response?.Ok == true)
+        {
+            await Cargar();
+        }
+        else
+        {
+            _error = response?.Error?.Message;
+        }
+
         _guardando = false;
     }
 
@@ -147,15 +335,20 @@ else if (_paso != null)
 
     private async Task Cambiar(string estado)
     {
-        var r = await ChecklistService.ActualizarPasoAsync(ChecklistId, PasoId, new UpdatePasoRequest { Estado = estado, Notas = _notas });
-        if (r?.Ok == true) await Cargar();
-        else _error = r?.Error?.Message;
-    }
+        var response = await ChecklistService.ActualizarPasoAsync(ChecklistId, PasoId, new UpdatePasoRequest
+        {
+            Estado = estado,
+            Notas = _notas
+        });
 
-    private async Task AbrirFileDialog()
-    {
-        _archivo = null;
-        _archivoNombre = null;
+        if (response?.Ok == true)
+        {
+            await Cargar();
+        }
+        else
+        {
+            _error = response?.Error?.Message;
+        }
     }
 
     private async Task OnArchivoSeleccionado(InputFileChangeEventArgs e)
@@ -165,12 +358,24 @@ else if (_paso != null)
             _archivo = e.File;
             _archivoNombre = e.File.Name;
         }
+        else
+        {
+            _archivo = null;
+            _archivoNombre = null;
+        }
+
+        await Task.CompletedTask;
     }
 
     private async Task SubirEvidencia()
     {
-        if (_archivo == null) return;
+        if (_archivo == null)
+        {
+            return;
+        }
+
         _subiendo = true;
+
         try
         {
             using var content = new MultipartFormDataContent();
@@ -179,17 +384,34 @@ else if (_paso != null)
             fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(_archivo.ContentType);
             content.Add(fileContent, "archivo", _archivo.Name);
 
-            var r = await Http.PostAsync($"api/v1/checklists/{ChecklistId}/pasos/{PasoId}/evidencias", content);
-            if (r.IsSuccessStatusCode)
+            var response = await Http.PostAsync($"api/v1/checklists/{ChecklistId}/pasos/{PasoId}/evidencias", content);
+            if (response.IsSuccessStatusCode)
             {
                 _archivo = null;
                 _archivoNombre = null;
                 await Cargar();
             }
-            else _error = "Error al subir";
+            else
+            {
+                _error = "Error al subir la evidencia";
+            }
         }
-        catch (Exception ex) { _error = ex.Message; }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+
         _subiendo = false;
+    }
+
+    private void VolverAChecklist() => Navigation.NavigateTo($"/checklists/{ChecklistId}");
+
+    private void IrASiguientePaso()
+    {
+        if (_siguientePaso != null)
+        {
+            Navigation.NavigateTo($"/checklists/{ChecklistId}/paso/{_siguientePaso.PasoId}");
+        }
     }
 
     private static string FormatearTamano(long bytes) => bytes switch

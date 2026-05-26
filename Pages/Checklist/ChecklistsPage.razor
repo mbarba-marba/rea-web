@@ -1,5 +1,6 @@
 @page "/checklists"
 @using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
 @using REA.Web.Components.Shared
 @using REA.Web.Models
 @using REA.Web.Services
@@ -8,6 +9,7 @@
 @inject ClienteService ClienteService
 @inject HttpClient Http
 @inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
 
 <div class="page-container animate-fade-in">
     <div class="page-header" style="margin-bottom:20px;align-items:flex-start;gap:16px;">
@@ -21,9 +23,12 @@
             <GlassButton Variant="secondary" OnClick='() => Navigation.NavigateTo("/periodos")'>
                 <LucideIcon Name="calendar-range" Size="16" /> Periodos
             </GlassButton>
-            <GlassButton Variant="primary" OnClick="AbrirModalNuevo">
-                <LucideIcon Name="plus" Size="16" /> Nuevo Checklist
-            </GlassButton>
+            @if (_esAdmin)
+            {
+                <GlassButton Variant="primary" OnClick="AbrirModalNuevo">
+                    <LucideIcon Name="plus" Size="16" /> Nuevo Checklist
+                </GlassButton>
+            }
         </div>
     </div>
 
@@ -117,7 +122,16 @@
             <div class="card empty-state" style="padding:56px 32px;">
                 <LucideIcon Name="list-checks" Size="40" />
                 <div class="empty-state-heading">No hay checklists para mostrar</div>
-                <div class="empty-state-body">Ajusta los filtros o crea un checklist nuevo para iniciar el proceso mensual.</div>
+                <div class="empty-state-body">
+                    @if (_clientesDisponibles.Count > 0)
+                    {
+                        <span>Tienes clientes disponibles, pero aun no existe un checklist creado para el periodo que necesitas trabajar.</span>
+                    }
+                    else
+                    {
+                        <span>Ajusta los filtros o crea un checklist nuevo para iniciar el proceso mensual.</span>
+                    }
+                </div>
             </div>
         }
         else
@@ -161,10 +175,10 @@
                                         <div style="display:grid;gap:8px;">
                                             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
                                                 <span class="body-small text-muted">Progreso</span>
-                                                <span style="font-size:12px;font-weight:600;color:var(--text-primary);">@($"{checklist.PorcentajeAvance:0}%")</span>
+                                                <span style="font-size:12px;font-weight:600;color:var(--text-primary);">@($"{ObtenerPorcentajeVisible(checklist):0}%")</span>
                                             </div>
                                             <div class="progress-bar" style="height:8px;">
-                                                <div class="progress-fill" style="width:@($"{checklist.PorcentajeAvance}%")"></div>
+                                                <div class="progress-fill" style="width:@($"{ObtenerPorcentajeVisible(checklist)}%")"></div>
                                             </div>
                                         </div>
                                     </td>
@@ -185,7 +199,7 @@
     }
 </div>
 
-@if (_modalNuevo)
+@if (_modalNuevo && _esAdmin)
 {
     <div class="modal-backdrop" @onclick="CerrarModalNuevo">
         <div class="modal-container" @onclick:stopPropagation="true" style="max-width:560px;">
@@ -265,6 +279,7 @@
     private long? _nuevoPeriodoId;
     private bool _creandoNuevo;
     private string? _errorModal;
+    private bool _esAdmin;
 
     private List<ChecklistDto> ChecklistsFiltrados => _checklists
         .Where(FiltraBusqueda)
@@ -275,9 +290,16 @@
 
     private int TotalEnProceso => ChecklistsFiltrados.Count(x => ObtenerEstado(x) == "en_proceso");
     private int TotalCompletados => ChecklistsFiltrados.Count(x => ObtenerEstado(x) == "completado");
-    private decimal AvancePromedio => ChecklistsFiltrados.Count == 0 ? 0 : Math.Round(ChecklistsFiltrados.Average(x => x.PorcentajeAvance), 0);
+    private decimal AvancePromedio => ChecklistsFiltrados.Count == 0 ? 0 : Math.Round(ChecklistsFiltrados.Average(ObtenerPorcentajeVisible), 0);
 
-    protected override async Task OnInitializedAsync() => await CargarTodo();
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _esAdmin = authState.User.IsInRole("admin") ||
+                   string.Equals(authState.User.FindFirst(ClaimTypes.Role)?.Value, "admin", StringComparison.OrdinalIgnoreCase);
+
+        await CargarTodo();
+    }
 
     private async Task CargarTodo()
     {
@@ -286,34 +308,49 @@
 
         try
         {
-            var checklistsTask = ChecklistService.ListarAsync(page: 1, limit: 100);
-            var clientesTask = ClienteService.ListarAsync(page: 1, limit: 100);
-            var periodosTask = Http.GetFromJsonAsync<ApiResponse<List<PeriodoDto>>>($"api/v1/periodos?anio={DateTime.Now.Year}");
-
-            await Task.WhenAll(checklistsTask, clientesTask, periodosTask!);
-
-            var checklistsResult = await checklistsTask;
+            var checklistsResult = await ChecklistService.ListarAsync(page: 1, limit: 100);
             if (checklistsResult?.Ok == true)
             {
                 _checklists = checklistsResult.Data ?? new();
             }
-
-            var clientesResult = await clientesTask;
-            if (clientesResult?.Ok == true)
+            else
             {
-                _clientesDisponibles = (clientesResult.Data ?? new())
-                    .Where(x => x.Activo)
-                    .OrderBy(x => x.RazonSocial)
-                    .ToList();
+                _error = checklistsResult?.Error?.Message ?? "No se pudieron cargar los checklists.";
             }
 
-            var periodosResult = await periodosTask!;
-            if (periodosResult?.Ok == true)
+            if (_esAdmin)
             {
-                _periodosDisponibles = (periodosResult.Data ?? new())
-                    .OrderByDescending(x => x.Anio)
-                    .ThenByDescending(x => x.Mes)
-                    .ToList();
+                try
+                {
+                    var clientesResult = await ClienteService.ListarAsync(page: 1, limit: 100);
+                    if (clientesResult?.Ok == true)
+                    {
+                        _clientesDisponibles = (clientesResult.Data ?? new())
+                            .Where(x => x.Activo)
+                            .OrderBy(x => x.RazonSocial)
+                            .ToList();
+                    }
+                }
+                catch
+                {
+                    _clientesDisponibles = new();
+                }
+            }
+
+            try
+            {
+                var periodosResult = await Http.GetFromJsonAsync<ApiResponse<List<PeriodoDto>>>($"api/v1/periodos?anio={DateTime.Now.Year}");
+                if (periodosResult?.Ok == true)
+                {
+                    _periodosDisponibles = (periodosResult.Data ?? new())
+                        .OrderByDescending(x => x.Anio)
+                        .ThenByDescending(x => x.Mes)
+                        .ToList();
+                }
+            }
+            catch
+            {
+                _periodosDisponibles = new();
             }
         }
         catch (Exception ex)
@@ -349,10 +386,17 @@
 
     private void AbrirModalNuevo()
     {
+        if (!_esAdmin)
+        {
+            return;
+        }
+
         _modalNuevo = true;
         _nuevoClienteId = null;
         _nuevoPeriodoId = null;
-        _errorModal = null;
+        _errorModal = _clientesDisponibles.Count == 0
+            ? "No hay clientes disponibles para crear un checklist."
+            : null;
     }
 
     private void CerrarModalNuevo()
@@ -413,7 +457,7 @@
             return "bloqueado";
         }
 
-        if (checklist.PorcentajeAvance <= 0)
+        if (ObtenerPorcentajeVisible(checklist) <= 0)
         {
             return "pendiente";
         }
@@ -422,13 +466,30 @@
     }
 
     private static int ObtenerPasosCompletados(ChecklistDto checklist)
-        => (int)Math.Clamp(Math.Round(checklist.PorcentajeAvance * 14m / 100m, MidpointRounding.AwayFromZero), 0m, 14m);
+    {
+        if (checklist.Pasos?.Count > 0)
+        {
+            return checklist.Pasos.Count(x => x.Estado == "completado");
+        }
+
+        return (int)Math.Clamp(Math.Round(checklist.PorcentajeAvance * 14m / 100m, MidpointRounding.AwayFromZero), 0m, 14m);
+    }
 
     private static string ObtenerResumenPasos(ChecklistDto checklist)
     {
         var completados = ObtenerPasosCompletados(checklist);
         var restantes = Math.Max(14 - completados, 0);
         return restantes == 0 ? "Flujo finalizado" : $"{restantes} por cerrar";
+    }
+
+    private static decimal ObtenerPorcentajeVisible(ChecklistDto checklist)
+    {
+        if (checklist.Pasos?.Count > 0)
+        {
+            return Math.Round((decimal)ObtenerPasosCompletados(checklist) * 100m / checklist.Pasos.Count, 0);
+        }
+
+        return checklist.PorcentajeAvance;
     }
 
     private static string FormatearPeriodo(PeriodoDto periodo) => $"{periodo.Anio}-{periodo.Mes:D2}";

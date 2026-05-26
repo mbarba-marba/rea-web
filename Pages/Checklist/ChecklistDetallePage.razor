@@ -42,7 +42,7 @@
 
             <div class="card" style="padding:16px 18px;">
                 <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Avance</div>
-                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@($"{_checklist.PorcentajeAvance:0}%")</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@($"{PorcentajeVisible:0}%")</div>
                 <div class="body-small text-muted" style="margin-top:4px;">@PasosCompletados de @_checklist.Pasos.Count pasos completados.</div>
             </div>
 
@@ -73,10 +73,10 @@
                     <div style="display:grid;gap:8px;">
                         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
                             <span class="body-small text-muted">Progreso general</span>
-                            <span style="font-size:12px;font-weight:600;color:var(--text-primary);">@($"{_checklist.PorcentajeAvance:0}%")</span>
+                            <span style="font-size:12px;font-weight:600;color:var(--text-primary);">@($"{PorcentajeVisible:0}%")</span>
                         </div>
                         <div class="progress-bar" style="height:9px;">
-                            <div class="progress-fill" style="width:@($"{_checklist.PorcentajeAvance}%")"></div>
+                            <div class="progress-fill" style="width:@($"{PorcentajeVisible}%")"></div>
                         </div>
                     </div>
                 </div>
@@ -197,6 +197,7 @@
 
     private int PasosCompletados => _checklist?.Pasos.Count(x => x.Estado == "completado") ?? 0;
     private int PasosEnProceso => _checklist?.Pasos.Count(x => x.Estado == "en_proceso") ?? 0;
+    private decimal PorcentajeVisible => CalcularPorcentajeVisible(_checklist);
     private string EstadoChecklist => _checklist == null ? "pendiente" : ObtenerEstadoChecklist(_checklist);
     private PasoDto? SiguientePaso => _checklist?.Pasos
         .OrderBy(x => x.NumeroPaso)
@@ -274,11 +275,29 @@
             return "bloqueado";
         }
 
-        if (checklist.PorcentajeAvance <= 0)
+        if (CalcularPorcentajeVisible(checklist) <= 0)
         {
             return "pendiente";
         }
 
         return "en_proceso";
+    }
+
+    private static decimal CalcularPorcentajeVisible(ChecklistDto? checklist)
+    {
+        if (checklist == null)
+        {
+            return 0;
+        }
+
+        var pasos = checklist.Pasos ?? new List<PasoDto>();
+        var totalPasos = pasos.Count;
+        if (totalPasos > 0)
+        {
+            var completados = pasos.Count(x => x.Estado == "completado");
+            return Math.Round((decimal)completados * 100m / totalPasos, 0);
+        }
+
+        return checklist.PorcentajeAvance;
     }
 }
