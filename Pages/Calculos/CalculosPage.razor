@@ -1,18 +1,586 @@
 @page "/calculos"
 @using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@using REA.Web.Components.Shared
+@using REA.Web.Models
+@using REA.Web.Services
 @attribute [Authorize(Roles = "admin,auxiliar")]
+@inject HttpClient Http
 @inject NavigationManager Navigation
+@inject ClienteService ClienteService
+@inject ChecklistService ChecklistService
+@inject AuthenticationStateProvider AuthStateProvider
 
-<PageHeader Title="Cálculos de Impuestos" Subtitle="ISR e IVA por cliente y período" />
+<div class="page-container animate-fade-in">
+    <div class="page-header" style="margin-bottom:20px;align-items:flex-start;gap:16px;">
+        <div class="page-header-left">
+            <h1>Cálculos ISR/IVA</h1>
+            <Breadcrumb Items="@_breadcrumb" />
+            <p class="body-small text-muted" style="margin-top:6px;">Centro de cálculo fiscal por cliente y periodo con lectura inmediata de ISR e IVA.</p>
+        </div>
+    </div>
 
-<div class="glass-card" style="text-align:center;padding:40px;">
-    <LucideIcon Name="shield-check" Size="48" />
-    <h3 style="margin:12px 0 4px;">Cálculos ISR / IVA</h3>
-    <p class="caption text-muted" style="margin-bottom:20px;">
-        Seleccione un cliente y período para calcular impuestos automáticamente desde las facturas procesadas.
-    </p>
-    <p style="color:var(--text-secondary);">
-        Los cálculos se generan automáticamente al procesar los XMLs del SAT.<br/>
-        Utilice el checklist para asegurar que todos los datos estén completos antes de generar la declaración.
-    </p>
+    @if (_mensaje != null)
+    {
+        <div class="card" style="margin-bottom:16px;padding:14px 16px;border-color:@(_mensajeError ? "rgba(239,68,68,0.24)" : "rgba(16,185,129,0.24)");background:@(_mensajeError ? "rgba(239,68,68,0.08)" : "rgba(16,185,129,0.10)");">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <div style="display:flex;align-items:center;gap:10px;color:@(_mensajeError ? "var(--danger)" : "var(--success)")">
+                    <LucideIcon Name="@(_mensajeError ? "alert-circle" : "badge-check")" Size="18" />
+                    <span style="font-weight:600;">@_mensaje</span>
+                </div>
+                <button @onclick="() => _mensaje = null" class="btn btn-secondary btn-icon" title="Cerrar">
+                    <LucideIcon Name="x" Size="14" />
+                </button>
+            </div>
+        </div>
+    }
+
+    @if (_cargando)
+    {
+        <SkeletonLoader />
+    }
+    else
+    {
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:16px;">
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Expedientes</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@Expedientes.Count</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Cruces visibles entre ISR e IVA.</div>
+            </div>
+
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">ISR total</div>
+                <div style="font-size:28px;font-weight:700;color:@(TotalIsr >= 0 ? "var(--danger)" : "var(--success)")">@FormatearMoneda(TotalIsr)</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Saldo acumulado de ISR.</div>
+            </div>
+
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">IVA total</div>
+                <div style="font-size:28px;font-weight:700;color:@(TotalIva >= 0 ? "var(--danger)" : "var(--success)")">@FormatearMoneda(TotalIva)</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Saldo acumulado de IVA.</div>
+            </div>
+
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Listos</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@ExpedientesCompletos</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Con cálculo ISR e IVA generado.</div>
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:minmax(320px,0.92fr) minmax(0,1.28fr);gap:16px;align-items:start;">
+            <div class="card" style="padding:0;overflow:hidden;">
+                <div class="surface-panel-header" style="padding:16px 20px;">
+                    <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Ejecución</div>
+                    <h3 style="margin-top:4px;">Generar o recalcular</h3>
+                </div>
+
+                <div style="padding:18px 20px;display:grid;gap:16px;">
+                    <div class="card" style="padding:16px;">
+                        <div style="display:flex;align-items:flex-start;gap:12px;">
+                            <div style="width:42px;height:42px;border-radius:12px;background:rgba(7,98,128,0.12);display:flex;align-items:center;justify-content:center;color:var(--accent-primary);flex-shrink:0;">
+                                <LucideIcon Name="calculator" Size="20" />
+                            </div>
+                            <div>
+                                <div style="font-size:15px;font-weight:700;color:var(--text-primary);">Motor fiscal</div>
+                                <div class="body-small text-muted" style="margin-top:6px;">Selecciona cliente y periodo para recalcular usando XML procesados y datos del expediente.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="input-label">Cliente</label>
+                        <select class="select-field" @bind="_clienteIdSeleccionado">
+                            <option value="">Selecciona un cliente</option>
+                            @foreach (var cliente in _clientesDisponibles)
+                            {
+                                <option value="@cliente.ClienteId">@cliente.RazonSocial</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="input-label">Periodo</label>
+                        <select class="select-field" @bind="_periodoIdSeleccionado">
+                            <option value="">Selecciona un periodo</option>
+                            @foreach (var periodo in _periodosDisponibles)
+                            {
+                                <option value="@periodo.PeriodoId">@FormatearPeriodo(periodo)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="card" style="padding:16px;">
+                        <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:10px;">Acciones</div>
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                            <GlassButton Variant="primary" OnClick="CalcularIsrAsync" Disabled="@(!_puedeCalcular || _calculandoIsr)">
+                                <LucideIcon Name="sigma" Size="16" /> @(_calculandoIsr ? "Calculando ISR..." : "Calcular ISR")
+                            </GlassButton>
+                            <GlassButton Variant="secondary" OnClick="CalcularIvaAsync" Disabled="@(!_puedeCalcular || _calculandoIva)">
+                                <LucideIcon Name="receipt" Size="16" /> @(_calculandoIva ? "Calculando IVA..." : "Calcular IVA")
+                            </GlassButton>
+                        </div>
+                    </div>
+
+                    <div class="body-small text-muted">
+                        @if (_puedeCalcular)
+                        {
+                            <span>Preparado para calcular <strong style="color:var(--text-primary);">@NombreClienteSeleccionado</strong> · <strong style="color:var(--text-primary);">@PeriodoSeleccionadoTexto</strong>.</span>
+                        }
+                        else
+                        {
+                            <span>Completa la selección para habilitar el cálculo.</span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="padding:0;overflow:hidden;">
+                <div class="surface-panel-header" style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <div>
+                        <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Bandeja</div>
+                        <h3 style="margin-top:4px;">Resultados por cliente y periodo</h3>
+                    </div>
+                    <div class="body-small text-muted">Abre ISR o IVA para revisar el desglose y sus importes fuente.</div>
+                </div>
+
+                <div style="padding:18px 20px;display:grid;grid-template-columns:minmax(220px,1fr) 220px 220px auto;gap:12px;align-items:end;border-bottom:1px solid var(--border-subtle);">
+                    <div>
+                        <label class="input-label">Buscar</label>
+                        <input type="text" class="input-field" @bind="_busqueda" @bind:event="oninput" placeholder="Cliente o periodo" />
+                    </div>
+
+                    <div>
+                        <label class="input-label">Periodo</label>
+                        <select class="select-field" @bind="_filtroPeriodoId">
+                            <option value="">Todos los periodos</option>
+                            @foreach (var periodo in _periodosDisponibles)
+                            {
+                                <option value="@periodo.PeriodoId">@FormatearPeriodo(periodo)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="input-label">Cobertura</label>
+                        <select class="select-field" @bind="_filtroCobertura">
+                            <option value="">Todas</option>
+                            <option value="completo">ISR + IVA</option>
+                            <option value="isr">Solo ISR</option>
+                            <option value="iva">Solo IVA</option>
+                            <option value="vacío">Sin cálculo</option>
+                        </select>
+                    </div>
+
+                    <div style="display:flex;justify-content:flex-end;gap:10px;align-items:center;flex-wrap:wrap;">
+                        <div class="badge badge-muted" style="padding:8px 10px;height:40px;display:inline-flex;">
+                            @ExpedientesFiltrados.Count resultados
+                        </div>
+                        <GlassButton Variant="secondary" OnClick="LimpiarFiltros">
+                            <LucideIcon Name="rotate-ccw" Size="16" /> Limpiar
+                        </GlassButton>
+                    </div>
+                </div>
+
+                @if (ExpedientesFiltrados.Count == 0)
+                {
+                    <div class="empty-state" style="padding:56px 24px;">
+                        <LucideIcon Name="calculator" Size="38" />
+                        <div class="empty-state-heading">Aún no hay resultados para mostrar</div>
+                        <div class="empty-state-body">Genera cálculos o ajusta los filtros para revisar ISR e IVA por expediente.</div>
+                    </div>
+                }
+                else
+                {
+                    <div style="overflow-x:auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Periodo</th>
+                                    <th>ISR</th>
+                                    <th>IVA</th>
+                                    <th>Cobertura</th>
+                                    <th style="text-align:right;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var expediente in ExpedientesFiltrados)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div style="font-weight:600;color:var(--text-primary);">@expediente.ClienteNombre</div>
+                                            <div class="body-small text-muted" style="margin-top:2px;">Cliente #@expediente.ClienteId</div>
+                                        </td>
+                                        <td style="font-size:13px;color:var(--text-secondary);">@expediente.PeriodoNombre</td>
+                                        <td>
+                                            @if (expediente.Isr != null)
+                                            {
+                                                <div style="font-weight:700;color:@(expediente.Isr.IsrAPagar >= 0 ? "var(--danger)" : "var(--success)")">@FormatearMoneda(expediente.Isr.IsrAPagar)</div>
+                                                <div class="body-small text-muted" style="margin-top:2px;">Actualizado @expediente.Isr.CalculadoEn.ToString("dd/MM HH:mm")</div>
+                                            }
+                                            else
+                                            {
+                                                <span class="body-small text-muted">Sin cálculo</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (expediente.Iva != null)
+                                            {
+                                                <div style="font-weight:700;color:@(expediente.Iva.IvaACargo >= 0 ? "var(--danger)" : "var(--success)")">@FormatearMoneda(expediente.Iva.IvaACargo)</div>
+                                                <div class="body-small text-muted" style="margin-top:2px;">Actualizado @expediente.Iva.CalculadoEn.ToString("dd/MM HH:mm")</div>
+                                            }
+                                            else
+                                            {
+                                                <span class="body-small text-muted">Sin cálculo</span>
+                                            }
+                                        </td>
+                                        <td><BadgeEstado Estado="@ObtenerCoberturaEstado(expediente)" /></td>
+                                        <td style="text-align:right;">
+                                            <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;">
+                                                <button class="btn btn-secondary btn-icon" title="Ver ISR" disabled="@(expediente.Isr == null)" @onclick="() => VerIsr(expediente)">
+                                                    <LucideIcon Name="sigma" Size="15" />
+                                                </button>
+                                                <button class="btn btn-secondary btn-icon" title="Ver IVA" disabled="@(expediente.Iva == null)" @onclick="() => VerIva(expediente)">
+                                                    <LucideIcon Name="receipt" Size="15" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    }
 </div>
+
+@code {
+    private readonly List<BreadcrumbItem> _breadcrumb = new()
+    {
+        new() { Text = "Inicio", Url = "/" },
+        new() { Text = "Cálculos ISR/IVA", Url = "/calculos" }
+    };
+
+    private List<ClienteDto> _clientesDisponibles = new();
+    private List<PeriodoDto> _periodosDisponibles = new();
+    private List<CalculoIsrDto> _calculosIsr = new();
+    private List<CalculoIvaDto> _calculosIva = new();
+    private bool _cargando = true;
+    private bool _esAdmin;
+    private bool _calculandoIsr;
+    private bool _calculandoIva;
+    private string? _mensaje;
+    private bool _mensajeError;
+    private string _busqueda = "";
+    private string _filtroCobertura = "";
+    private long? _filtroPeriodoId;
+    private long? _clienteIdSeleccionado;
+    private long? _periodoIdSeleccionado;
+
+    private bool _puedeCalcular => _clienteIdSeleccionado.HasValue && _periodoIdSeleccionado.HasValue;
+    private decimal TotalIsr => Expedientes.Sum(x => x.Isr?.IsrAPagar ?? 0m);
+    private decimal TotalIva => Expedientes.Sum(x => x.Iva?.IvaACargo ?? 0m);
+    private int ExpedientesCompletos => Expedientes.Count(x => x.Isr != null && x.Iva != null);
+    private string NombreClienteSeleccionado => _clientesDisponibles.FirstOrDefault(x => x.ClienteId == _clienteIdSeleccionado)?.RazonSocial ?? "Cliente";
+    private string PeriodoSeleccionadoTexto => _periodosDisponibles.FirstOrDefault(x => x.PeriodoId == _periodoIdSeleccionado) is { } periodo
+        ? FormatearPeriodo(periodo)
+        : "Periodo";
+
+    private List<CalculoExpedienteItem> Expedientes => ConstruirExpedientes();
+    private List<CalculoExpedienteItem> ExpedientesFiltrados => Expedientes
+        .Where(FiltraBusqueda)
+        .Where(FiltraPeriodo)
+        .Where(FiltraCobertura)
+        .OrderByDescending(x => x.PeriodoNombre)
+        .ThenBy(x => x.ClienteNombre)
+        .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _esAdmin = authState.User.IsInRole("admin") ||
+                   string.Equals(authState.User.FindFirst(ClaimTypes.Role)?.Value, "admin", StringComparison.OrdinalIgnoreCase);
+
+        await CargarTodoAsync();
+    }
+
+    private async Task CargarTodoAsync()
+    {
+        _cargando = true;
+
+        try
+        {
+            await CargarClientesAsync();
+            await CargarPeriodosAsync();
+            await CargarCalculosAsync();
+            AplicarSeleccionesPorDefecto();
+        }
+        catch (Exception ex)
+        {
+            _mensaje = ex.Message;
+            _mensajeError = true;
+        }
+
+        _cargando = false;
+    }
+
+    private async Task CargarClientesAsync()
+    {
+        if (_esAdmin)
+        {
+            var clientesResult = await ClienteService.ListarAsync(page: 1, limit: 100);
+            if (clientesResult?.Ok == true)
+            {
+                _clientesDisponibles = (clientesResult.Data ?? new())
+                    .Where(x => x.Activo)
+                    .OrderBy(x => x.RazonSocial)
+                    .ToList();
+                return;
+            }
+        }
+
+        var checklistsResult = await ChecklistService.ListarAsync(page: 1, limit: 100);
+        if (checklistsResult?.Ok == true)
+        {
+            _clientesDisponibles = (checklistsResult.Data ?? new())
+                .GroupBy(x => new { x.ClienteId, x.ClienteNombre })
+                .Select(g => new ClienteDto { ClienteId = g.Key.ClienteId, RazonSocial = g.Key.ClienteNombre, Activo = true })
+                .OrderBy(x => x.RazonSocial)
+                .ToList();
+        }
+    }
+
+    private async Task CargarPeriodosAsync()
+    {
+        var periodosResult = await Http.GetFromJsonAsync<ApiResponse<List<PeriodoDto>>>($"api/v1/periodos?anio={DateTime.Now.Year}");
+        if (periodosResult?.Ok == true)
+        {
+            _periodosDisponibles = (periodosResult.Data ?? new())
+                .OrderByDescending(x => x.Anio)
+                .ThenByDescending(x => x.Mes)
+                .ToList();
+        }
+    }
+
+    private async Task CargarCalculosAsync()
+    {
+        var isrResult = await Http.GetFromJsonAsync<ApiResponse<List<CalculoIsrDto>>>("api/v1/calculos/isr");
+        _calculosIsr = isrResult?.Ok == true ? isrResult.Data ?? new() : new();
+
+        var ivaResult = await Http.GetFromJsonAsync<ApiResponse<List<CalculoIvaDto>>>("api/v1/calculos/iva");
+        _calculosIva = ivaResult?.Ok == true ? ivaResult.Data ?? new() : new();
+    }
+
+    private void AplicarSeleccionesPorDefecto()
+    {
+        if (!_clienteIdSeleccionado.HasValue && _clientesDisponibles.Count == 1)
+        {
+            _clienteIdSeleccionado = _clientesDisponibles[0].ClienteId;
+        }
+
+        if (!_periodoIdSeleccionado.HasValue && _periodosDisponibles.Count > 0)
+        {
+            _periodoIdSeleccionado = _periodosDisponibles[0].PeriodoId;
+        }
+    }
+
+    private async Task CalcularIsrAsync()
+    {
+        if (!_puedeCalcular)
+        {
+            return;
+        }
+
+        _calculandoIsr = true;
+        _mensaje = null;
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/v1/calculos/isr", new CalcularRequest
+            {
+                ClienteId = _clienteIdSeleccionado!.Value,
+                PeriodoId = _periodoIdSeleccionado!.Value
+            });
+
+            var result = await response.Content.ReadFromJsonAsync<ApiResponse<CalculoIsrDto>>();
+            if (response.IsSuccessStatusCode && result?.Ok == true)
+            {
+                await CargarCalculosAsync();
+                _mensaje = "Cálculo ISR generado correctamente.";
+                _mensajeError = false;
+            }
+            else
+            {
+                _mensaje = result?.Error?.Message ?? "No se pudo calcular ISR.";
+                _mensajeError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            _mensaje = ex.Message;
+            _mensajeError = true;
+        }
+
+        _calculandoIsr = false;
+    }
+
+    private async Task CalcularIvaAsync()
+    {
+        if (!_puedeCalcular)
+        {
+            return;
+        }
+
+        _calculandoIva = true;
+        _mensaje = null;
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/v1/calculos/iva", new CalcularRequest
+            {
+                ClienteId = _clienteIdSeleccionado!.Value,
+                PeriodoId = _periodoIdSeleccionado!.Value
+            });
+
+            var result = await response.Content.ReadFromJsonAsync<ApiResponse<CalculoIvaDto>>();
+            if (response.IsSuccessStatusCode && result?.Ok == true)
+            {
+                await CargarCalculosAsync();
+                _mensaje = "Cálculo IVA generado correctamente.";
+                _mensajeError = false;
+            }
+            else
+            {
+                _mensaje = result?.Error?.Message ?? "No se pudo calcular IVA.";
+                _mensajeError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            _mensaje = ex.Message;
+            _mensajeError = true;
+        }
+
+        _calculandoIva = false;
+    }
+
+    private List<CalculoExpedienteItem> ConstruirExpedientes()
+    {
+        var keys = _calculosIsr
+            .Select(x => (x.ClienteId, x.PeriodoId))
+            .Concat(_calculosIva.Select(x => (x.ClienteId, x.PeriodoId)))
+            .Distinct()
+            .ToList();
+
+        return keys.Select(key =>
+        {
+            var cliente = _clientesDisponibles.FirstOrDefault(x => x.ClienteId == key.ClienteId);
+            var periodo = _periodosDisponibles.FirstOrDefault(x => x.PeriodoId == key.PeriodoId);
+            var isr = _calculosIsr.FirstOrDefault(x => x.ClienteId == key.ClienteId && x.PeriodoId == key.PeriodoId);
+            var iva = _calculosIva.FirstOrDefault(x => x.ClienteId == key.ClienteId && x.PeriodoId == key.PeriodoId);
+
+            return new CalculoExpedienteItem
+            {
+                ClienteId = key.ClienteId,
+                PeriodoId = key.PeriodoId,
+                ClienteNombre = cliente?.RazonSocial ?? $"Cliente #{key.ClienteId}",
+                PeriodoNombre = periodo != null ? FormatearPeriodo(periodo) : $"Periodo #{key.PeriodoId}",
+                Isr = isr,
+                Iva = iva
+            };
+        }).ToList();
+    }
+
+    private bool FiltraBusqueda(CalculoExpedienteItem item)
+    {
+        if (string.IsNullOrWhiteSpace(_busqueda))
+        {
+            return true;
+        }
+
+        var query = _busqueda.Trim();
+        return item.ClienteNombre.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || item.PeriodoNombre.Contains(query, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool FiltraPeriodo(CalculoExpedienteItem item)
+        => !_filtroPeriodoId.HasValue || item.PeriodoId == _filtroPeriodoId.Value;
+
+    private bool FiltraCobertura(CalculoExpedienteItem item) => _filtroCobertura switch
+    {
+        "completo" => item.Isr != null && item.Iva != null,
+        "isr" => item.Isr != null && item.Iva == null,
+        "iva" => item.Isr == null && item.Iva != null,
+        "vacío" => item.Isr == null && item.Iva == null,
+        _ => true
+    };
+
+    private static string ObtenerCoberturaEstado(CalculoExpedienteItem item)
+    {
+        if (item.Isr != null && item.Iva != null) return "completado";
+        if (item.Isr != null || item.Iva != null) return "en_proceso";
+        return "pendiente";
+    }
+
+    private void LimpiarFiltros()
+    {
+        _busqueda = "";
+        _filtroPeriodoId = null;
+        _filtroCobertura = "";
+    }
+
+    private void VerIsr(CalculoExpedienteItem item)
+    {
+        if (item.Isr != null)
+        {
+            Navigation.NavigateTo($"/calculos/isr/{item.Isr.CalculoId}");
+        }
+    }
+
+    private void VerIva(CalculoExpedienteItem item)
+    {
+        if (item.Iva != null)
+        {
+            Navigation.NavigateTo($"/calculos/iva/{item.Iva.CalculoId}");
+        }
+    }
+
+    private static string FormatearPeriodo(PeriodoDto periodo) => $"{periodo.Anio}-{periodo.Mes:D2}";
+    private static string FormatearMoneda(decimal valor) => $"{valor:N2}";
+
+    private sealed class CalculoExpedienteItem
+    {
+        public long ClienteId { get; set; }
+        public long PeriodoId { get; set; }
+        public string ClienteNombre { get; set; } = string.Empty;
+        public string PeriodoNombre { get; set; } = string.Empty;
+        public CalculoIsrDto? Isr { get; set; }
+        public CalculoIvaDto? Iva { get; set; }
+    }
+
+    private sealed class CalcularRequest
+    {
+        public long ClienteId { get; set; }
+        public long PeriodoId { get; set; }
+    }
+
+    private sealed class CalculoIsrDto
+    {
+        public long CalculoId { get; set; }
+        public long ClienteId { get; set; }
+        public long PeriodoId { get; set; }
+        public decimal IsrAPagar { get; set; }
+        public DateTime CalculadoEn { get; set; }
+    }
+
+    private sealed class CalculoIvaDto
+    {
+        public long CalculoId { get; set; }
+        public long ClienteId { get; set; }
+        public long PeriodoId { get; set; }
+        public decimal IvaACargo { get; set; }
+        public DateTime CalculadoEn { get; set; }
+    }
+}

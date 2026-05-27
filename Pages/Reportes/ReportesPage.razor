@@ -1,78 +1,489 @@
 @page "/reportes"
 @using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@using REA.Web.Components.Shared
 @using REA.Web.Models
+@using REA.Web.Services
 @attribute [Authorize(Roles = "admin,auxiliar")]
 @inject HttpClient Http
 @inject NavigationManager Navigation
+@inject ClienteService ClienteService
+@inject ChecklistService ChecklistService
+@inject AuthenticationStateProvider AuthStateProvider
 
-<PageHeader Title="Reportes" Subtitle="Generación y descarga de reportes fiscales" />
+<div class="page-container animate-fade-in">
+    <div class="page-header" style="margin-bottom:20px;align-items:flex-start;gap:16px;">
+        <div class="page-header-left">
+            <h1>Reportes</h1>
+            <Breadcrumb Items="@_breadcrumb" />
+            <p class="body-small text-muted" style="margin-top:6px;">Generación, seguimiento y descarga de reportes fiscales por cliente y periodo.</p>
+        </div>
+    </div>
 
-<div class="glass-card" style="text-align:center;padding:40px;margin-bottom:24px;">
-    <LucideIcon Name="scroll-text" Size="48" />
-    <h3 style="margin:12px 0 4px;">Generar Nuevo Reporte</h3>
-    <p class="caption text-muted">Seleccione un cliente y período para generar reportes PDF</p>
+    @if (_mensaje != null)
+    {
+        <div class="card" style="margin-bottom:16px;padding:14px 16px;border-color:@(_mensajeError ? "rgba(239,68,68,0.24)" : "rgba(16,185,129,0.24)");background:@(_mensajeError ? "rgba(239,68,68,0.08)" : "rgba(16,185,129,0.10)");">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <div style="display:flex;align-items:center;gap:10px;color:@(_mensajeError ? "var(--danger)" : "var(--success)")">
+                    <LucideIcon Name="@(_mensajeError ? "alert-circle" : "badge-check")" Size="18" />
+                    <span style="font-weight:600;">@_mensaje</span>
+                </div>
+                <button @onclick="() => _mensaje = null" class="btn btn-secondary btn-icon" title="Cerrar">
+                    <LucideIcon Name="x" Size="14" />
+                </button>
+            </div>
+        </div>
+    }
+
+    @if (_cargando)
+    {
+        <SkeletonLoader />
+    }
+    else
+    {
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:16px;">
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Reportes</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@ReportesFiltrados.Count</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Resultados con los filtros actuales.</div>
+            </div>
+
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Generados</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@TotalGenerados</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Listos para descarga o entrega.</div>
+            </div>
+
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Entregados</div>
+                <div style="font-size:28px;font-weight:700;color:var(--success);">@TotalEntregados</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Marcados como compartidos con el cliente.</div>
+            </div>
+
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Último movimiento</div>
+                <div style="font-size:18px;font-weight:700;color:var(--text-primary);">@UltimoMovimientoTexto</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Fecha más reciente en la bandeja.</div>
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:minmax(320px,0.92fr) minmax(0,1.28fr);gap:16px;align-items:start;">
+            <div class="card" style="padding:0;overflow:hidden;">
+                <div class="surface-panel-header" style="padding:16px 20px;">
+                    <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Generación</div>
+                    <h3 style="margin-top:4px;">Nuevo reporte</h3>
+                </div>
+
+                <div style="padding:18px 20px;display:grid;gap:16px;">
+                    <div class="card" style="padding:16px;">
+                        <div style="display:flex;align-items:flex-start;gap:12px;">
+                            <div style="width:42px;height:42px;border-radius:12px;background:rgba(7,98,128,0.12);display:flex;align-items:center;justify-content:center;color:var(--accent-primary);flex-shrink:0;">
+                                <LucideIcon Name="scroll-text" Size="20" />
+                            </div>
+                            <div>
+                                <div style="font-size:15px;font-weight:700;color:var(--text-primary);">Salida oficial</div>
+                                <div class="body-small text-muted" style="margin-top:6px;">Genera el PDF del periodo a partir del checklist o del cálculo fiscal ya resuelto.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="input-label">Cliente</label>
+                        <select class="select-field" @bind="_clienteIdSeleccionado">
+                            <option value="">Selecciona un cliente</option>
+                            @foreach (var cliente in _clientesDisponibles)
+                            {
+                                <option value="@cliente.ClienteId">@cliente.RazonSocial</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="input-label">Periodo</label>
+                        <select class="select-field" @bind="_periodoIdSeleccionado">
+                            <option value="">Selecciona un periodo</option>
+                            @foreach (var periodo in _periodosDisponibles)
+                            {
+                                <option value="@periodo.PeriodoId">@FormatearPeriodo(periodo)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="input-label">Tipo</label>
+                        <select class="select-field" @bind="_tipoSeleccionado">
+                            <option value="mensual">Reporte mensual</option>
+                            <option value="isr">Reporte ISR</option>
+                        </select>
+                    </div>
+
+                    <div class="card" style="padding:16px;">
+                        <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:10px;">Acción</div>
+                        <GlassButton Variant="primary" OnClick="GenerarReporteAsync" Disabled="@(!_puedeGenerar || _generando)">
+                            <LucideIcon Name="file-output" Size="16" /> @(_generando ? "Generando..." : "Generar reporte")
+                        </GlassButton>
+                    </div>
+
+                    <div class="body-small text-muted">
+                        @if (_puedeGenerar)
+                        {
+                            <span>Se generará <strong style="color:var(--text-primary);">@TextoTipoSeleccionado</strong> para <strong style="color:var(--text-primary);">@NombreClienteSeleccionado</strong> · <strong style="color:var(--text-primary);">@PeriodoSeleccionadoTexto</strong>.</span>
+                        }
+                        else
+                        {
+                            <span>Selecciona cliente y periodo para habilitar la generación.</span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="padding:0;overflow:hidden;">
+                <div class="surface-panel-header" style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <div>
+                        <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Bandeja</div>
+                        <h3 style="margin-top:4px;">Historial de reportes</h3>
+                    </div>
+                    <div class="body-small text-muted">Descarga el PDF o marca la entrega cuando el documento ya salió al cliente.</div>
+                </div>
+
+                <div style="padding:18px 20px;display:grid;grid-template-columns:minmax(220px,1fr) 190px 190px auto;gap:12px;align-items:end;border-bottom:1px solid var(--border-subtle);">
+                    <div>
+                        <label class="input-label">Buscar</label>
+                        <input type="text" class="input-field" @bind="_busqueda" @bind:event="oninput" placeholder="Cliente o periodo" />
+                    </div>
+
+                    <div>
+                        <label class="input-label">Tipo</label>
+                        <select class="select-field" @bind="_filtroTipo">
+                            <option value="">Todos los tipos</option>
+                            <option value="mensual">Mensual</option>
+                            <option value="checklist">Checklist</option>
+                            <option value="isr">ISR</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="input-label">Estado</label>
+                        <select class="select-field" @bind="_filtroEstado">
+                            <option value="">Todos los estados</option>
+                            <option value="generado">Generado</option>
+                            <option value="entregado">Entregado</option>
+                        </select>
+                    </div>
+
+                    <div style="display:flex;justify-content:flex-end;gap:10px;align-items:center;flex-wrap:wrap;">
+                        <div class="badge badge-muted" style="padding:8px 10px;height:40px;display:inline-flex;">
+                            @ReportesFiltrados.Count resultados
+                        </div>
+                        <GlassButton Variant="secondary" OnClick="LimpiarFiltros">
+                            <LucideIcon Name="rotate-ccw" Size="16" /> Limpiar
+                        </GlassButton>
+                    </div>
+                </div>
+
+                @if (ReportesFiltrados.Count == 0)
+                {
+                    <div class="empty-state" style="padding:56px 24px;">
+                        <LucideIcon Name="inbox" Size="38" />
+                        <div class="empty-state-heading">No hay reportes para mostrar</div>
+                        <div class="empty-state-body">Genera el primer PDF o ajusta los filtros para revisar el historial completo.</div>
+                    </div>
+                }
+                else
+                {
+                    <div style="overflow-x:auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Periodo</th>
+                                    <th>Tipo</th>
+                                    <th>Estado</th>
+                                    <th>Generado</th>
+                                    <th style="text-align:right;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var reporte in ReportesFiltrados)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div style="font-weight:600;color:var(--text-primary);">@reporte.ClienteNombre</div>
+                                            <div class="body-small text-muted" style="margin-top:2px;">Reporte #@reporte.ReporteId</div>
+                                        </td>
+                                        <td style="font-size:13px;color:var(--text-secondary);">@ObtenerNombrePeriodo(reporte.PeriodoId)</td>
+                                        <td>@FormatearTipo(reporte.Tipo)</td>
+                                        <td><BadgeEstado Estado="@reporte.Estatus" /></td>
+                                        <td style="font-size:12px;color:var(--text-secondary);">@(reporte.GeneradoEn?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                                        <td style="text-align:right;">
+                                            <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;">
+                                                <a href="@($"/api/v1/reportes/{reporte.ReporteId}/descargar")" class="btn btn-secondary btn-icon" title="Descargar reporte" target="_blank">
+                                                    <LucideIcon Name="download" Size="15" />
+                                                </a>
+                                                @if (!string.Equals(reporte.Estatus, "entregado", StringComparison.OrdinalIgnoreCase))
+                                                {
+                                                    <button class="btn btn-secondary btn-icon" title="Marcar como entregado" @onclick="() => MarcarEntregadoAsync(reporte.ReporteId)">
+                                                        <LucideIcon Name="badge-check" Size="15" />
+                                                    </button>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    }
 </div>
 
-@if (_cargando)
-{
-    <div style="text-align:center;padding:20px;">Cargando...</div>
-}
-else if (_reportes.Count == 0)
-{
-    <div class="glass-card" style="text-align:center;padding:40px;">
-        <LucideIcon Name="inbox" Size="32" />
-        <p>No hay reportes generados</p>
-    </div>
-}
-else
-{
-    <div class="glass-card">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Cliente</th>
-                    <th>Tipo</th>
-                    <th>Estado</th>
-                    <th>Fecha</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var r in _reportes)
-                {
-                    <tr>
-                        <td>@r.ClienteNombre</td>
-                        <td>@r.Tipo</td>
-                        <td><BadgeEstado Estado="@r.Estatus" /></td>
-                        <td style="font-size:12px;">@(r.GeneradoEn?.ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-}
-
 @code {
+    private readonly List<BreadcrumbItem> _breadcrumb = new()
+    {
+        new() { Text = "Inicio", Url = "/" },
+        new() { Text = "Reportes", Url = "/reportes" }
+    };
+
     private List<ReporteDto> _reportes = new();
+    private List<ClienteDto> _clientesDisponibles = new();
+    private List<PeriodoDto> _periodosDisponibles = new();
     private bool _cargando = true;
+    private bool _esAdmin;
+    private bool _generando;
+    private string? _mensaje;
+    private bool _mensajeError;
+    private string _busqueda = "";
+    private string _filtroTipo = "";
+    private string _filtroEstado = "";
+    private long? _clienteIdSeleccionado;
+    private long? _periodoIdSeleccionado;
+    private string _tipoSeleccionado = "mensual";
+
+    private bool _puedeGenerar => _clienteIdSeleccionado.HasValue && _periodoIdSeleccionado.HasValue;
+    private int TotalGenerados => _reportes.Count(x => string.Equals(x.Estatus, "generado", StringComparison.OrdinalIgnoreCase));
+    private int TotalEntregados => _reportes.Count(x => string.Equals(x.Estatus, "entregado", StringComparison.OrdinalIgnoreCase));
+    private string UltimoMovimientoTexto => _reportes.Count == 0 ? "Sin registros" : _reportes.Max(x => x.CreatedAt).ToString("dd/MM HH:mm");
+    private string NombreClienteSeleccionado => _clientesDisponibles.FirstOrDefault(x => x.ClienteId == _clienteIdSeleccionado)?.RazonSocial ?? "Cliente";
+    private string PeriodoSeleccionadoTexto => _periodosDisponibles.FirstOrDefault(x => x.PeriodoId == _periodoIdSeleccionado) is { } periodo ? FormatearPeriodo(periodo) : "Periodo";
+    private string TextoTipoSeleccionado => FormatearTipo(_tipoSeleccionado);
+
+    private List<ReporteDto> ReportesFiltrados => _reportes
+        .Where(FiltraBusqueda)
+        .Where(FiltraTipo)
+        .Where(FiltraEstado)
+        .OrderByDescending(x => x.CreatedAt)
+        .ToList();
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _esAdmin = authState.User.IsInRole("admin") ||
+                   string.Equals(authState.User.FindFirst(ClaimTypes.Role)?.Value, "admin", StringComparison.OrdinalIgnoreCase);
+
+        await CargarTodoAsync();
+    }
+
+    private async Task CargarTodoAsync()
+    {
+        _cargando = true;
+
         try
         {
-            var result = await Http.GetFromJsonAsync<ApiResponse<List<ReporteDto>>>("api/v1/reportes");
-            if (result?.Ok == true)
-                _reportes = result.Data ?? new();
+            await CargarClientesAsync();
+            await CargarPeriodosAsync();
+            await CargarReportesAsync();
+            AplicarSeleccionesPorDefecto();
         }
-        catch { }
+        catch (Exception ex)
+        {
+            _mensaje = ex.Message;
+            _mensajeError = true;
+        }
+
         _cargando = false;
     }
 
-    private class ReporteDto
+    private async Task CargarClientesAsync()
+    {
+        if (_esAdmin)
+        {
+            var clientesResult = await ClienteService.ListarAsync(page: 1, limit: 100);
+            if (clientesResult?.Ok == true)
+            {
+                _clientesDisponibles = (clientesResult.Data ?? new())
+                    .Where(x => x.Activo)
+                    .OrderBy(x => x.RazonSocial)
+                    .ToList();
+                return;
+            }
+        }
+
+        var checklistsResult = await ChecklistService.ListarAsync(page: 1, limit: 100);
+        if (checklistsResult?.Ok == true)
+        {
+            _clientesDisponibles = (checklistsResult.Data ?? new())
+                .GroupBy(x => new { x.ClienteId, x.ClienteNombre })
+                .Select(g => new ClienteDto { ClienteId = g.Key.ClienteId, RazonSocial = g.Key.ClienteNombre, Activo = true })
+                .OrderBy(x => x.RazonSocial)
+                .ToList();
+        }
+    }
+
+    private async Task CargarPeriodosAsync()
+    {
+        var periodosResult = await Http.GetFromJsonAsync<ApiResponse<List<PeriodoDto>>>($"api/v1/periodos?anio={DateTime.Now.Year}");
+        if (periodosResult?.Ok == true)
+        {
+            _periodosDisponibles = (periodosResult.Data ?? new())
+                .OrderByDescending(x => x.Anio)
+                .ThenByDescending(x => x.Mes)
+                .ToList();
+        }
+    }
+
+    private async Task CargarReportesAsync()
+    {
+        var result = await Http.GetFromJsonAsync<ApiResponse<List<ReporteDto>>>("api/v1/reportes");
+        _reportes = result?.Ok == true ? result.Data ?? new() : new();
+    }
+
+    private void AplicarSeleccionesPorDefecto()
+    {
+        if (!_clienteIdSeleccionado.HasValue && _clientesDisponibles.Count == 1)
+        {
+            _clienteIdSeleccionado = _clientesDisponibles[0].ClienteId;
+        }
+
+        if (!_periodoIdSeleccionado.HasValue && _periodosDisponibles.Count > 0)
+        {
+            _periodoIdSeleccionado = _periodosDisponibles[0].PeriodoId;
+        }
+    }
+
+    private async Task GenerarReporteAsync()
+    {
+        if (!_puedeGenerar)
+        {
+            return;
+        }
+
+        _generando = true;
+        _mensaje = null;
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/v1/reportes", new GenerarReporteRequest
+            {
+                ClienteId = _clienteIdSeleccionado!.Value,
+                PeriodoId = _periodoIdSeleccionado!.Value,
+                Tipo = _tipoSeleccionado
+            });
+
+            if (response.IsSuccessStatusCode)
+            {
+                _mensaje = "Reporte generado correctamente. Ya aparece en el historial.";
+                _mensajeError = false;
+                await CargarReportesAsync();
+            }
+            else
+            {
+                var error = await response.Content.ReadFromJsonAsync<ApiResponse<object>>();
+                _mensaje = error?.Error?.Message ?? "No se pudo generar el reporte.";
+                _mensajeError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            _mensaje = ex.Message;
+            _mensajeError = true;
+        }
+
+        _generando = false;
+    }
+
+    private async Task MarcarEntregadoAsync(long reporteId)
+    {
+        try
+        {
+            var response = await Http.PutAsync($"api/v1/reportes/{reporteId}/entregar", null);
+            if (response.IsSuccessStatusCode)
+            {
+                _mensaje = "Reporte marcado como entregado.";
+                _mensajeError = false;
+                await CargarReportesAsync();
+            }
+            else
+            {
+                _mensaje = "No se pudo actualizar el estado del reporte.";
+                _mensajeError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            _mensaje = ex.Message;
+            _mensajeError = true;
+        }
+    }
+
+    private bool FiltraBusqueda(ReporteDto reporte)
+    {
+        if (string.IsNullOrWhiteSpace(_busqueda))
+        {
+            return true;
+        }
+
+        var query = _busqueda.Trim();
+        return reporte.ClienteNombre.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || ObtenerNombrePeriodo(reporte.PeriodoId).Contains(query, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool FiltraTipo(ReporteDto reporte)
+        => string.IsNullOrWhiteSpace(_filtroTipo) || string.Equals(reporte.Tipo, _filtroTipo, StringComparison.OrdinalIgnoreCase);
+
+    private bool FiltraEstado(ReporteDto reporte)
+        => string.IsNullOrWhiteSpace(_filtroEstado) || string.Equals(reporte.Estatus, _filtroEstado, StringComparison.OrdinalIgnoreCase);
+
+    private void LimpiarFiltros()
+    {
+        _busqueda = "";
+        _filtroTipo = "";
+        _filtroEstado = "";
+    }
+
+    private string ObtenerNombrePeriodo(long periodoId)
+        => _periodosDisponibles.FirstOrDefault(x => x.PeriodoId == periodoId) is { } periodo
+            ? FormatearPeriodo(periodo)
+            : $"Periodo #{periodoId}";
+
+    private static string FormatearPeriodo(PeriodoDto periodo) => $"{periodo.Anio}-{periodo.Mes:D2}";
+
+    private static string FormatearTipo(string tipo) => tipo.ToLowerInvariant() switch
+    {
+        "mensual" => "Reporte mensual",
+        "checklist" => "Checklist mensual",
+        "isr" => "Reporte ISR",
+        _ => tipo
+    };
+
+    private sealed class GenerarReporteRequest
+    {
+        public long ClienteId { get; set; }
+        public long PeriodoId { get; set; }
+        public string Tipo { get; set; } = "mensual";
+    }
+
+    private sealed class ReporteDto
     {
         public long ReporteId { get; set; }
+        public long ClienteId { get; set; }
         public string ClienteNombre { get; set; } = string.Empty;
+        public long PeriodoId { get; set; }
         public string Tipo { get; set; } = string.Empty;
         public string Estatus { get; set; } = string.Empty;
         public DateTime? GeneradoEn { get; set; }
+        public DateTime? EntregadoEn { get; set; }
+        public DateTime CreatedAt { get; set; }
     }
 }
