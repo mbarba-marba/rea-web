@@ -484,11 +484,26 @@
         return "en_proceso";
     }
 
+    private static string NormalizarEstado(string? estado)
+    {
+        if (string.IsNullOrWhiteSpace(estado))
+        {
+            return "pendiente";
+        }
+
+        return estado.Trim().ToLowerInvariant() switch
+        {
+            "enproceso" => "en_proceso",
+            "en proceso" => "en_proceso",
+            _ => estado.Trim().ToLowerInvariant()
+        };
+    }
+
     private static int ObtenerPasosCompletados(ChecklistDto checklist)
     {
         if (checklist.Pasos?.Count > 0)
         {
-            return checklist.Pasos.Count(x => x.Estado == "completado");
+            return checklist.Pasos.Count(x => NormalizarEstado(x.Estado) == "completado");
         }
 
         return (int)Math.Clamp(Math.Round(checklist.PorcentajeAvance * 14m / 100m, MidpointRounding.AwayFromZero), 0m, 14m);

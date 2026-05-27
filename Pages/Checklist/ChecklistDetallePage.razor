@@ -287,6 +287,11 @@
             return "pendiente";
         }
 
-        return estado.Trim().ToLowerInvariant();
+        return estado.Trim().ToLowerInvariant() switch
+        {
+            "enproceso" => "en_proceso",
+            "en proceso" => "en_proceso",
+            _ => estado.Trim().ToLowerInvariant()
+        };
     }
 }

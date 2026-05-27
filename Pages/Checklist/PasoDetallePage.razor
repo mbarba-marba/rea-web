@@ -27,7 +27,6 @@
     {
         <ErrorBanner Message="@_error" OnDismiss="() => _error = null" />
     }
-
     @if (_cargando)
     {
         <SkeletonLoader />
@@ -108,6 +107,7 @@
                         <div>
                             <label class="input-label">Notas operativas</label>
                             <textarea @bind="_notas"
+                                      @bind:event="oninput"
                                       class="input-field"
                                       rows="6"
                                       style="width:100%;resize:vertical;min-height:144px;"
@@ -144,6 +144,14 @@
                                 </GlassButton>
                             }
                         </div>
+
+                        @if (_mensaje != null)
+                        {
+                            <div style="display:flex;align-items:center;gap:8px;color:var(--success);font-size:13px;font-weight:600;">
+                                <LucideIcon Name="badge-check" Size="16" />
+                                <span>@_mensaje</span>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
@@ -255,6 +263,7 @@
     private bool _guardando;
     private bool _subiendo;
     private string? _error;
+    private string? _mensaje;
     private string? _archivoNombre;
     private IBrowserFile? _archivo;
     private string EstadoActual => NormalizarEstado(_paso?.Estado);
@@ -319,6 +328,7 @@
 
         if (response?.Ok == true)
         {
+            _mensaje = "Notas guardadas correctamente.";
             await Cargar();
         }
         else
@@ -343,6 +353,13 @@
 
         if (response?.Ok == true)
         {
+            _mensaje = estado switch
+            {
+                "completado" => "Paso completado.",
+                "bloqueado" => "Paso bloqueado.",
+                "en_proceso" => "Paso reactivado.",
+                _ => "Paso actualizado."
+            };
             await Cargar();
         }
         else
@@ -389,6 +406,7 @@
             {
                 _archivo = null;
                 _archivoNombre = null;
+                _mensaje = "Evidencia subida correctamente.";
                 await Cargar();
             }
             else
@@ -441,7 +459,12 @@
             return "pendiente";
         }
 
-        return estado.Trim().ToLowerInvariant();
+        return estado.Trim().ToLowerInvariant() switch
+        {
+            "enproceso" => "en_proceso",
+            "en proceso" => "en_proceso",
+            _ => estado.Trim().ToLowerInvariant()
+        };
     }
 
     private static string FormatearTamano(long bytes) => bytes switch

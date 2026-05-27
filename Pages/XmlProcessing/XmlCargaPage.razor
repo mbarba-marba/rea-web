@@ -1,145 +1,434 @@
 @page "/xml"
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Security.Claims
+@using REA.Web.Components.Shared
 @using REA.Web.Models
 @using REA.Web.Services
-@using Microsoft.AspNetCore.Components.Forms
 @attribute [Authorize(Roles = "admin,auxiliar")]
 @inject NavigationManager Navigation
 @inject HttpClient Http
 @inject IJSRuntime JS
+@inject XmlService XmlService
+@inject ClienteService ClienteService
+@inject ChecklistService ChecklistService
+@inject AuthenticationStateProvider AuthStateProvider
 
-<PageHeader Title="XML Processing" Subtitle="Carga de ZIPs del SAT" />
+<div class="page-container animate-fade-in">
+    <div class="page-header" style="margin-bottom:20px;align-items:flex-start;gap:16px;">
+        <div class="page-header-left">
+            <h1>Carga XMLs</h1>
+            <Breadcrumb Items="@_breadcrumb" />
+            <p class="body-small text-muted" style="margin-top:6px;">Carga operativa de ZIPs del SAT, vinculada al cliente y periodo fiscal correspondiente.</p>
+        </div>
 
-<div class="glass-card" style="margin-bottom:24px;padding:24px;text-align:center;">
-    <LucideIcon Name="file-archive" Size="48" />
-    <h3 style="margin:12px 0 4px;">Cargar ZIP con XMLs</h3>
-    <p class="caption text-muted" style="margin-bottom:16px;">Arrastre o seleccione un archivo ZIP con facturas del SAT</p>
-
-    <InputFile OnChange="OnFileSelected" accept=".zip" style="display:none;" @ref="_fileInput" />
-    <GlassButton Variant="primary" OnClick="OpenFileDialog">
-        <LucideIcon Name="upload" Size="16" /> Seleccionar ZIP
-    </GlassButton>
-
-    @if (_selectedFile != null)
-    {
-        <div style="margin-top:12px;padding:8px 16px;background:var(--surface-raised);border-radius:8px;">
-            <strong>@_selectedFile</strong>
-            <GlassButton Variant="primary" OnClick="SubirCarga" Disabled="@_uploading" style="margin-left:12px;">
-                @(_uploading ? "Subiendo..." : "Subir")
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+            <GlassButton Variant="secondary" OnClick='() => Navigation.NavigateTo("/xml/facturas")'>
+                <LucideIcon Name="receipt-text" Size="16" /> Facturas procesadas
             </GlassButton>
         </div>
-    }
+    </div>
 
-    @if (!string.IsNullOrEmpty(_error))
+    @if (_error != null)
     {
         <ErrorBanner Message="@_error" OnDismiss="() => _error = null" />
     }
 
-    @if (!string.IsNullOrEmpty(_success))
+    @if (_success != null)
     {
-        <div style="margin-top:12px;color:var(--success);">@_success</div>
-    }
-</div>
-
-<div class="glass-card">
-    <h3 style="padding:16px 20px 0;">Historial de Cargas</h3>
-    @if (_cargando)
-    {
-        <div style="text-align:center;padding:40px;color:var(--text-secondary);">Cargando...</div>
-    }
-    else if (_cargas.Count == 0)
-    {
-        <div style="text-align:center;padding:40px;color:var(--text-secondary);">
-            <LucideIcon Name="inbox" Size="32" />
-            <p>No hay cargas registradas</p>
+        <div class="card" style="margin-bottom:16px;padding:14px 16px;border-color:rgba(16,185,129,0.24);background:rgba(16,185,129,0.10);">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <div style="display:flex;align-items:center;gap:10px;color:var(--success);">
+                    <LucideIcon Name="badge-check" Size="18" />
+                    <span style="font-weight:600;">@_success</span>
+                </div>
+                <button @onclick="() => _success = null" class="btn btn-secondary btn-icon" title="Cerrar">
+                    <LucideIcon Name="x" Size="14" />
+                </button>
+            </div>
         </div>
     }
-    else
-    {
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Archivo</th>
-                    <th>Archivos</th>
-                    <th>Procesados</th>
-                    <th>Errores</th>
-                    <th>Estado</th>
-                    <th>Fecha</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var c in _cargas)
+
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:16px;">
+        <div class="card" style="padding:16px 18px;">
+            <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Cargas visibles</div>
+            <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@_cargas.Count</div>
+            <div class="body-small text-muted" style="margin-top:4px;">Resultados con los filtros activos.</div>
+        </div>
+
+        <div class="card" style="padding:16px 18px;">
+            <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">XML procesados</div>
+            <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@TotalProcesados</div>
+            <div class="body-small text-muted" style="margin-top:4px;">Archivos leídos correctamente.</div>
+        </div>
+
+        <div class="card" style="padding:16px 18px;">
+            <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Con errores</div>
+            <div style="font-size:28px;font-weight:700;color:var(--danger);">@TotalErrores</div>
+            <div class="body-small text-muted" style="margin-top:4px;">Incidencias detectadas en la ingesta.</div>
+        </div>
+
+        <div class="card" style="padding:16px 18px;">
+            <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Última carga</div>
+            <div style="font-size:18px;font-weight:700;color:var(--text-primary);">@UltimaCargaTexto</div>
+            <div class="body-small text-muted" style="margin-top:4px;">Registro más reciente en la bandeja.</div>
+        </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:minmax(340px,0.95fr) minmax(0,1.25fr);gap:16px;align-items:start;">
+        <div class="card" style="padding:0;overflow:hidden;">
+            <div class="surface-panel-header" style="padding:16px 20px;">
+                <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Ingreso</div>
+                <h3 style="margin-top:4px;">Nueva carga SAT</h3>
+            </div>
+
+            <div style="padding:18px 20px;display:grid;gap:16px;">
+                <div class="card" style="padding:16px;">
+                    <div style="display:flex;align-items:flex-start;gap:12px;">
+                        <div style="width:42px;height:42px;border-radius:12px;background:rgba(7,98,128,0.12);display:flex;align-items:center;justify-content:center;color:var(--accent-primary);flex-shrink:0;">
+                            <LucideIcon Name="file-archive" Size="20" />
+                        </div>
+                        <div>
+                            <div style="font-size:15px;font-weight:700;color:var(--text-primary);">ZIP contable del periodo</div>
+                            <div class="body-small text-muted" style="margin-top:6px;">Selecciona el cliente, el periodo y el archivo ZIP que contiene los XML emitidos y recibidos.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="input-label">Cliente</label>
+                    <select class="select-field" @bind="_clienteIdSeleccionado">
+                        <option value="">Selecciona un cliente</option>
+                        @foreach (var cliente in _clientesDisponibles)
+                        {
+                            <option value="@cliente.ClienteId">@cliente.RazonSocial</option>
+                        }
+                    </select>
+                </div>
+
+                <div>
+                    <label class="input-label">Periodo</label>
+                    <select class="select-field" @bind="_periodoIdSeleccionado">
+                        <option value="">Selecciona un periodo</option>
+                        @foreach (var periodo in _periodosDisponibles)
+                        {
+                            <option value="@periodo.PeriodoId">@FormatearPeriodo(periodo)</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="card" style="padding:16px;border-style:dashed;">
+                    <InputFile id="xml-upload-input" OnChange="OnFileSelected" accept=".zip" style="display:none;" />
+
+                    <div style="display:grid;gap:12px;">
+                        <div>
+                            <div class="body-small text-muted">Archivo ZIP</div>
+                            <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-top:6px;">
+                                @(_selectedFile ?? "Aún no has seleccionado un archivo")
+                            </div>
+                        </div>
+
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                            <GlassButton Variant="secondary" OnClick="OpenFileDialog">
+                                <LucideIcon Name="paperclip" Size="16" /> Seleccionar ZIP
+                            </GlassButton>
+
+                            <GlassButton Variant="primary" OnClick="SubirCarga" Disabled="@(!_browserFileDisponible || _uploading)">
+                                <LucideIcon Name="upload" Size="16" /> @(_uploading ? "Subiendo..." : "Procesar carga")
+                            </GlassButton>
+                        </div>
+                    </div>
+                </div>
+
+                @if (_clienteIdSeleccionado.HasValue && _periodoIdSeleccionado.HasValue)
                 {
-                    <tr>
-                        <td>@c.NombreZip</td>
-                        <td>@c.TotalArchivos</td>
-                        <td>@c.Procesados</td>
-                        <td style="color:@(c.ConErrores > 0 ? "var(--danger)" : "inherit")">@c.ConErrores</td>
-                        <td><BadgeEstado Estado="@c.Estado" /></td>
-                        <td style="font-size:12px;">@c.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
-                        <td>
-                            @if (c.Estado == "completado")
-                            {
-                                <GlassButton Variant="ghost" OnClick="() => VerCarga(c.CargaId)">
-                                    <LucideIcon Name="eye" Size="14" />
-                                </GlassButton>
-                            }
-                        </td>
-                    </tr>
+                    <div class="body-small text-muted">
+                        La carga quedará ligada a <strong style="color:var(--text-primary);">@NombreClienteSeleccionado</strong> · <strong style="color:var(--text-primary);">@PeriodoSeleccionadoTexto</strong>.
+                    </div>
                 }
-            </tbody>
-        </table>
-    }
+            </div>
+        </div>
+
+        <div class="card" style="padding:0;overflow:hidden;">
+            <div class="surface-panel-header" style="padding:16px 20px;">
+                <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Bandeja</div>
+                <h3 style="margin-top:4px;">Historial de cargas</h3>
+            </div>
+
+            <div style="padding:18px 20px;display:grid;grid-template-columns:minmax(220px,1fr) 220px auto;gap:12px;align-items:end;border-bottom:1px solid var(--border-subtle);">
+                <div>
+                    <label class="input-label">Cliente</label>
+                    <select class="select-field" @bind="_filtroClienteId" @bind:after="AplicarFiltrosAsync">
+                        <option value="">Todos los clientes</option>
+                        @foreach (var cliente in _clientesDisponibles)
+                        {
+                            <option value="@cliente.ClienteId">@cliente.RazonSocial</option>
+                        }
+                    </select>
+                </div>
+
+                <div>
+                    <label class="input-label">Periodo</label>
+                    <select class="select-field" @bind="_filtroPeriodoId" @bind:after="AplicarFiltrosAsync">
+                        <option value="">Todos los periodos</option>
+                        @foreach (var periodo in _periodosDisponibles)
+                        {
+                            <option value="@periodo.PeriodoId">@FormatearPeriodo(periodo)</option>
+                        }
+                    </select>
+                </div>
+
+                <div style="display:flex;justify-content:flex-end;gap:10px;align-items:center;flex-wrap:wrap;">
+                    <div class="badge badge-muted" style="padding:8px 10px;height:40px;display:inline-flex;">
+                        @_cargas.Count registros
+                    </div>
+                    <GlassButton Variant="secondary" OnClick="LimpiarFiltrosAsync">
+                        <LucideIcon Name="rotate-ccw" Size="16" /> Limpiar
+                    </GlassButton>
+                </div>
+            </div>
+
+            @if (_cargando)
+            {
+                <div style="padding:20px;">
+                    <SkeletonLoader />
+                </div>
+            }
+            else if (_cargas.Count == 0)
+            {
+                <div class="empty-state" style="padding:56px 24px;">
+                    <LucideIcon Name="inbox" Size="38" />
+                    <div class="empty-state-heading">No hay cargas registradas</div>
+                    <div class="empty-state-body">Ajusta los filtros o procesa un ZIP nuevo para iniciar la trazabilidad del SAT.</div>
+                </div>
+            }
+            else
+            {
+                <div style="overflow-x:auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Archivo</th>
+                                <th>Total</th>
+                                <th>Procesados</th>
+                                <th>Errores</th>
+                                <th>Estado</th>
+                                <th>Fecha</th>
+                                <th style="text-align:right;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var c in _cargas.OrderByDescending(x => x.CreatedAt))
+                            {
+                                <tr style="cursor:pointer;" @onclick="() => VerCarga(c.CargaId)">
+                                    <td>
+                                        <div style="font-weight:600;color:var(--text-primary);">@c.NombreZip</div>
+                                        <div class="body-small text-muted" style="margin-top:2px;">Carga #@c.CargaId</div>
+                                    </td>
+                                    <td>@c.TotalArchivos</td>
+                                    <td>@c.Procesados</td>
+                                    <td style="color:@(c.ConErrores > 0 ? "var(--danger)" : "var(--text-secondary)")">@c.ConErrores</td>
+                                    <td><BadgeEstado Estado="@c.Estado" /></td>
+                                    <td style="font-size:12px;color:var(--text-secondary);">@c.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td style="text-align:right;">
+                                        <button class="btn btn-secondary btn-icon" title="Ver carga" @onclick:stopPropagation @onclick="() => VerCarga(c.CargaId)">
+                                            <LucideIcon Name="arrow-up-right" Size="15" />
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
 </div>
 
 @code {
-    private InputFile? _fileInput;
-    private string? _selectedFile;
-    private IBrowserFile? _browserFile;
-    private bool _uploading;
+    private readonly List<BreadcrumbItem> _breadcrumb = new()
+    {
+        new() { Text = "Inicio", Url = "/" },
+        new() { Text = "Carga XMLs", Url = "/xml" }
+    };
+
+    private List<XmlCargaDto> _cargas = new();
+    private List<ClienteDto> _clientesDisponibles = new();
+    private List<PeriodoDto> _periodosDisponibles = new();
     private bool _cargando = true;
+    private bool _uploading;
+    private bool _esAdmin;
     private string? _error;
     private string? _success;
-    private List<XmlCargaDto> _cargas = new();
+    private string? _selectedFile;
+    private IBrowserFile? _browserFile;
+    private long? _clienteIdSeleccionado;
+    private long? _periodoIdSeleccionado;
+    private long? _filtroClienteId;
+    private long? _filtroPeriodoId;
+
+    private int TotalProcesados => _cargas.Sum(x => x.Procesados);
+    private int TotalErrores => _cargas.Sum(x => x.ConErrores);
+    private string UltimaCargaTexto => _cargas.Count == 0 ? "Sin registros" : _cargas.Max(x => x.CreatedAt).ToString("dd/MM HH:mm");
+    private bool _browserFileDisponible => _browserFile != null;
+    private string NombreClienteSeleccionado => _clientesDisponibles.FirstOrDefault(x => x.ClienteId == _clienteIdSeleccionado)?.RazonSocial ?? "Cliente";
+    private string PeriodoSeleccionadoTexto => _periodosDisponibles.FirstOrDefault(x => x.PeriodoId == _periodoIdSeleccionado) is { } periodo
+        ? FormatearPeriodo(periodo)
+        : "Periodo";
 
     protected override async Task OnInitializedAsync()
     {
-        await CargarHistorial();
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _esAdmin = authState.User.IsInRole("admin") ||
+                   string.Equals(authState.User.FindFirst(ClaimTypes.Role)?.Value, "admin", StringComparison.OrdinalIgnoreCase);
+
+        await CargarTodoAsync();
     }
 
-    private async Task CargarHistorial()
+    private async Task CargarTodoAsync()
     {
         _cargando = true;
+        _error = null;
+
         try
         {
-            var result = await Http.GetFromJsonAsync<ApiResponse<List<XmlCargaDto>>>("api/v1/xml/cargas");
-            if (result?.Ok == true)
-                _cargas = result.Data ?? new();
+            await CargarClientesAsync();
+            await CargarPeriodosAsync();
+            await CargarHistorialAsync();
+            AplicarSeleccionesPorDefecto();
         }
-        catch { }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+
         _cargando = false;
+    }
+
+    private async Task CargarClientesAsync()
+    {
+        try
+        {
+            if (_esAdmin)
+            {
+                var clientesResult = await ClienteService.ListarAsync(page: 1, limit: 100);
+                if (clientesResult?.Ok == true)
+                {
+                    _clientesDisponibles = (clientesResult.Data ?? new())
+                        .Where(x => x.Activo)
+                        .OrderBy(x => x.RazonSocial)
+                        .ToList();
+                    return;
+                }
+            }
+
+            var checklistsResult = await ChecklistService.ListarAsync(page: 1, limit: 100);
+            if (checklistsResult?.Ok == true)
+            {
+                _clientesDisponibles = (checklistsResult.Data ?? new())
+                    .GroupBy(x => new { x.ClienteId, x.ClienteNombre })
+                    .Select(g => new ClienteDto { ClienteId = g.Key.ClienteId, RazonSocial = g.Key.ClienteNombre, Activo = true })
+                    .OrderBy(x => x.RazonSocial)
+                    .ToList();
+            }
+        }
+        catch
+        {
+            _clientesDisponibles = new();
+        }
+    }
+
+    private async Task CargarPeriodosAsync()
+    {
+        try
+        {
+            var periodosResult = await Http.GetFromJsonAsync<ApiResponse<List<PeriodoDto>>>($"api/v1/periodos?anio={DateTime.Now.Year}");
+            if (periodosResult?.Ok == true)
+            {
+                _periodosDisponibles = (periodosResult.Data ?? new())
+                    .OrderByDescending(x => x.Anio)
+                    .ThenByDescending(x => x.Mes)
+                    .ToList();
+            }
+        }
+        catch
+        {
+            _periodosDisponibles = new();
+        }
+    }
+
+    private async Task CargarHistorialAsync()
+    {
+        var result = await XmlService.ListarCargasAsync(_filtroClienteId, _filtroPeriodoId, page: 1, limit: 100);
+        if (result?.Ok == true)
+        {
+            _cargas = result.Data ?? new();
+        }
+        else
+        {
+            _cargas = new();
+        }
+    }
+
+    private void AplicarSeleccionesPorDefecto()
+    {
+        if (!_clienteIdSeleccionado.HasValue && _clientesDisponibles.Count == 1)
+        {
+            _clienteIdSeleccionado = _clientesDisponibles[0].ClienteId;
+        }
+
+        if (!_periodoIdSeleccionado.HasValue && _periodosDisponibles.Count > 0)
+        {
+            _periodoIdSeleccionado = _periodosDisponibles[0].PeriodoId;
+        }
     }
 
     private async Task OnFileSelected(InputFileChangeEventArgs e)
     {
         _browserFile = e.File;
         _selectedFile = e.File.Name;
+        await Task.CompletedTask;
     }
 
     private async Task OpenFileDialog()
     {
-        await JS.InvokeVoidAsync("eval", "document.querySelector('.glass-card input[type=file]').click()");
+        await JS.InvokeVoidAsync("eval", "document.getElementById('xml-upload-input').click()");
     }
 
     private void VerCarga(long id) => Navigation.NavigateTo($"/xml/cargas/{id}");
 
+    private async Task AplicarFiltrosAsync()
+    {
+        _cargando = true;
+        await CargarHistorialAsync();
+        _cargando = false;
+    }
+
+    private async Task LimpiarFiltrosAsync()
+    {
+        _filtroClienteId = null;
+        _filtroPeriodoId = null;
+        await AplicarFiltrosAsync();
+    }
+
     private async Task SubirCarga()
     {
-        if (_browserFile == null) return;
-        _uploading = true;
         _error = null;
         _success = null;
+
+        if (_browserFile == null)
+        {
+            _error = "Selecciona un archivo ZIP para continuar.";
+            return;
+        }
+
+        if (!_clienteIdSeleccionado.HasValue || !_periodoIdSeleccionado.HasValue)
+        {
+            _error = "Selecciona cliente y periodo antes de procesar la carga.";
+            return;
+        }
+
+        _uploading = true;
 
         try
         {
@@ -147,26 +436,29 @@
             var fileContent = new StreamContent(_browserFile.OpenReadStream(50 * 1024 * 1024));
             fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/zip");
             content.Add(fileContent, "archivo", _browserFile.Name);
-            content.Add(new StringContent("1"), "clienteId"); // TODO: select from dropdown
-            content.Add(new StringContent("1"), "periodoId"); // TODO: select from dropdown
+            content.Add(new StringContent(_clienteIdSeleccionado.Value.ToString()), "clienteId");
+            content.Add(new StringContent(_periodoIdSeleccionado.Value.ToString()), "periodoId");
 
-            var response = await Http.PostAsync("api/v1/xml/cargas", content);
-            if (response.IsSuccessStatusCode)
+            var result = await XmlService.SubirCargaAsync(content);
+            if (result?.Ok == true)
             {
-                _success = "Carga procesada exitosamente";
+                _success = "Carga procesada exitosamente.";
                 _selectedFile = null;
                 _browserFile = null;
-                await CargarHistorial();
+                await CargarHistorialAsync();
             }
             else
             {
-                _error = "Error al procesar la carga";
+                _error = result?.Error?.Message ?? "Error al procesar la carga.";
             }
         }
         catch (Exception ex)
         {
             _error = ex.Message;
         }
+
         _uploading = false;
     }
+
+    private static string FormatearPeriodo(PeriodoDto periodo) => $"{periodo.Anio}-{periodo.Mes:D2}";
 }
