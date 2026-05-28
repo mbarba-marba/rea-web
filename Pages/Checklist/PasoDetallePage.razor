@@ -6,6 +6,7 @@
 @using REA.Web.Services
 @attribute [Authorize(Roles = "admin,auxiliar")]
 @inject ChecklistService ChecklistService
+@inject XmlService XmlService
 @inject HttpClient Http
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
@@ -49,9 +50,9 @@
             </div>
 
             <div class="card" style="padding:16px 18px;">
-                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Evidencias</div>
-                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@_evidencias.Count</div>
-                <div class="body-small text-muted" style="margin-top:4px;">Archivos adjuntos a este paso.</div>
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">@(EsPasoXml ? "Cargas XML" : "Evidencias")</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@(EsPasoXml ? _xmlCargasPaso.Count : _evidencias.Count)</div>
+                <div class="body-small text-muted" style="margin-top:4px;">@(EsPasoXml ? "Emitidos y recibidos ligados al cliente y periodo." : "Archivos adjuntos a este paso.")</div>
             </div>
 
             <div class="card" style="padding:16px 18px;">
@@ -198,66 +199,147 @@
                     </div>
                 }
 
-                <div class="card" style="padding:0;overflow:hidden;">
-                    <div class="surface-panel-header" style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-                        <div>
-                            <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Documentacion</div>
-                            <h3 style="margin-top:4px;">Evidencias</h3>
-                        </div>
-                        <div class="body-small text-muted">@_evidencias.Count archivo(s)</div>
-                    </div>
-
-                    <div style="padding:18px 20px;display:grid;gap:14px;">
-                        @if (_evidencias.Count == 0)
-                        {
-                            <div class="card empty-state" style="padding:28px 18px;">
-                                <LucideIcon Name="file-stack" Size="28" />
-                                <div class="empty-state-heading" style="font-size:16px;">Sin evidencias adjuntas</div>
-                                <div class="empty-state-body">Sube documentos de respaldo para dejar trazabilidad del paso.</div>
+                @if (EsPasoXml)
+                {
+                    <div class="card" style="padding:0;overflow:hidden;">
+                        <div class="surface-panel-header" style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                            <div>
+                                <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Paso 2</div>
+                                <h3 style="margin-top:4px;">Carga XML emitidos y recibidos</h3>
                             </div>
-                        }
-                        else
-                        {
-                            <div style="display:grid;gap:10px;max-height:360px;overflow-y:auto;padding-right:2px;">
-                                @foreach (var evidencia in _evidencias.OrderByDescending(x => x.CreatedAt))
+                            <div class="body-small text-muted">La relacion con cliente y periodo ya viene resuelta por este checklist.</div>
+                        </div>
+
+                        <div style="padding:18px 20px;display:grid;gap:14px;">
+                            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;">
+                                <div class="card" style="padding:16px;">
+                                    <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">XML Emitidos</div>
+                                    <div class="body-small text-muted">Sube un ZIP o RAR con los CFDI emitidos del periodo.</div>
+                                    <div style="margin-top:12px;display:grid;gap:10px;">
+                                        <InputFile OnChange="OnArchivoEmitidosSeleccionado" class="input-field" accept=".zip,.rar" />
+                                        @if (_archivoEmitidos != null)
+                                        {
+                                            <div class="body-small text-muted">@_archivoEmitidosNombre</div>
+                                        }
+                                        <GlassButton Variant="primary" OnClick="SubirXmlEmitidos" Disabled="@(_subiendoEmitidos || _archivoEmitidos == null)">
+                                            <LucideIcon Name="upload" Size="16" /> @(_subiendoEmitidos ? "Subiendo..." : "Procesar emitidos")
+                                        </GlassButton>
+                                    </div>
+                                </div>
+
+                                <div class="card" style="padding:16px;">
+                                    <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">XML Recibidos</div>
+                                    <div class="body-small text-muted">Sube un ZIP o RAR con los CFDI recibidos del periodo.</div>
+                                    <div style="margin-top:12px;display:grid;gap:10px;">
+                                        <InputFile OnChange="OnArchivoRecibidosSeleccionado" class="input-field" accept=".zip,.rar" />
+                                        @if (_archivoRecibidos != null)
+                                        {
+                                            <div class="body-small text-muted">@_archivoRecibidosNombre</div>
+                                        }
+                                        <GlassButton Variant="primary" OnClick="SubirXmlRecibidos" Disabled="@(_subiendoRecibidos || _archivoRecibidos == null)">
+                                            <LucideIcon Name="upload" Size="16" /> @(_subiendoRecibidos ? "Subiendo..." : "Procesar recibidos")
+                                        </GlassButton>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card" style="padding:14px 16px;">
+                                <div class="body-small text-muted">Historial del paso</div>
+                                @if (_xmlCargasPaso.Count == 0)
                                 {
-                                    <div class="card" style="padding:14px 16px;">
-                                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
-                                            <div style="min-width:0;">
-                                                <div style="font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@evidencia.NombreArchivo</div>
-                                                <div class="body-small text-muted" style="margin-top:4px;">@FormatearTamano(evidencia.TamanoBytes) · @evidencia.CreatedAt.ToString("dd/MM/yy HH:mm")</div>
+                                    <div class="empty-state" style="padding:24px 18px;">
+                                        <LucideIcon Name="archive-x" Size="28" />
+                                        <div class="empty-state-heading" style="font-size:16px;">Sin cargas XML</div>
+                                        <div class="empty-state-body">Aun no hay emitidos ni recibidos registrados para este cliente y periodo.</div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div style="display:grid;gap:10px;max-height:360px;overflow-y:auto;padding-right:2px;margin-top:10px;">
+                                        @foreach (var carga in _xmlCargasPaso.OrderByDescending(x => x.CreatedAt))
+                                        {
+                                            <div class="card" style="padding:14px 16px;">
+                                                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+                                                    <div style="min-width:0;">
+                                                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                                                            <span class="badge @(carga.TipoCarga == "emitidos" ? "badge-accent" : "badge-muted")">@TituloTipoCarga(carga.TipoCarga)</span>
+                                                            <div style="font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@(!string.IsNullOrWhiteSpace(carga.NombreArchivo) ? carga.NombreArchivo : carga.NombreZip)</div>
+                                                        </div>
+                                                        <div class="body-small text-muted" style="margin-top:6px;">@carga.CreatedAt.ToString("dd/MM/yy HH:mm") · @carga.Procesados procesados · @carga.ConErrores errores</div>
+                                                    </div>
+                                                    <BadgeEstado Estado="@carga.Estado" />
+                                                </div>
                                             </div>
-                                            <a href="https://rea-interno-production.up.railway.app/api/v1/checklists/evidencias/@evidencia.EvidenciaId/descargar"
-                                               class="btn btn-secondary btn-icon"
-                                               target="_blank"
-                                               title="Descargar evidencia">
-                                                <LucideIcon Name="download" Size="15" />
-                                            </a>
-                                        </div>
+                                        }
                                     </div>
                                 }
                             </div>
-                        }
-
-                        <div class="card" style="padding:14px 16px;">
-                            <div class="body-small text-muted" style="margin-bottom:10px;">Adjuntar documento</div>
-                            <InputFile OnChange="OnArchivoSeleccionado" class="input-field" />
-
-                            @if (_archivo != null)
-                            {
-                                <div style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-                                    <div>
-                                        <div style="font-weight:600;color:var(--text-primary);">@_archivoNombre</div>
-                                        <div class="body-small text-muted" style="margin-top:4px;">Listo para subir al expediente.</div>
-                                    </div>
-                                    <GlassButton Variant="primary" OnClick="SubirEvidencia" Disabled="@_subiendo">
-                                        <LucideIcon Name="upload" Size="16" /> @(_subiendo ? "Subiendo..." : "Subir archivo")
-                                    </GlassButton>
-                                </div>
-                            }
                         </div>
                     </div>
-                </div>
+                }
+                else
+                {
+                    <div class="card" style="padding:0;overflow:hidden;">
+                        <div class="surface-panel-header" style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                            <div>
+                                <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Documentacion</div>
+                                <h3 style="margin-top:4px;">Evidencias</h3>
+                            </div>
+                            <div class="body-small text-muted">@_evidencias.Count archivo(s)</div>
+                        </div>
+
+                        <div style="padding:18px 20px;display:grid;gap:14px;">
+                            @if (_evidencias.Count == 0)
+                            {
+                                <div class="card empty-state" style="padding:28px 18px;">
+                                    <LucideIcon Name="file-stack" Size="28" />
+                                    <div class="empty-state-heading" style="font-size:16px;">Sin evidencias adjuntas</div>
+                                    <div class="empty-state-body">Sube documentos de respaldo para dejar trazabilidad del paso.</div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div style="display:grid;gap:10px;max-height:360px;overflow-y:auto;padding-right:2px;">
+                                    @foreach (var evidencia in _evidencias.OrderByDescending(x => x.CreatedAt))
+                                    {
+                                        <div class="card" style="padding:14px 16px;">
+                                            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+                                                <div style="min-width:0;">
+                                                    <div style="font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@evidencia.NombreArchivo</div>
+                                                    <div class="body-small text-muted" style="margin-top:4px;">@FormatearTamano(evidencia.TamanoBytes) · @evidencia.CreatedAt.ToString("dd/MM/yy HH:mm")</div>
+                                                </div>
+                                                <a href="https://rea-interno-production.up.railway.app/api/v1/checklists/evidencias/@evidencia.EvidenciaId/descargar"
+                                                   class="btn btn-secondary btn-icon"
+                                                   target="_blank"
+                                                   title="Descargar evidencia">
+                                                    <LucideIcon Name="download" Size="15" />
+                                                </a>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+
+                            <div class="card" style="padding:14px 16px;">
+                                <div class="body-small text-muted" style="margin-bottom:10px;">Adjuntar documento</div>
+                                <InputFile OnChange="OnArchivoSeleccionado" class="input-field" />
+
+                                @if (_archivo != null)
+                                {
+                                    <div style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+                                        <div>
+                                            <div style="font-weight:600;color:var(--text-primary);">@_archivoNombre</div>
+                                            <div class="body-small text-muted" style="margin-top:4px;">Listo para subir al expediente.</div>
+                                        </div>
+                                        <GlassButton Variant="primary" OnClick="SubirEvidencia" Disabled="@_subiendo">
+                                            <LucideIcon Name="upload" Size="16" /> @(_subiendo ? "Subiendo..." : "Subir archivo")
+                                        </GlassButton>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
 
                 <div class="card" style="padding:18px 20px;">
                     <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Navegacion</div>
@@ -297,6 +379,7 @@
     private PasoDto? _paso;
     private PasoDto? _siguientePaso;
     private List<EvidenciaDto> _evidencias = new();
+    private List<XmlCargaDto> _xmlCargasPaso = new();
     private string _titulo = "Paso";
     private string _subtitulo = "";
     private string _notas = "";
@@ -307,11 +390,18 @@
     private string? _mensaje;
     private string? _archivoNombre;
     private IBrowserFile? _archivo;
+    private string? _archivoEmitidosNombre;
+    private IBrowserFile? _archivoEmitidos;
+    private string? _archivoRecibidosNombre;
+    private IBrowserFile? _archivoRecibidos;
+    private bool _subiendoEmitidos;
+    private bool _subiendoRecibidos;
     private bool _esAdmin;
     private bool _esAuxiliar;
+    private bool EsPasoXml => _paso?.NumeroPaso == 2;
     private string EstadoActual => NormalizarEstado(_paso?.Estado);
     private bool TieneNotaOperativa => !string.IsNullOrWhiteSpace(_notas);
-    private bool TieneEvidencias => _evidencias.Count > 0;
+    private bool TieneEvidencias => EsPasoXml ? _xmlCargasPaso.Count > 0 : _evidencias.Count > 0;
     private bool PuedeCompletarPaso => string.IsNullOrWhiteSpace(MensajeBloqueoCompletar);
     private string? MensajeBloqueoCompletar => ObtenerMensajeBloqueoCompletar();
 
@@ -342,6 +432,7 @@
                 if (_paso != null)
                 {
                     _evidencias = _paso.Evidencias ?? new();
+                    _xmlCargasPaso = new();
                     _notas = _paso.Notas ?? "";
                     _titulo = $"Paso {_paso.NumeroPaso}";
                     _subtitulo = _paso.NombrePaso ?? "";
@@ -349,6 +440,11 @@
 
                     _breadcrumb[2] = new BreadcrumbItem { Text = _checklist.ClienteNombre, Url = $"/checklists/{ChecklistId}" };
                     _breadcrumb[3] = new BreadcrumbItem { Text = _titulo, Url = $"/checklists/{ChecklistId}/paso/{PasoId}" };
+
+                    if (EsPasoXml)
+                    {
+                        await CargarXmlPasoAsync();
+                    }
                 }
                 else
                 {
@@ -366,6 +462,35 @@
         }
 
         _cargando = false;
+    }
+
+    private async Task CargarXmlPasoAsync()
+    {
+        if (_checklist == null)
+        {
+            _xmlCargasPaso = new();
+            return;
+        }
+
+        try
+        {
+            var result = await XmlService.ListarCargasAsync(_checklist.ClienteId, _checklist.PeriodoId, page: 1, limit: 100);
+            if (result?.Ok == true)
+            {
+                _xmlCargasPaso = (result.Data ?? new())
+                    .Where(x => x.TipoCarga is "emitidos" or "recibidos")
+                    .OrderByDescending(x => x.CreatedAt)
+                    .ToList();
+            }
+            else
+            {
+                _xmlCargasPaso = new();
+            }
+        }
+        catch
+        {
+            _xmlCargasPaso = new();
+        }
     }
 
     private async Task GuardarNotas()
@@ -439,6 +564,110 @@
 
         await Task.CompletedTask;
     }
+
+    private async Task OnArchivoXmlSeleccionado(InputFileChangeEventArgs e, string tipoCarga)
+    {
+        var file = e.FileCount > 0 ? e.File : null;
+        if (tipoCarga == "emitidos")
+        {
+            _archivoEmitidos = file;
+            _archivoEmitidosNombre = file?.Name;
+        }
+        else
+        {
+            _archivoRecibidos = file;
+            _archivoRecibidosNombre = file?.Name;
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private Task OnArchivoEmitidosSeleccionado(InputFileChangeEventArgs e)
+        => OnArchivoXmlSeleccionado(e, "emitidos");
+
+    private Task OnArchivoRecibidosSeleccionado(InputFileChangeEventArgs e)
+        => OnArchivoXmlSeleccionado(e, "recibidos");
+
+    private async Task SubirXml(string tipoCarga)
+    {
+        if (_checklist == null)
+        {
+            return;
+        }
+
+        var archivo = tipoCarga == "emitidos" ? _archivoEmitidos : _archivoRecibidos;
+        if (archivo == null)
+        {
+            return;
+        }
+
+        if (tipoCarga == "emitidos")
+        {
+            _subiendoEmitidos = true;
+        }
+        else
+        {
+            _subiendoRecibidos = true;
+        }
+
+        try
+        {
+            using var content = new MultipartFormDataContent();
+            var fileContent = new StreamContent(archivo.OpenReadStream(50 * 1024 * 1024));
+            var mime = Path.GetExtension(archivo.Name).Equals(".rar", StringComparison.OrdinalIgnoreCase)
+                ? "application/vnd.rar"
+                : "application/zip";
+            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mime);
+            content.Add(fileContent, "archivo", archivo.Name);
+            content.Add(new StringContent(_checklist.ClienteId.ToString()), "clienteId");
+            content.Add(new StringContent(_checklist.PeriodoId.ToString()), "periodoId");
+            content.Add(new StringContent(tipoCarga), "tipoCarga");
+
+            var result = await XmlService.SubirCargaAsync(content);
+            if (result?.Ok == true)
+            {
+                _mensaje = $"Carga de {TituloTipoCarga(tipoCarga).ToLowerInvariant()} procesada correctamente.";
+                if (tipoCarga == "emitidos")
+                {
+                    _archivoEmitidos = null;
+                    _archivoEmitidosNombre = null;
+                    _subiendoEmitidos = false;
+                }
+                else
+                {
+                    _archivoRecibidos = null;
+                    _archivoRecibidosNombre = null;
+                    _subiendoRecibidos = false;
+                }
+
+                await CargarXmlPasoAsync();
+                return;
+            }
+
+            _error = result?.Error?.Message ?? $"No se pudo procesar la carga de {tipoCarga}.";
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            if (tipoCarga == "emitidos")
+            {
+                _subiendoEmitidos = false;
+            }
+            else
+            {
+                _subiendoRecibidos = false;
+            }
+        }
+    }
+
+    private Task SubirXmlEmitidos()
+        => SubirXml("emitidos");
+
+    private Task SubirXmlRecibidos()
+        => SubirXml("recibidos");
 
     private async Task SubirEvidencia()
     {
@@ -569,5 +798,11 @@
         < 1024 => $"{bytes} B",
         < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
         _ => $"{bytes / (1024.0 * 1024.0):F1} MB"
+    };
+
+    private static string TituloTipoCarga(string? tipoCarga) => tipoCarga switch
+    {
+        "recibidos" => "Recibidos",
+        _ => "Emitidos"
     };
 }

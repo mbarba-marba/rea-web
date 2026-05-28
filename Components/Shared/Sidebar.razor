@@ -47,13 +47,6 @@
             <span class="@LabelCls">Libro de Trabajo</span>
         </NavLink>
 
-        <AuthorizeView Roles="admin,auxiliar">
-            <NavLink href="/xml" Match="NavLinkMatch.Prefix" title="Carga XMLs"
-                     class="@NavCls">
-                <span class="@IconCls"><LucideIcon Name="file-archive" Size="18" /></span>
-                <span class="@LabelCls">Carga XMLs</span>
-            </NavLink>
-        </AuthorizeView>
 
         <AuthorizeView Roles="admin,auxiliar">
             <NavLink href="/calculos" Match="NavLinkMatch.Prefix" title="Cálculos ISR/IVA"

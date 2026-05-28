@@ -1,94 +1,26 @@
 @page "/xml/facturas"
 @using Microsoft.AspNetCore.Authorization
-@using REA.Web.Models
-@using REA.Web.Services
 @attribute [Authorize(Roles = "admin,auxiliar")]
-@inject HttpClient Http
 @inject NavigationManager Navigation
 
-<PageHeader Title="Facturas XML" Subtitle="Búsqueda de CFDI procesados" />
-
-<div class="glass-card" style="margin-bottom:16px;padding:12px 20px;">
-    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-        <input @bind="_uuid" placeholder="UUID" style="border:1px solid var(--border-glass);border-radius:8px;padding:8px 12px;background:transparent;color:var(--text-primary);width:300px;" />
-        <input @bind="_rfc" placeholder="RFC Emisor" style="border:1px solid var(--border-glass);border-radius:8px;padding:8px 12px;background:transparent;color:var(--text-primary);width:180px;" />
-        <GlassButton Variant="primary" OnClick="Buscar">Buscar</GlassButton>
+<div class="page-container animate-fade-in">
+    <div class="card" style="padding:24px;max-width:720px;">
+        <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Flujo actualizado</div>
+        <h1 style="margin-top:6px;">La consulta de XML procesados se integra al paso 2</h1>
+        <p class="body-small text-muted" style="margin-top:10px;">
+            Redirigiendo al libro de trabajo para continuar desde el checklist correspondiente.
+        </p>
     </div>
 </div>
 
-@if (_cargando)
-{
-    <SkeletonLoader />
-}
-else if (_facturas.Count == 0)
-{
-    <div class="glass-card" style="text-align:center;padding:40px;">
-        <LucideIcon Name="file-text" Size="48" />
-        <p>No se encontraron facturas</p>
-    </div>
-}
-else
-{
-    <div class="glass-card">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>UUID</th>
-                    <th>Emisor</th>
-                    <th>Receptor</th>
-                    <th>Tipo</th>
-                    <th>Método</th>
-                    <th>Subtotal</th>
-                    <th>IVA</th>
-                    <th>Total</th>
-                    <th>Fecha</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var f in _facturas)
-                {
-                    <tr>
-                        <td class="mono" style="font-size:11px;" title="@f.Uuid">@f.Uuid[..Math.Min(12, f.Uuid.Length)]...</td>
-                        <td>@(f.NombreEmisor ?? f.RfcEmisor)</td>
-                        <td>@(f.NombreReceptor ?? f.RfcReceptor)</td>
-                        <td><BadgeEstado Estado="@f.Tipo" /></td>
-                        <td>@f.MetodoPago</td>
-                        <td class="mono">@f.Subtotal.ToString("N2")</td>
-                        <td class="mono">@f.IvaTrasladado.ToString("N2")</td>
-                        <td class="mono">@f.Total.ToString("N2")</td>
-                        <td style="font-size:12px;">@f.FechaEmision.ToString("dd/MM/yyyy")</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-}
-
 @code {
-    private List<XmlFacturaDto> _facturas = new();
-    private string _uuid = "";
-    private string _rfc = "";
-    private bool _cargando = true;
-
-    protected override async Task OnInitializedAsync()
+    protected override void OnAfterRender(bool firstRender)
     {
-        await Buscar();
-    }
-
-    private async Task Buscar()
-    {
-        _cargando = true;
-        try
+        if (!firstRender)
         {
-            var query = $"api/v1/xml/facturas?limit=50";
-            if (!string.IsNullOrEmpty(_uuid)) query += $"&uuid={_uuid}";
-            if (!string.IsNullOrEmpty(_rfc)) query += $"&rfcEmisor={_rfc}";
-
-            var result = await Http.GetFromJsonAsync<ApiResponse<List<XmlFacturaDto>>>(query);
-            if (result?.Ok == true)
-                _facturas = result.Data ?? new();
+            return;
         }
-        catch { }
-        _cargando = false;
+
+        Navigation.NavigateTo("/checklists", replace: true);
     }
 }

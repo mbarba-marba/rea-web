@@ -15,11 +15,12 @@ public class XmlService
         return await response.Content.ReadFromJsonAsync<ApiResponse<XmlCargaDto>>();
     }
 
-    public async Task<ApiResponse<List<XmlCargaDto>>?> ListarCargasAsync(long? clienteId = null, long? periodoId = null, int page = 1, int limit = 10)
+    public async Task<ApiResponse<List<XmlCargaDto>>?> ListarCargasAsync(long? clienteId = null, long? periodoId = null, string? tipoCarga = null, int page = 1, int limit = 10)
     {
         var query = $"api/v1/xml/cargas?page={page}&limit={limit}";
         if (clienteId.HasValue) query += $"&clienteId={clienteId}";
         if (periodoId.HasValue) query += $"&periodoId={periodoId}";
+        if (!string.IsNullOrWhiteSpace(tipoCarga)) query += $"&tipoCarga={Uri.EscapeDataString(tipoCarga)}";
         return await _http.GetFromJsonAsync<ApiResponse<List<XmlCargaDto>>>(query);
     }
 
@@ -33,12 +34,20 @@ public class XmlService
 public class XmlCargaDto
 {
     public long CargaId { get; set; }
+    public long ClienteId { get; set; }
+    public string ClienteNombre { get; set; } = string.Empty;
+    public long PeriodoId { get; set; }
+    public string TipoCarga { get; set; } = string.Empty;
+    public string NombreArchivo { get; set; } = string.Empty;
     public string NombreZip { get; set; } = string.Empty;
+    public long? TamanoBytes { get; set; }
     public int TotalArchivos { get; set; }
     public int Procesados { get; set; }
     public int ConErrores { get; set; }
     public string Estado { get; set; } = string.Empty;
+    public string? ErrorMensaje { get; set; }
     public DateTime CreatedAt { get; set; }
+    public DateTime? ProcesadoEn { get; set; }
 }
 
 public class XmlFacturaDto
