@@ -17,6 +17,11 @@ public class ApiClient
         _sessionRedirect = sessionRedirect;
     }
 
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
     private async Task<bool> SetAuthHeader()
     {
         var token = await _tokenService.GetAccessTokenAsync();
@@ -44,7 +49,56 @@ public class ApiClient
             return default;
         }
 
-        return await response.Content.ReadFromJsonAsync<ApiResponse<T>>();
+        return await ReadApiResponseAsync<T>(response);
+    }
+
+    private static async Task<ApiResponse<T>?> ReadApiResponseAsync<T>(HttpResponseMessage response)
+    {
+        var content = await response.Content.ReadAsStringAsync();
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return new ApiResponse<T>
+            {
+                Ok = response.IsSuccessStatusCode,
+                Error = response.IsSuccessStatusCode
+                    ? null
+                    : new ApiError
+                    {
+                        Code = $"HTTP_{(int)response.StatusCode}",
+                        Message = "La respuesta del servidor llego vacia."
+                    }
+            };
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<ApiResponse<T>>(content, JsonOptions);
+        }
+        catch (JsonException)
+        {
+            return new ApiResponse<T>
+            {
+                Ok = false,
+                Error = new ApiError
+                {
+                    Code = $"HTTP_{(int)response.StatusCode}",
+                    Message = ExtraerMensajePlano(content)
+                }
+            };
+        }
+    }
+
+    private static string ExtraerMensajePlano(string content)
+    {
+        var compact = content.Trim();
+        if (compact.StartsWith("<", StringComparison.Ordinal))
+        {
+            return "El servidor devolvio una respuesta invalida. Intenta nuevamente en unos segundos.";
+        }
+
+        return compact.Length > 240
+            ? compact[..240] + "..."
+            : compact;
     }
 
     public async Task<ApiResponse<T>?> GetAsync<T>(string url)
@@ -65,7 +119,7 @@ public class ApiClient
             return default;
         }
 
-        var response = await _http.PostAsJsonAsync(url, body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        var response = await _http.PostAsJsonAsync(url, body, JsonOptions);
         return await ReadResponseAsync<T>(response);
     }
 
@@ -76,7 +130,7 @@ public class ApiClient
             return default;
         }
 
-        var response = await _http.PutAsJsonAsync(url, body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        var response = await _http.PutAsJsonAsync(url, body, JsonOptions);
         return await ReadResponseAsync<T>(response);
     }
 
@@ -105,13 +159,13 @@ public class ApiClient
     public async Task PostUnauthAsync(string url, object body)
     {
         _http.DefaultRequestHeaders.Authorization = null;
-        await _http.PostAsJsonAsync(url, body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        await _http.PostAsJsonAsync(url, body, JsonOptions);
     }
 
     public async Task<ApiResponse<T>?> PostUnauthAsync<T>(string url, object body)
     {
         _http.DefaultRequestHeaders.Authorization = null;
-        var response = await _http.PostAsJsonAsync(url, body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-        return await response.Content.ReadFromJsonAsync<ApiResponse<T>>();
+        var response = await _http.PostAsJsonAsync(url, body, JsonOptions);
+        return await ReadApiResponseAsync<T>(response);
     }
 }
