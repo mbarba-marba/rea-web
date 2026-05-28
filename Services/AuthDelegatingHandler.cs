@@ -14,6 +14,16 @@ public class AuthDelegatingHandler : DelegatingHandler
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var token = await _tokenService.GetAccessTokenAsync();
+        if (!RequiereAutenticacion(request.RequestUri))
+        {
+            return await base.SendAsync(request, cancellationToken);
+        }
+
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return await base.SendAsync(request, cancellationToken);
+        }
+
         if (_tokenService.IsTokenExpired(token))
         {
             await _sessionRedirect.RedirectToLoginAsync();
@@ -35,5 +45,24 @@ public class AuthDelegatingHandler : DelegatingHandler
         }
 
         return response;
+    }
+
+    private static bool RequiereAutenticacion(Uri? requestUri)
+    {
+        if (requestUri is null)
+        {
+            return true;
+        }
+
+        var path = requestUri.AbsolutePath.ToLowerInvariant();
+        return path switch
+        {
+            "/api/v1/auth/login" => false,
+            "/api/v1/auth/refresh" => false,
+            "/api/v1/auth/logout" => false,
+            "/api/v1/auth/mfa/verify" => false,
+            "/api/v1/auth/mfa/recovery" => false,
+            _ => true
+        };
     }
 }
