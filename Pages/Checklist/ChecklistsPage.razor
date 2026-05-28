@@ -25,6 +25,9 @@
             </GlassButton>
             @if (_esAdmin)
             {
+                <GlassButton Variant="secondary" OnClick='() => Navigation.NavigateTo("/checklists/protocolo")'>
+                    <LucideIcon Name="shield-check" Size="16" /> Protocolo
+                </GlassButton>
                 <GlassButton Variant="primary" OnClick="AbrirModalNuevo">
                     <LucideIcon Name="plus" Size="16" /> Nuevo Checklist
                 </GlassButton>
@@ -175,7 +178,13 @@
                                 <tr style="cursor:pointer;" @onclick="() => VerChecklist(checklist.ChecklistId)">
                                     <td>
                                         <div style="font-weight:600;color:var(--text-primary);">@checklist.ClienteNombre</div>
-                                        <div class="body-small text-muted" style="margin-top:2px;">Checklist #@checklist.ChecklistId</div>
+                                        <div class="body-small text-muted" style="margin-top:2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                                            <span>Checklist #@checklist.ChecklistId</span>
+                                            @if (checklist.Pasos.Any(x => x.Protocolo?.TieneReglasActivas == true))
+                                            {
+                                                <span class="badge badge-warning" style="padding:2px 8px;">Protocolo activo</span>
+                                            }
+                                        </div>
                                     </td>
                                     <td style="font-size:13px;color:var(--text-secondary);">@checklist.PeriodoNombre</td>
                                     <td>

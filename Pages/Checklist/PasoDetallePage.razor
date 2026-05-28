@@ -1,5 +1,6 @@
 @page "/checklists/{ChecklistId:long}/paso/{PasoId:long}"
 @using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
 @using REA.Web.Components.Shared
 @using REA.Web.Models
 @using REA.Web.Services
@@ -7,6 +8,7 @@
 @inject ChecklistService ChecklistService
 @inject HttpClient Http
 @inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
 
 <div class="page-container animate-fade-in">
     <div class="page-header" style="margin-bottom:20px;align-items:flex-start;gap:16px;">
@@ -121,13 +123,13 @@
 
                             @if (EstadoActual == "pendiente")
                             {
-                                <GlassButton Variant="primary" OnClick="CompletarPaso">
+                                <GlassButton Variant="primary" OnClick="CompletarPaso" Disabled="@(!PuedeCompletarPaso)">
                                     <LucideIcon Name="check" Size="16" /> Completar
                                 </GlassButton>
                             }
                             else if (EstadoActual == "en_proceso")
                             {
-                                <GlassButton Variant="primary" OnClick="CompletarPaso">
+                                <GlassButton Variant="primary" OnClick="CompletarPaso" Disabled="@(!PuedeCompletarPaso)">
                                     <LucideIcon Name="check" Size="16" /> Completar
                                 </GlassButton>
                                 <GlassButton Variant="secondary" OnClick="BloquearPaso">
@@ -139,11 +141,19 @@
                                 <GlassButton Variant="secondary" OnClick="DesbloquearPaso">
                                     <LucideIcon Name="rotate-ccw" Size="16" /> Desbloquear
                                 </GlassButton>
-                                <GlassButton Variant="primary" OnClick="CompletarPaso">
+                                <GlassButton Variant="primary" OnClick="CompletarPaso" Disabled="@(!PuedeCompletarPaso)">
                                     <LucideIcon Name="check" Size="16" /> Completar
                                 </GlassButton>
                             }
                         </div>
+
+                        @if (!string.IsNullOrWhiteSpace(MensajeBloqueoCompletar))
+                        {
+                            <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:14px;background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.18);color:#b45309;">
+                                <LucideIcon Name="alert-circle" Size="18" />
+                                <span style="font-size:13px;font-weight:600;">@MensajeBloqueoCompletar</span>
+                            </div>
+                        }
 
                         @if (_mensaje != null)
                         {
@@ -157,6 +167,37 @@
             </div>
 
             <div style="display:grid;gap:16px;">
+                @if (_paso.Protocolo?.TieneReglasActivas == true)
+                {
+                    <div class="card" style="padding:18px 20px;">
+                        <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Protocolo activo</div>
+                        <h3 style="margin-top:4px;">Candados para trabajo auxiliar</h3>
+                        <div style="display:grid;gap:10px;margin-top:14px;">
+                            @if (_paso.Protocolo.NotaObligatoriaAuxiliar)
+                            {
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <LucideIcon Name="notebook-pen" Size="16" />
+                                    <span class="body-small">Se requiere nota operativa antes de completar.</span>
+                                </div>
+                            }
+                            @if (_paso.Protocolo.EvidenciaObligatoriaAuxiliar)
+                            {
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <LucideIcon Name="paperclip" Size="16" />
+                                    <span class="body-small">Se requiere al menos una evidencia adjunta.</span>
+                                </div>
+                            }
+                            @if (_paso.Protocolo.RequiereCierreAdminAuxiliar)
+                            {
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <LucideIcon Name="shield-check" Size="16" />
+                                    <span class="body-small">El cierre final de este paso solo puede hacerlo un administrador.</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
                 <div class="card" style="padding:0;overflow:hidden;">
                     <div class="surface-panel-header" style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
                         <div>
@@ -266,7 +307,22 @@
     private string? _mensaje;
     private string? _archivoNombre;
     private IBrowserFile? _archivo;
+    private bool _esAdmin;
+    private bool _esAuxiliar;
     private string EstadoActual => NormalizarEstado(_paso?.Estado);
+    private bool TieneNotaOperativa => !string.IsNullOrWhiteSpace(_notas);
+    private bool TieneEvidencias => _evidencias.Count > 0;
+    private bool PuedeCompletarPaso => string.IsNullOrWhiteSpace(MensajeBloqueoCompletar);
+    private string? MensajeBloqueoCompletar => ObtenerMensajeBloqueoCompletar();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _esAdmin = authState.User.IsInRole("admin") ||
+                   string.Equals(authState.User.FindFirst(ClaimTypes.Role)?.Value, "admin", StringComparison.OrdinalIgnoreCase);
+        _esAuxiliar = authState.User.IsInRole("auxiliar") ||
+                      string.Equals(authState.User.FindFirst(ClaimTypes.Role)?.Value, "auxiliar", StringComparison.OrdinalIgnoreCase);
+    }
 
     protected override async Task OnParametersSetAsync() => await Cargar();
 
@@ -450,6 +506,47 @@
         return lista.FirstOrDefault(p =>
             p.PasoId != actual.PasoId &&
             NormalizarEstado(p.Estado) != "completado");
+    }
+
+    private string? ObtenerMensajeBloqueoCompletar()
+    {
+        if (_paso?.Protocolo == null || !_paso.Protocolo.TieneReglasActivas)
+        {
+            return null;
+        }
+
+        if (_esAuxiliar && _paso.Protocolo.RequiereCierreAdminAuxiliar)
+        {
+            return "Este paso debe cerrarlo un administrador, aunque el checklist este asignado a tu cartera.";
+        }
+
+        var faltantes = new List<string>();
+        if (_paso.Protocolo.NotaObligatoriaAuxiliar && !TieneNotaOperativa)
+        {
+            faltantes.Add("falta la nota obligatoria");
+        }
+
+        if (_paso.Protocolo.EvidenciaObligatoriaAuxiliar && !TieneEvidencias)
+        {
+            faltantes.Add("falta la evidencia obligatoria");
+        }
+
+        if (faltantes.Count == 0)
+        {
+            return null;
+        }
+
+        if (_esAuxiliar)
+        {
+            return $"No puedes completar este paso porque {string.Join(" y ", faltantes)}.";
+        }
+
+        if (_esAdmin && _paso.FueTrabajadoPorAuxiliar)
+        {
+            return $"Antes del cierre administrativo, {string.Join(" y ", faltantes)} del trabajo auxiliar.";
+        }
+
+        return null;
     }
 
     private static string NormalizarEstado(string? estado)

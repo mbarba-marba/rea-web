@@ -24,4 +24,10 @@ public class ChecklistService
 
     public async Task<ApiResponse<PasoDto>?> ActualizarPasoAsync(long checklistId, long pasoId, UpdatePasoRequest request)
         => await _api.PutAsync<PasoDto>($"api/v1/checklists/{checklistId}/pasos/{pasoId}", request);
+
+    public async Task<ApiResponse<ProtocoloChecklistResponseDto>?> ObtenerProtocoloAsync()
+        => await _api.GetAsync<ProtocoloChecklistResponseDto>("api/v1/checklists/protocolo");
+
+    public async Task<ApiResponse<ProtocoloChecklistResponseDto>?> ActualizarProtocoloAsync(UpdateProtocoloChecklistRequest request)
+        => await _api.PutAsync<ProtocoloChecklistResponseDto>("api/v1/checklists/protocolo", request);
 }

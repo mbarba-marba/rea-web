@@ -47,6 +47,14 @@
             <span class="@LabelCls">Libro de Trabajo</span>
         </NavLink>
 
+        <AuthorizeView Roles="admin">
+            <NavLink href="/checklists/protocolo" Match="NavLinkMatch.Prefix" title="Protocolo Checklist"
+                     class="@NavCls">
+                <span class="@IconCls"><LucideIcon Name="shield-check" Size="18" /></span>
+                <span class="@LabelCls">Protocolo Checklist</span>
+            </NavLink>
+        </AuthorizeView>
+
         <AuthorizeView Roles="admin,auxiliar">
             <NavLink href="/xml" Match="NavLinkMatch.Prefix" title="Carga XMLs"
                      class="@NavCls">

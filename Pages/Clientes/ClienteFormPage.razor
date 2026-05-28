@@ -53,7 +53,7 @@
     }
     else
     {
-        <div style="display:grid;grid-template-columns:minmax(0,1.7fr) minmax(320px,0.8fr);gap:18px;align-items:start;">
+        <div style="display:grid;grid-template-columns:minmax(0,1.95fr) minmax(300px,0.72fr);gap:18px;align-items:start;">
             <div style="display:grid;gap:16px;">
                 <div class="card" style="padding:0;overflow:hidden;">
                     <div class="surface-panel-header" style="padding:16px 20px;">
@@ -168,7 +168,7 @@
                             {
                                 var item = _form.Regimenes[i];
                                 <div class="card" style="padding:14px 16px;background:color-mix(in srgb, var(--glass-bg-primary) 84%, var(--bg-base) 16%);">
-                                    <div style="display:grid;grid-template-columns:minmax(0,1.5fr) repeat(2,minmax(140px,0.7fr)) auto;gap:12px;align-items:end;">
+                                    <div style="display:grid;grid-template-columns:minmax(0,1.7fr) repeat(2,minmax(150px,0.8fr)) auto;gap:12px;align-items:end;">
                                         <div>
                                             <label class="input-label">Regimen</label>
                                             <input @bind="item.NombreRegimen" class="input-field" placeholder="Nombre del regimen" />
@@ -213,7 +213,7 @@
                             {
                                 var item = _form.ActividadesEconomicas[i];
                                 <div class="card" style="padding:14px 16px;background:color-mix(in srgb, var(--glass-bg-primary) 84%, var(--bg-base) 16%);">
-                                    <div style="display:grid;grid-template-columns:90px minmax(0,1.6fr) 120px repeat(2,minmax(140px,0.8fr)) auto;gap:12px;align-items:end;">
+                                    <div style="display:grid;grid-template-columns:96px minmax(0,1.7fr) 120px auto;gap:12px;align-items:end;">
                                         <div>
                                             <label class="input-label">Orden</label>
                                             <InputNumber @bind-Value="item.Orden" class="input-field" />
@@ -223,9 +223,17 @@
                                             <input @bind="item.Descripcion" class="input-field" placeholder="Descripcion de la actividad" />
                                         </div>
                                         <div>
-                                            <label class="input-label">%</label>
+                                            <label class="input-label">% actividad</label>
                                             <InputNumber @bind-Value="item.Porcentaje" class="input-field" step="0.01" />
                                         </div>
+                                        <div style="display:flex;justify-content:flex-end;">
+                                            <button type="button" class="btn btn-secondary btn-icon" @onclick="() => RemoverActividad(i)" title="Remover actividad">
+                                                <LucideIcon Name="trash-2" Size="15" />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div style="display:grid;grid-template-columns:repeat(2,minmax(180px,1fr));gap:12px;align-items:end;margin-top:12px;">
                                         <div>
                                             <label class="input-label">Inicio</label>
                                             <InputDate @bind-Value="item.FechaInicio" class="input-field" />
@@ -234,9 +242,6 @@
                                             <label class="input-label">Fin</label>
                                             <InputDate @bind-Value="item.FechaFin" class="input-field" />
                                         </div>
-                                        <button type="button" class="btn btn-secondary btn-icon" @onclick="() => RemoverActividad(i)" title="Remover actividad">
-                                            <LucideIcon Name="trash-2" Size="15" />
-                                        </button>
                                     </div>
                                 </div>
                             }
@@ -266,15 +271,24 @@
                             {
                                 var item = _form.ObligacionesFiscales[i];
                                 <div class="card" style="padding:14px 16px;background:color-mix(in srgb, var(--glass-bg-primary) 84%, var(--bg-base) 16%);">
-                                    <div style="display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr) repeat(2,minmax(140px,0.7fr)) auto;gap:12px;align-items:end;">
+                                    <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start;">
                                         <div>
                                             <label class="input-label">Obligacion</label>
-                                            <textarea @bind="item.DescripcionObligacion" class="input-field" rows="2" placeholder="Descripcion de la obligacion"></textarea>
+                                            <textarea @bind="item.DescripcionObligacion" class="input-field" rows="3" style="min-height:88px;" placeholder="Descripcion de la obligacion"></textarea>
                                         </div>
-                                        <div>
-                                            <label class="input-label">Vencimiento</label>
-                                            <textarea @bind="item.DescripcionVencimiento" class="input-field" rows="2" placeholder="Regla o periodo de vencimiento"></textarea>
+                                        <div style="display:flex;justify-content:flex-end;padding-top:24px;">
+                                            <button type="button" class="btn btn-secondary btn-icon" @onclick="() => RemoverObligacion(i)" title="Remover obligacion">
+                                                <LucideIcon Name="trash-2" Size="15" />
+                                            </button>
                                         </div>
+                                    </div>
+
+                                    <div style="margin-top:12px;">
+                                        <label class="input-label">Vencimiento</label>
+                                        <textarea @bind="item.DescripcionVencimiento" class="input-field" rows="3" style="min-height:88px;" placeholder="Regla o periodo de vencimiento"></textarea>
+                                    </div>
+
+                                    <div style="display:grid;grid-template-columns:repeat(2,minmax(180px,1fr));gap:12px;align-items:end;margin-top:12px;">
                                         <div>
                                             <label class="input-label">Inicio</label>
                                             <InputDate @bind-Value="item.FechaInicio" class="input-field" />
@@ -283,9 +297,6 @@
                                             <label class="input-label">Fin</label>
                                             <InputDate @bind-Value="item.FechaFin" class="input-field" />
                                         </div>
-                                        <button type="button" class="btn btn-secondary btn-icon" @onclick="() => RemoverObligacion(i)" title="Remover obligacion">
-                                            <LucideIcon Name="trash-2" Size="15" />
-                                        </button>
                                     </div>
                                 </div>
                             }
@@ -370,7 +381,7 @@
                 </div>
             </div>
 
-            <div style="display:grid;gap:16px;">
+            <div style="display:grid;gap:16px;align-content:start;">
                 <div class="card" style="padding:20px;">
                     <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Resumen</div>
                     <h3 style="margin-top:4px;margin-bottom:14px;">Vista rapida</h3>
@@ -407,6 +418,18 @@
                 </div>
 
                 <div class="card" style="padding:20px;">
+                    <div style="display:flex;flex-direction:column;gap:10px;">
+                        <GlassButton Variant="primary" OnClick="Guardar" Disabled="@(_guardando || _cargando)">
+                            <LucideIcon Name="save" Size="16" />
+                            @(_guardando ? "Guardando..." : (EsEdicion ? "Guardar cambios" : "Crear cliente"))
+                        </GlassButton>
+                        <GlassButton Variant="secondary" OnClick="Cancelar">
+                            <LucideIcon Name="x" Size="16" /> Cancelar
+                        </GlassButton>
+                    </div>
+                </div>
+
+                <div class="card" style="padding:20px;">
                     <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Recomendaciones</div>
                     <h3 style="margin-top:4px;margin-bottom:14px;">Checklist de captura</h3>
 
@@ -425,18 +448,6 @@
                             <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Domicilio</div>
                             <div style="color:var(--text-primary);">El detalle del domicilio se usa como fuente de verdad para el expediente fiscal.</div>
                         </div>
-                    </div>
-                </div>
-
-                <div class="card" style="padding:20px;">
-                    <div style="display:flex;flex-direction:column;gap:10px;">
-                        <GlassButton Variant="primary" OnClick="Guardar" Disabled="@(_guardando || _cargando)">
-                            <LucideIcon Name="save" Size="16" />
-                            @(_guardando ? "Guardando..." : (EsEdicion ? "Guardar cambios" : "Crear cliente"))
-                        </GlassButton>
-                        <GlassButton Variant="secondary" OnClick="Cancelar">
-                            <LucideIcon Name="x" Size="16" /> Cancelar
-                        </GlassButton>
                     </div>
                 </div>
             </div>

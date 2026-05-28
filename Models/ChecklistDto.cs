@@ -23,7 +23,24 @@ public class PasoDto
     public long? CompletadoPor { get; set; }
     public DateTime? CompletadoEn { get; set; }
     public string? Notas { get; set; }
+    public bool FueTrabajadoPorAuxiliar { get; set; }
+    public ProtocoloPasoDto Protocolo { get; set; } = new();
     public List<EvidenciaDto> Evidencias { get; set; } = new();
+}
+
+public class ProtocoloPasoDto
+{
+    public short NumeroPaso { get; set; }
+    public string NombrePaso { get; set; } = string.Empty;
+    public bool NotaObligatoriaAuxiliar { get; set; }
+    public bool EvidenciaObligatoriaAuxiliar { get; set; }
+    public bool RequiereCierreAdminAuxiliar { get; set; }
+    public bool TieneReglasActivas => NotaObligatoriaAuxiliar || EvidenciaObligatoriaAuxiliar || RequiereCierreAdminAuxiliar;
+}
+
+public class ProtocoloChecklistResponseDto
+{
+    public List<ProtocoloPasoDto> Pasos { get; set; } = new();
 }
 
 public class EvidenciaDto
@@ -47,4 +64,18 @@ public class UpdatePasoRequest
 {
     public string Estado { get; set; } = string.Empty;
     public string? Notas { get; set; }
+}
+
+public class UpdateProtocoloChecklistRequest
+{
+    public List<UpdateProtocoloPasoChecklistItemRequest> Pasos { get; set; } = new();
+}
+
+public class UpdateProtocoloPasoChecklistItemRequest
+{
+    public short NumeroPaso { get; set; }
+    public string NombrePaso { get; set; } = string.Empty;
+    public bool NotaObligatoriaAuxiliar { get; set; }
+    public bool EvidenciaObligatoriaAuxiliar { get; set; }
+    public bool RequiereCierreAdminAuxiliar { get; set; }
 }
