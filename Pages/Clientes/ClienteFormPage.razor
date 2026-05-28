@@ -1,6 +1,7 @@
 @page "/clientes/nuevo"
 @page "/clientes/{Id:long}/editar"
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
 @using REA.Web.Components.Shared
 @using REA.Web.Models
 @using REA.Web.Services
@@ -14,7 +15,7 @@
             <h1>@(EsEdicion ? "Editar Cliente" : "Nuevo Cliente")</h1>
             <Breadcrumb Items="@_breadcrumb" />
             <p class="body-small text-muted" style="margin-top:6px;">
-                @(EsEdicion ? "Actualiza la ficha operativa y fiscal del cliente." : "Registra una nueva cuenta con la informacion fiscal y de contacto.")
+                @(EsEdicion ? "Actualiza la ficha fiscal, domicilio y obligaciones del cliente." : "Registra una cuenta nueva y, si tienes la constancia fiscal, usa el PDF para precargar la informacion.")
             </p>
         </div>
 
@@ -36,33 +37,83 @@
         </div>
     }
 
+    @if (_mensaje != null)
+    {
+        <div class="card" style="margin-bottom:16px;padding:14px 16px;border-color:rgba(16,185,129,0.24);background:rgba(16,185,129,0.10);">
+            <div style="display:flex;align-items:center;gap:10px;color:var(--success);font-weight:600;">
+                <LucideIcon Name="badge-check" Size="18" />
+                <span>@_mensaje</span>
+            </div>
+        </div>
+    }
+
     @if (_cargando)
     {
         <SkeletonLoader />
     }
     else
     {
-        <div style="display:grid;grid-template-columns:minmax(0,1.55fr) minmax(280px,0.75fr);gap:18px;align-items:start;">
+        <div style="display:grid;grid-template-columns:minmax(0,1.7fr) minmax(320px,0.8fr);gap:18px;align-items:start;">
             <div style="display:grid;gap:16px;">
                 <div class="card" style="padding:0;overflow:hidden;">
                     <div class="surface-panel-header" style="padding:16px 20px;">
-                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
-                            <div>
-                                <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Identidad fiscal</div>
-                                <h3 style="margin-top:4px;">Datos principales del cliente</h3>
+                        <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Documento fiscal</div>
+                        <h3 style="margin-top:4px;">Carga una Constancia de Situacion Fiscal</h3>
+                    </div>
+
+                    <div style="padding:20px;display:grid;gap:14px;">
+                        <div class="card" style="padding:16px;background:color-mix(in srgb, var(--glass-bg-primary) 84%, var(--bg-base) 16%);">
+                            <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+                                <div>
+                                    <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Archivo</div>
+                                    <div style="font-size:15px;font-weight:600;color:var(--text-primary);">@(string.IsNullOrWhiteSpace(_archivoNombre) ? "Sin PDF seleccionado" : _archivoNombre)</div>
+                                    <div class="body-small text-muted" style="margin-top:4px;">Extraemos RFC, razon social, domicilio, actividades, regimenes y obligaciones.</div>
+                                </div>
+                                @if (_ultimaExtraccion != null)
+                                {
+                                    <span class="badge badge-accent">PDF procesado</span>
+                                }
                             </div>
-                            @if (EsEdicion)
-                            {
-                                <span class="badge badge-accent" style="padding:6px 10px;">Edicion activa</span>
-                            }
                         </div>
+
+                        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+                            <InputFile OnChange="OnArchivoSeleccionado" accept=".pdf,application/pdf" />
+                            <GlassButton Variant="secondary" OnClick="ExtraerCsf" Disabled="@(_archivoSeleccionado == null || _extrayendo)">
+                                <LucideIcon Name="file-search" Size="16" />
+                                @(_extrayendo ? "Extrayendo..." : "Extraer datos del PDF")
+                            </GlassButton>
+                        </div>
+
+                        @if (_ultimaExtraccion != null)
+                        {
+                            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;">
+                                <div class="card" style="padding:12px 14px;">
+                                    <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Regimenes</div>
+                                    <div style="font-size:22px;font-weight:700;color:var(--text-primary);">@_form.Regimenes.Count</div>
+                                </div>
+                                <div class="card" style="padding:12px 14px;">
+                                    <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Actividades</div>
+                                    <div style="font-size:22px;font-weight:700;color:var(--text-primary);">@_form.ActividadesEconomicas.Count</div>
+                                </div>
+                                <div class="card" style="padding:12px 14px;">
+                                    <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Obligaciones</div>
+                                    <div style="font-size:22px;font-weight:700;color:var(--text-primary);">@_form.ObligacionesFiscales.Count</div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="card" style="padding:0;overflow:hidden;">
+                    <div class="surface-panel-header" style="padding:16px 20px;">
+                        <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Identidad fiscal</div>
+                        <h3 style="margin-top:4px;">Datos principales del cliente</h3>
                     </div>
 
                     <div style="padding:20px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 18px;">
                         <div>
                             <label class="input-label">RFC *</label>
                             <input @bind="_form.Rfc" class="input-field" disabled="@EsEdicion" placeholder="ABC010203XYZ" />
-                            <div class="body-small text-muted" style="margin-top:6px;">@(EsEdicion ? "El RFC se mantiene fijo una vez creado el cliente." : "Usa el RFC tal como aparece en la constancia fiscal.")</div>
                         </div>
 
                         <div>
@@ -74,52 +125,246 @@
                         </div>
 
                         <div style="grid-column:1/-1;">
-                            <label class="input-label">Razon Social *</label>
+                            <label class="input-label">Razon social *</label>
                             <input @bind="_form.RazonSocial" class="input-field" placeholder="Nombre legal o razon social" />
                         </div>
 
+                        <div style="grid-column:1/-1;">
+                            <label class="input-label">Denominacion o nombre fiscal</label>
+                            <input @bind="_form.DenominacionONombreFiscal" class="input-field" placeholder="Como aparece en la constancia fiscal" />
+                        </div>
+
                         <div>
-                            <label class="input-label">Nombre Comercial</label>
+                            <label class="input-label">Nombre comercial</label>
                             <input @bind="_form.NombreComercial" class="input-field" placeholder="Marca o nombre visible" />
                         </div>
 
                         <div>
-                            <label class="input-label">Regimen Fiscal</label>
-                            <input @bind="_form.RegimenFiscal" class="input-field" placeholder="Ej. Persona Moral, Sueldos y Salarios..." />
+                            <label class="input-label">Fecha inicio operaciones</label>
+                            <InputDate @bind-Value="_form.FechaInicioOperaciones" class="input-field" />
                         </div>
+                    </div>
+                </div>
 
+                <div class="card" style="padding:0;overflow:hidden;">
+                    <div class="surface-panel-header" style="padding:16px 20px;display:flex;justify-content:space-between;gap:12px;align-items:center;">
                         <div>
-                            <label class="input-label">Actividad</label>
-                            <input @bind="_form.Actividad" class="input-field" placeholder="Actividad economica principal" />
+                            <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Regimenes</div>
+                            <h3 style="margin-top:4px;">Listado fiscal del contribuyente</h3>
                         </div>
+                        <GlassButton Variant="secondary" OnClick="AgregarRegimen">
+                            <LucideIcon Name="plus" Size="16" /> Agregar regimen
+                        </GlassButton>
+                    </div>
 
+                    <div style="padding:20px;display:grid;gap:12px;">
+                        @if (_form.Regimenes.Count == 0)
+                        {
+                            <div class="body-small text-muted">No hay regimenes cargados aun.</div>
+                        }
+                        else
+                        {
+                            @for (var i = 0; i < _form.Regimenes.Count; i++)
+                            {
+                                var item = _form.Regimenes[i];
+                                <div class="card" style="padding:14px 16px;background:color-mix(in srgb, var(--glass-bg-primary) 84%, var(--bg-base) 16%);">
+                                    <div style="display:grid;grid-template-columns:minmax(0,1.5fr) repeat(2,minmax(140px,0.7fr)) auto;gap:12px;align-items:end;">
+                                        <div>
+                                            <label class="input-label">Regimen</label>
+                                            <input @bind="item.NombreRegimen" class="input-field" placeholder="Nombre del regimen" />
+                                        </div>
+                                        <div>
+                                            <label class="input-label">Inicio</label>
+                                            <InputDate @bind-Value="item.FechaInicio" class="input-field" />
+                                        </div>
+                                        <div>
+                                            <label class="input-label">Fin</label>
+                                            <InputDate @bind-Value="item.FechaFin" class="input-field" />
+                                        </div>
+                                        <button type="button" class="btn btn-secondary btn-icon" @onclick="() => RemoverRegimen(i)" title="Remover regimen">
+                                            <LucideIcon Name="trash-2" Size="15" />
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+
+                <div class="card" style="padding:0;overflow:hidden;">
+                    <div class="surface-panel-header" style="padding:16px 20px;display:flex;justify-content:space-between;gap:12px;align-items:center;">
                         <div>
-                            <label class="input-label">% Actividad</label>
-                            <input @bind="_form.PorcentajeAct" class="input-field" type="number" step="0.01" placeholder="0.00" />
+                            <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Actividades economicas</div>
+                            <h3 style="margin-top:4px;">Actividades, porcentajes y vigencia</h3>
+                        </div>
+                        <GlassButton Variant="secondary" OnClick="AgregarActividad">
+                            <LucideIcon Name="plus" Size="16" /> Agregar actividad
+                        </GlassButton>
+                    </div>
+
+                    <div style="padding:20px;display:grid;gap:12px;">
+                        @if (_form.ActividadesEconomicas.Count == 0)
+                        {
+                            <div class="body-small text-muted">No hay actividades economicas capturadas aun.</div>
+                        }
+                        else
+                        {
+                            @for (var i = 0; i < _form.ActividadesEconomicas.Count; i++)
+                            {
+                                var item = _form.ActividadesEconomicas[i];
+                                <div class="card" style="padding:14px 16px;background:color-mix(in srgb, var(--glass-bg-primary) 84%, var(--bg-base) 16%);">
+                                    <div style="display:grid;grid-template-columns:90px minmax(0,1.6fr) 120px repeat(2,minmax(140px,0.8fr)) auto;gap:12px;align-items:end;">
+                                        <div>
+                                            <label class="input-label">Orden</label>
+                                            <InputNumber @bind-Value="item.Orden" class="input-field" />
+                                        </div>
+                                        <div>
+                                            <label class="input-label">Actividad</label>
+                                            <input @bind="item.Descripcion" class="input-field" placeholder="Descripcion de la actividad" />
+                                        </div>
+                                        <div>
+                                            <label class="input-label">%</label>
+                                            <InputNumber @bind-Value="item.Porcentaje" class="input-field" step="0.01" />
+                                        </div>
+                                        <div>
+                                            <label class="input-label">Inicio</label>
+                                            <InputDate @bind-Value="item.FechaInicio" class="input-field" />
+                                        </div>
+                                        <div>
+                                            <label class="input-label">Fin</label>
+                                            <InputDate @bind-Value="item.FechaFin" class="input-field" />
+                                        </div>
+                                        <button type="button" class="btn btn-secondary btn-icon" @onclick="() => RemoverActividad(i)" title="Remover actividad">
+                                            <LucideIcon Name="trash-2" Size="15" />
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+
+                <div class="card" style="padding:0;overflow:hidden;">
+                    <div class="surface-panel-header" style="padding:16px 20px;display:flex;justify-content:space-between;gap:12px;align-items:center;">
+                        <div>
+                            <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Obligaciones</div>
+                            <h3 style="margin-top:4px;">Compromisos fiscales vigentes</h3>
+                        </div>
+                        <GlassButton Variant="secondary" OnClick="AgregarObligacion">
+                            <LucideIcon Name="plus" Size="16" /> Agregar obligacion
+                        </GlassButton>
+                    </div>
+
+                    <div style="padding:20px;display:grid;gap:12px;">
+                        @if (_form.ObligacionesFiscales.Count == 0)
+                        {
+                            <div class="body-small text-muted">No hay obligaciones cargadas aun.</div>
+                        }
+                        else
+                        {
+                            @for (var i = 0; i < _form.ObligacionesFiscales.Count; i++)
+                            {
+                                var item = _form.ObligacionesFiscales[i];
+                                <div class="card" style="padding:14px 16px;background:color-mix(in srgb, var(--glass-bg-primary) 84%, var(--bg-base) 16%);">
+                                    <div style="display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr) repeat(2,minmax(140px,0.7fr)) auto;gap:12px;align-items:end;">
+                                        <div>
+                                            <label class="input-label">Obligacion</label>
+                                            <textarea @bind="item.DescripcionObligacion" class="input-field" rows="2" placeholder="Descripcion de la obligacion"></textarea>
+                                        </div>
+                                        <div>
+                                            <label class="input-label">Vencimiento</label>
+                                            <textarea @bind="item.DescripcionVencimiento" class="input-field" rows="2" placeholder="Regla o periodo de vencimiento"></textarea>
+                                        </div>
+                                        <div>
+                                            <label class="input-label">Inicio</label>
+                                            <InputDate @bind-Value="item.FechaInicio" class="input-field" />
+                                        </div>
+                                        <div>
+                                            <label class="input-label">Fin</label>
+                                            <InputDate @bind-Value="item.FechaFin" class="input-field" />
+                                        </div>
+                                        <button type="button" class="btn btn-secondary btn-icon" @onclick="() => RemoverObligacion(i)" title="Remover obligacion">
+                                            <LucideIcon Name="trash-2" Size="15" />
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+
+                <div class="card" style="padding:0;overflow:hidden;">
+                    <div class="surface-panel-header" style="padding:16px 20px;">
+                        <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Domicilio fiscal</div>
+                        <h3 style="margin-top:4px;">Datos del domicilio registrado</h3>
+                    </div>
+
+                    <div style="padding:20px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 18px;">
+                        <div>
+                            <label class="input-label">Pais</label>
+                            <input @bind="_form.Pais" class="input-field" placeholder="Mexico" />
+                        </div>
+                        <div>
+                            <label class="input-label">Estado</label>
+                            <input @bind="_form.Estado" class="input-field" placeholder="Entidad federativa" />
+                        </div>
+                        <div>
+                            <label class="input-label">Municipio</label>
+                            <input @bind="_form.Municipio" class="input-field" placeholder="Municipio o demarcacion" />
+                        </div>
+                        <div>
+                            <label class="input-label">Localidad</label>
+                            <input @bind="_form.Localidad" class="input-field" placeholder="Localidad" />
+                        </div>
+                        <div>
+                            <label class="input-label">Colonia</label>
+                            <input @bind="_form.Colonia" class="input-field" placeholder="Colonia" />
+                        </div>
+                        <div>
+                            <label class="input-label">Codigo postal</label>
+                            <input @bind="_form.CodigoPostal" class="input-field" placeholder="00000" />
+                        </div>
+                        <div>
+                            <label class="input-label">Tipo de vialidad</label>
+                            <input @bind="_form.TipoVialidad" class="input-field" placeholder="Calle, avenida..." />
+                        </div>
+                        <div>
+                            <label class="input-label">Nombre de vialidad</label>
+                            <input @bind="_form.NombreVialidad" class="input-field" placeholder="Nombre de calle o avenida" />
+                        </div>
+                        <div>
+                            <label class="input-label">Numero exterior</label>
+                            <input @bind="_form.NumeroExterior" class="input-field" placeholder="S/N o numero" />
+                        </div>
+                        <div>
+                            <label class="input-label">Numero interior</label>
+                            <input @bind="_form.NumeroInterior" class="input-field" placeholder="Interior" />
+                        </div>
+                        <div>
+                            <label class="input-label">Entre calle</label>
+                            <input @bind="_form.EntreCalle" class="input-field" placeholder="Cruce principal" />
+                        </div>
+                        <div>
+                            <label class="input-label">Y calle</label>
+                            <input @bind="_form.YCalle" class="input-field" placeholder="Segunda referencia" />
                         </div>
                     </div>
                 </div>
 
                 <div class="card" style="padding:0;overflow:hidden;">
                     <div class="surface-panel-header" style="padding:16px 20px;">
-                        <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Contacto y seguimiento</div>
-                        <h3 style="margin-top:4px;">Canales de contacto del cliente</h3>
+                        <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Contacto</div>
+                        <h3 style="margin-top:4px;">Datos complementarios</h3>
                     </div>
 
                     <div style="padding:20px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 18px;">
                         <div>
-                            <label class="input-label">Email</label>
-                            <input @bind="_form.Email" class="input-field" type="email" placeholder="cliente@empresa.com" />
+                            <label class="input-label">Gmail / Email</label>
+                            <input @bind="_form.Email" class="input-field" type="email" placeholder="cliente@gmail.com" />
                         </div>
-
                         <div>
                             <label class="input-label">Telefono</label>
                             <input @bind="_form.Telefono" class="input-field" placeholder="664-000-0000" />
-                        </div>
-
-                        <div style="grid-column:1/-1;">
-                            <label class="input-label">Direccion</label>
-                            <input @bind="_form.Direccion" class="input-field" placeholder="Calle, numero, colonia y ciudad" />
                         </div>
                     </div>
                 </div>
@@ -135,7 +380,7 @@
                             <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Estado del registro</div>
                             @if (EsEdicion)
                             {
-                                <span class="badge badge-accent">Actualizando ficha existente</span>
+                                <span class="badge badge-accent">Edicion activa</span>
                             }
                             else
                             {
@@ -144,7 +389,7 @@
                         </div>
 
                         <div>
-                            <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Clasificacion seleccionada</div>
+                            <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Clasificacion</div>
                             <span class="badge @(ClasificacionBadgeClass)">@ClasificacionBadgeText</span>
                         </div>
 
@@ -153,27 +398,32 @@
                             <div style="font-size:15px;font-weight:600;color:var(--text-primary);">@(string.IsNullOrWhiteSpace(_form.RazonSocial) ? "Sin nombre capturado" : _form.RazonSocial)</div>
                             <div class="mono" style="font-size:12px;color:var(--text-secondary);margin-top:4px;">@(string.IsNullOrWhiteSpace(_form.Rfc) ? "RFC pendiente" : _form.Rfc)</div>
                         </div>
+
+                        <div>
+                            <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Cobertura cargada</div>
+                            <div class="body-small text-muted">@_form.Regimenes.Count regimenes, @_form.ActividadesEconomicas.Count actividades y @_form.ObligacionesFiscales.Count obligaciones.</div>
+                        </div>
                     </div>
                 </div>
 
                 <div class="card" style="padding:20px;">
-                    <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Checklist de captura</div>
-                    <h3 style="margin-top:4px;margin-bottom:14px;">Recomendaciones</h3>
+                    <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Recomendaciones</div>
+                    <h3 style="margin-top:4px;margin-bottom:14px;">Checklist de captura</h3>
 
                     <div style="display:grid;gap:12px;">
                         <div>
-                            <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">RFC y razon social</div>
-                            <div style="color:var(--text-primary);">Asegura que coincidan con la documentacion fiscal.</div>
+                            <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">PDF SAT</div>
+                            <div style="color:var(--text-primary);">Usa la constancia para precargar y luego valida manualmente los datos de contacto.</div>
                         </div>
 
                         <div>
-                            <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Contacto</div>
-                            <div style="color:var(--text-primary);">Deja un correo valido para seguimiento de pendientes y alertas.</div>
+                            <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Obligaciones</div>
+                            <div style="color:var(--text-primary);">Mantenerlas estructuradas ayuda para futuras automatizaciones y seguimiento.</div>
                         </div>
 
                         <div>
-                            <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Clasificacion</div>
-                            <div style="color:var(--text-primary);">La clasificacion impacta reportes y vistas operativas del despacho.</div>
+                            <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Domicilio</div>
+                            <div style="color:var(--text-primary);">El detalle del domicilio se usa como fuente de verdad para el expediente fiscal.</div>
                         </div>
                     </div>
                 </div>
@@ -200,7 +450,12 @@
     private CreateClienteRequest _form = new();
     private bool _guardando;
     private bool _cargando = true;
+    private bool _extrayendo;
     private string? _error;
+    private string? _mensaje;
+    private IBrowserFile? _archivoSeleccionado;
+    private string? _archivoNombre;
+    private CsfExtractionDto? _ultimaExtraccion;
     private readonly List<BreadcrumbItem> _breadcrumb = new();
 
     private bool EsEdicion => Id > 0;
@@ -253,14 +508,52 @@
                 {
                     Rfc = c.Rfc,
                     RazonSocial = c.RazonSocial,
+                    DenominacionONombreFiscal = c.DenominacionONombreFiscal,
                     NombreComercial = c.NombreComercial,
                     Clasificacion = c.Clasificacion,
                     Actividad = c.Actividad,
                     PorcentajeAct = c.PorcentajeAct,
                     RegimenFiscal = c.RegimenFiscal,
+                    FechaInicioOperaciones = c.FechaInicioOperaciones,
                     Email = c.Email,
                     Telefono = c.Telefono,
-                    Direccion = c.Direccion
+                    Direccion = c.Direccion,
+                    Pais = c.Pais,
+                    Estado = c.Estado,
+                    Municipio = c.Municipio,
+                    Localidad = c.Localidad,
+                    Colonia = c.Colonia,
+                    CodigoPostal = c.CodigoPostal,
+                    TipoVialidad = c.TipoVialidad,
+                    NombreVialidad = c.NombreVialidad,
+                    NumeroExterior = c.NumeroExterior,
+                    NumeroInterior = c.NumeroInterior,
+                    EntreCalle = c.EntreCalle,
+                    YCalle = c.YCalle,
+                    Regimenes = c.Regimenes.Select(x => new ClienteRegimenDto
+                    {
+                        ClienteRegimenId = x.ClienteRegimenId,
+                        NombreRegimen = x.NombreRegimen,
+                        FechaInicio = x.FechaInicio,
+                        FechaFin = x.FechaFin
+                    }).ToList(),
+                    ActividadesEconomicas = c.ActividadesEconomicas.Select(x => new ClienteActividadEconomicaDto
+                    {
+                        ClienteActividadEconomicaId = x.ClienteActividadEconomicaId,
+                        Orden = x.Orden,
+                        Descripcion = x.Descripcion,
+                        Porcentaje = x.Porcentaje,
+                        FechaInicio = x.FechaInicio,
+                        FechaFin = x.FechaFin
+                    }).ToList(),
+                    ObligacionesFiscales = c.ObligacionesFiscales.Select(x => new ClienteObligacionFiscalDto
+                    {
+                        ClienteObligacionFiscalId = x.ClienteObligacionFiscalId,
+                        DescripcionObligacion = x.DescripcionObligacion,
+                        DescripcionVencimiento = x.DescripcionVencimiento,
+                        FechaInicio = x.FechaInicio,
+                        FechaFin = x.FechaFin
+                    }).ToList()
                 };
             }
             else
@@ -274,9 +567,104 @@
         }
     }
 
+    private void OnArchivoSeleccionado(InputFileChangeEventArgs e)
+    {
+        _archivoSeleccionado = e.File;
+        _archivoNombre = e.File.Name;
+        _mensaje = null;
+    }
+
+    private async Task ExtraerCsf()
+    {
+        if (_archivoSeleccionado == null)
+        {
+            return;
+        }
+
+        _extrayendo = true;
+        _error = null;
+        _mensaje = null;
+
+        try
+        {
+            var result = await ClienteService.ExtraerCsfAsync(_archivoSeleccionado);
+            if (result?.Ok == true && result.Data != null)
+            {
+                _ultimaExtraccion = result.Data;
+                AplicarExtraccion(result.Data);
+                _mensaje = "Datos fiscales extraidos y precargados correctamente.";
+            }
+            else
+            {
+                _error = result?.Error?.Message ?? "No se pudo extraer la informacion del PDF.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _extrayendo = false;
+        }
+    }
+
+    private void AplicarExtraccion(CsfExtractionDto data)
+    {
+        if (!string.IsNullOrWhiteSpace(data.Rfc) && !EsEdicion)
+        {
+            _form.Rfc = data.Rfc;
+        }
+
+        if (!string.IsNullOrWhiteSpace(data.RazonSocial))
+        {
+            _form.RazonSocial = data.RazonSocial;
+        }
+
+        if (!string.IsNullOrWhiteSpace(data.DenominacionONombreFiscal))
+        {
+            _form.DenominacionONombreFiscal = data.DenominacionONombreFiscal;
+        }
+
+        if (!string.IsNullOrWhiteSpace(data.NombreComercial))
+        {
+            _form.NombreComercial = data.NombreComercial;
+        }
+
+        _form.FechaInicioOperaciones = data.FechaInicioOperaciones ?? _form.FechaInicioOperaciones;
+        _form.Pais = data.Pais ?? _form.Pais;
+        _form.Estado = data.Estado ?? _form.Estado;
+        _form.Municipio = data.Municipio ?? _form.Municipio;
+        _form.Localidad = data.Localidad ?? _form.Localidad;
+        _form.Colonia = data.Colonia ?? _form.Colonia;
+        _form.CodigoPostal = data.CodigoPostal ?? _form.CodigoPostal;
+        _form.TipoVialidad = data.TipoVialidad ?? _form.TipoVialidad;
+        _form.NombreVialidad = data.NombreVialidad ?? _form.NombreVialidad;
+        _form.NumeroExterior = data.NumeroExterior ?? _form.NumeroExterior;
+        _form.NumeroInterior = data.NumeroInterior ?? _form.NumeroInterior;
+        _form.EntreCalle = data.EntreCalle ?? _form.EntreCalle;
+        _form.YCalle = data.YCalle ?? _form.YCalle;
+        _form.Regimenes = data.Regimenes.Select(CloneRegimen).ToList();
+        _form.ActividadesEconomicas = data.ActividadesEconomicas.Select(CloneActividad).ToList();
+        _form.ObligacionesFiscales = data.ObligacionesFiscales.Select(CloneObligacion).ToList();
+
+        if (_form.Regimenes.Count > 0)
+        {
+            _form.RegimenFiscal = _form.Regimenes[0].NombreRegimen;
+        }
+
+        if (_form.ActividadesEconomicas.Count > 0)
+        {
+            var principal = _form.ActividadesEconomicas.OrderBy(x => x.Orden).First();
+            _form.Actividad = principal.Descripcion;
+            _form.PorcentajeAct = principal.Porcentaje;
+        }
+    }
+
     private async Task Guardar()
     {
         _error = null;
+        _mensaje = null;
         _guardando = true;
 
         try
@@ -286,20 +674,37 @@
                 var req = new UpdateClienteRequest
                 {
                     RazonSocial = _form.RazonSocial,
+                    DenominacionONombreFiscal = _form.DenominacionONombreFiscal,
                     NombreComercial = _form.NombreComercial,
                     Clasificacion = _form.Clasificacion,
                     Actividad = _form.Actividad,
                     PorcentajeAct = _form.PorcentajeAct,
                     RegimenFiscal = _form.RegimenFiscal,
+                    FechaInicioOperaciones = _form.FechaInicioOperaciones,
                     Email = _form.Email,
                     Telefono = _form.Telefono,
-                    Direccion = _form.Direccion
+                    Direccion = _form.Direccion,
+                    Pais = _form.Pais,
+                    Estado = _form.Estado,
+                    Municipio = _form.Municipio,
+                    Localidad = _form.Localidad,
+                    Colonia = _form.Colonia,
+                    CodigoPostal = _form.CodigoPostal,
+                    TipoVialidad = _form.TipoVialidad,
+                    NombreVialidad = _form.NombreVialidad,
+                    NumeroExterior = _form.NumeroExterior,
+                    NumeroInterior = _form.NumeroInterior,
+                    EntreCalle = _form.EntreCalle,
+                    YCalle = _form.YCalle,
+                    Regimenes = _form.Regimenes.Select(CloneRegimen).ToList(),
+                    ActividadesEconomicas = _form.ActividadesEconomicas.Select(CloneActividad).ToList(),
+                    ObligacionesFiscales = _form.ObligacionesFiscales.Select(CloneObligacion).ToList()
                 };
 
                 var result = await ClienteService.ActualizarAsync(Id, req);
                 if (result?.Ok == true)
                 {
-                    Navigation.NavigateTo("/clientes");
+                    Navigation.NavigateTo($"/clientes/{Id}");
                     return;
                 }
 
@@ -308,9 +713,9 @@
             else
             {
                 var result = await ClienteService.CrearAsync(_form);
-                if (result?.Ok == true)
+                if (result?.Ok == true && result.Data != null)
                 {
-                    Navigation.NavigateTo("/clientes");
+                    Navigation.NavigateTo($"/clientes/{result.Data.ClienteId}");
                     return;
                 }
 
@@ -327,5 +732,46 @@
         }
     }
 
-    private void Cancelar() => Navigation.NavigateTo("/clientes");
+    private static ClienteRegimenDto CloneRegimen(ClienteRegimenDto item) => new()
+    {
+        ClienteRegimenId = item.ClienteRegimenId,
+        NombreRegimen = item.NombreRegimen,
+        FechaInicio = item.FechaInicio,
+        FechaFin = item.FechaFin
+    };
+
+    private static ClienteActividadEconomicaDto CloneActividad(ClienteActividadEconomicaDto item) => new()
+    {
+        ClienteActividadEconomicaId = item.ClienteActividadEconomicaId,
+        Orden = item.Orden,
+        Descripcion = item.Descripcion,
+        Porcentaje = item.Porcentaje,
+        FechaInicio = item.FechaInicio,
+        FechaFin = item.FechaFin
+    };
+
+    private static ClienteObligacionFiscalDto CloneObligacion(ClienteObligacionFiscalDto item) => new()
+    {
+        ClienteObligacionFiscalId = item.ClienteObligacionFiscalId,
+        DescripcionObligacion = item.DescripcionObligacion,
+        DescripcionVencimiento = item.DescripcionVencimiento,
+        FechaInicio = item.FechaInicio,
+        FechaFin = item.FechaFin
+    };
+
+    private void AgregarRegimen() => _form.Regimenes.Add(new ClienteRegimenDto());
+    private void RemoverRegimen(int index) => _form.Regimenes.RemoveAt(index);
+
+    private void AgregarActividad()
+    {
+        _form.ActividadesEconomicas.Add(new ClienteActividadEconomicaDto
+        {
+            Orden = (short)(_form.ActividadesEconomicas.Count + 1)
+        });
+    }
+
+    private void RemoverActividad(int index) => _form.ActividadesEconomicas.RemoveAt(index);
+    private void AgregarObligacion() => _form.ObligacionesFiscales.Add(new ClienteObligacionFiscalDto());
+    private void RemoverObligacion(int index) => _form.ObligacionesFiscales.RemoveAt(index);
+    private void Cancelar() => Navigation.NavigateTo(EsEdicion ? $"/clientes/{Id}" : "/clientes");
 }

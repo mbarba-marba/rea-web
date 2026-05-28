@@ -1,4 +1,6 @@
 using REA.Web.Models;
+using Microsoft.AspNetCore.Components.Forms;
+using System.Net.Http.Headers;
 
 namespace REA.Web.Services;
 
@@ -27,4 +29,14 @@ public class ClienteService
 
     public async Task DesactivarAsync(long id)
         => await _api.DeleteAsync<object>($"api/v1/clientes/{id}");
+
+    public async Task<ApiResponse<CsfExtractionDto>?> ExtraerCsfAsync(IBrowserFile archivo)
+    {
+        using var stream = archivo.OpenReadStream(15_000_000);
+        using var content = new MultipartFormDataContent();
+        var fileContent = new StreamContent(stream);
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue(archivo.ContentType);
+        content.Add(fileContent, "archivo", archivo.Name);
+        return await _api.PostMultipartAsync<CsfExtractionDto>("api/v1/clientes/extraer-csf", content);
+    }
 }

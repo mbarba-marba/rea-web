@@ -52,6 +52,13 @@ public class ApiClient
         return await response.Content.ReadFromJsonAsync<ApiResponse<T>>();
     }
 
+    public async Task<ApiResponse<T>?> PostMultipartAsync<T>(string url, MultipartFormDataContent content)
+    {
+        await SetAuthHeader();
+        var response = await _http.PostAsync(url, content);
+        return await response.Content.ReadFromJsonAsync<ApiResponse<T>>();
+    }
+
     public async Task PostUnauthAsync(string url, object body)
     {
         _http.DefaultRequestHeaders.Authorization = null;

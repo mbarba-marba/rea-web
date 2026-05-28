@@ -12,7 +12,7 @@
         <div class="page-header-left">
             <h1>@(_cliente?.RazonSocial ?? "Cliente")</h1>
             <Breadcrumb Items="@_breadcrumb" />
-            <p class="body-small text-muted" style="margin-top:6px;">Detalle operativo del cliente</p>
+            <p class="body-small text-muted" style="margin-top:6px;">Expediente fiscal, domicilio y obligaciones del cliente.</p>
         </div>
         <div style="display:flex;gap:10px;align-items:center;">
             <GlassButton Variant="secondary" OnClick="Volver">
@@ -51,73 +51,180 @@
             </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:stretch;">
-            <div class="card" style="padding:20px;height:100%;">
-                <h3 style="margin-bottom:14px;">Informacion General</h3>
-                <div style="display:grid;gap:12px;">
-                    <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">RFC</div><div class="mono" style="font-size:16px;font-weight:600;color:var(--text-primary);">@_cliente.Rfc</div></div>
-                    <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Razon Social</div><div style="font-size:18px;font-weight:600;color:var(--text-primary);">@_cliente.RazonSocial</div></div>
-                    <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Nombre Comercial</div><div style="font-size:16px;font-weight:500;color:var(--text-primary);">@(string.IsNullOrWhiteSpace(_cliente.NombreComercial) ? "-" : _cliente.NombreComercial)</div></div>
-                    <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Clasificacion</div><div style="margin-top:2px;"><BadgeCliente Clasificacion="@_cliente.Clasificacion" /></div></div>
-                    <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Regimen Fiscal</div><div style="font-size:16px;font-weight:500;color:var(--text-primary);">@(string.IsNullOrWhiteSpace(_cliente.RegimenFiscal) ? "-" : _cliente.RegimenFiscal)</div></div>
-                    <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Actividad</div><div style="font-size:16px;font-weight:500;color:var(--text-primary);">@(string.IsNullOrWhiteSpace(_cliente.Actividad) ? "-" : _cliente.Actividad)</div></div>
-                    <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">% Actividad</div><div style="font-size:16px;font-weight:600;color:var(--text-primary);">@(_cliente.PorcentajeAct?.ToString("0.##") ?? "-")%</div></div>
+        <div style="display:grid;grid-template-columns:1.25fr 1fr;gap:16px;align-items:start;">
+            <div style="display:grid;gap:16px;">
+                <div class="card" style="padding:20px;">
+                    <h3 style="margin-bottom:14px;">Identidad fiscal</h3>
+                    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px;">
+                        <div>
+                            <div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">RFC</div>
+                            <div class="mono" style="font-size:16px;font-weight:600;color:var(--text-primary);">@_cliente.Rfc</div>
+                        </div>
+                        <div>
+                            <div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Fecha inicio operaciones</div>
+                            <div style="font-size:16px;font-weight:600;color:var(--text-primary);">@FmtDate(_cliente.FechaInicioOperaciones)</div>
+                        </div>
+                        <div style="grid-column:1/-1;">
+                            <div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Razon social</div>
+                            <div style="font-size:18px;font-weight:600;color:var(--text-primary);">@_cliente.RazonSocial</div>
+                        </div>
+                        <div style="grid-column:1/-1;">
+                            <div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Denominacion o nombre fiscal</div>
+                            <div style="font-size:16px;font-weight:500;color:var(--text-primary);">@(string.IsNullOrWhiteSpace(_cliente.DenominacionONombreFiscal) ? "-" : _cliente.DenominacionONombreFiscal)</div>
+                        </div>
+                        <div>
+                            <div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Nombre comercial</div>
+                            <div style="font-size:16px;font-weight:500;color:var(--text-primary);">@(string.IsNullOrWhiteSpace(_cliente.NombreComercial) ? "-" : _cliente.NombreComercial)</div>
+                        </div>
+                        <div>
+                            <div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Activo</div>
+                            <div style="margin-top:2px;">
+                                @if (_cliente.Activo)
+                                {
+                                    <span class="badge badge-success">Activo</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-muted">Inactivo</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="padding:20px;">
+                    <h3 style="margin-bottom:14px;">Domicilio fiscal registrado</h3>
+                    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px;">
+                        <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Pais</div><div style="font-size:15px;font-weight:500;color:var(--text-primary);">@(Empty(_cliente.Pais))</div></div>
+                        <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Estado</div><div style="font-size:15px;font-weight:500;color:var(--text-primary);">@(Empty(_cliente.Estado))</div></div>
+                        <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Municipio</div><div style="font-size:15px;font-weight:500;color:var(--text-primary);">@(Empty(_cliente.Municipio))</div></div>
+                        <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Localidad</div><div style="font-size:15px;font-weight:500;color:var(--text-primary);">@(Empty(_cliente.Localidad))</div></div>
+                        <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Colonia</div><div style="font-size:15px;font-weight:500;color:var(--text-primary);">@(Empty(_cliente.Colonia))</div></div>
+                        <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Codigo postal</div><div style="font-size:15px;font-weight:500;color:var(--text-primary);">@(Empty(_cliente.CodigoPostal))</div></div>
+                        <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Tipo de vialidad</div><div style="font-size:15px;font-weight:500;color:var(--text-primary);">@(Empty(_cliente.TipoVialidad))</div></div>
+                        <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Nombre de vialidad</div><div style="font-size:15px;font-weight:500;color:var(--text-primary);">@(Empty(_cliente.NombreVialidad))</div></div>
+                        <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Numero exterior</div><div style="font-size:15px;font-weight:500;color:var(--text-primary);">@(Empty(_cliente.NumeroExterior))</div></div>
+                        <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Numero interior</div><div style="font-size:15px;font-weight:500;color:var(--text-primary);">@(Empty(_cliente.NumeroInterior))</div></div>
+                        <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Entre calle</div><div style="font-size:15px;font-weight:500;color:var(--text-primary);">@(Empty(_cliente.EntreCalle))</div></div>
+                        <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Y calle</div><div style="font-size:15px;font-weight:500;color:var(--text-primary);">@(Empty(_cliente.YCalle))</div></div>
+                    </div>
+                </div>
+
+                <div class="card" style="padding:20px;">
+                    <h3 style="margin-bottom:12px;">Obligaciones fiscales</h3>
+                    @if (_cliente.ObligacionesFiscales.Count == 0)
+                    {
+                        <p class="body-small text-muted">No hay obligaciones registradas.</p>
+                    }
+                    else
+                    {
+                        <div style="display:grid;gap:10px;">
+                            @foreach (var obligacion in _cliente.ObligacionesFiscales)
+                            {
+                                <div style="padding:12px 14px;border:1px solid var(--glass-border);border-radius:10px;background:color-mix(in srgb, var(--glass-bg-primary) 82%, var(--bg-base) 18%);">
+                                    <div style="font-size:15px;font-weight:600;color:var(--text-primary);">@obligacion.DescripcionObligacion</div>
+                                    <div class="body-small text-muted" style="margin-top:4px;">@(string.IsNullOrWhiteSpace(obligacion.DescripcionVencimiento) ? "Sin detalle de vencimiento" : obligacion.DescripcionVencimiento)</div>
+                                    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--text-secondary);">
+                                        <span>Inicio: @FmtDate(obligacion.FechaInicio)</span>
+                                        <span>Fin: @FmtDate(obligacion.FechaFin)</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
                 </div>
             </div>
 
-            <div class="card" style="padding:20px;height:100%;">
-                <h3 style="margin-bottom:12px;">Contacto y Estado</h3>
-                <div style="display:grid;gap:12px;">
-                    <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Email</div><div style="font-size:16px;font-weight:500;color:var(--text-primary);">@(string.IsNullOrWhiteSpace(_cliente.Email) ? "-" : _cliente.Email)</div></div>
-                    <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Telefono</div><div style="font-size:16px;font-weight:500;color:var(--text-primary);">@(string.IsNullOrWhiteSpace(_cliente.Telefono) ? "-" : _cliente.Telefono)</div></div>
-                    <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Direccion</div><div style="font-size:16px;font-weight:500;color:var(--text-primary);">@(string.IsNullOrWhiteSpace(_cliente.Direccion) ? "-" : _cliente.Direccion)</div></div>
-                    <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Estatus E-Firma</div><div style="margin-top:2px;"><BadgeEstado Estado="@(_cliente.EstatusEfirma?.ToLower() ?? "pendiente")" /></div></div>
-                    <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Activo</div><div style="margin-top:2px;">
-                        @if (_cliente.Activo)
-                        {
-                            <span class="badge badge-success">Activo</span>
-                        }
-                        else
-                        {
-                            <span class="badge badge-muted">Inactivo</span>
-                        }
-                    </div></div>
-                </div>
-            </div>
-
-            <div class="card" style="padding:20px;grid-column:1/-1;">
-                <h3 style="margin-bottom:12px;">Vigencias</h3>
-                <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;">
-                    <div style="padding:10px 12px;border:1px solid var(--glass-border);border-radius:10px;background:color-mix(in srgb, var(--glass-bg-primary) 82%, var(--bg-base) 18%);">
-                        <div style="font-size:11px;color:var(--text-secondary);">E-Firma Inicio</div>
-                        <div style="font-weight:600;color:var(--text-primary);">@FmtDate(_cliente.EFirmaVigenciaInicio)</div>
-                    </div>
-                    <div style="padding:10px 12px;border:1px solid var(--glass-border);border-radius:10px;background:color-mix(in srgb, var(--glass-bg-primary) 82%, var(--bg-base) 18%);">
-                        <div style="font-size:11px;color:var(--text-secondary);">E-Firma Fin</div>
-                        <div style="font-weight:600;color:var(--text-primary);">@FmtDate(_cliente.EFirmaVigenciaFin)</div>
-                    </div>
-                    <div style="padding:10px 12px;border:1px solid var(--glass-border);border-radius:10px;background:color-mix(in srgb, var(--glass-bg-primary) 82%, var(--bg-base) 18%);">
-                        <div style="font-size:11px;color:var(--text-secondary);">Alta</div>
-                        <div style="font-weight:600;color:var(--text-primary);">@_cliente.CreatedAt.ToString("dd/MM/yyyy")</div>
+            <div style="display:grid;gap:16px;">
+                <div class="card" style="padding:20px;">
+                    <h3 style="margin-bottom:12px;">Contacto y estado</h3>
+                    <div style="display:grid;gap:12px;">
+                        <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Email</div><div style="font-size:16px;font-weight:500;color:var(--text-primary);">@(Empty(_cliente.Email))</div></div>
+                        <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Telefono</div><div style="font-size:16px;font-weight:500;color:var(--text-primary);">@(Empty(_cliente.Telefono))</div></div>
+                        <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Direccion consolidada</div><div style="font-size:16px;font-weight:500;color:var(--text-primary);">@(Empty(_cliente.Direccion))</div></div>
+                        <div><div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;">Estatus E-Firma</div><div style="margin-top:2px;"><BadgeEstado Estado="@(_cliente.EstatusEfirma?.ToLower() ?? "pendiente")" /></div></div>
                     </div>
                 </div>
-            </div>
 
-            <div class="card" style="padding:20px;grid-column:1/-1;">
-                <h3 style="margin-bottom:12px;">Auxiliares Asignados</h3>
-                @if (_cliente.Asignaciones.Count == 0)
-                {
-                    <p style="color:var(--text-secondary);">Sin auxiliares asignados</p>
-                }
-                else
-                {
-                    <div style="display:flex;flex-wrap:wrap;gap:8px;">
-                        @foreach (var a in _cliente.Asignaciones)
-                        {
-                            <span class="badge badge-accent" style="padding:6px 10px;">@a.AuxiliarNombre</span>
-                        }
+                <div class="card" style="padding:20px;">
+                    <h3 style="margin-bottom:12px;">Regimenes</h3>
+                    @if (_cliente.Regimenes.Count == 0)
+                    {
+                        <p class="body-small text-muted">No hay regimenes cargados.</p>
+                    }
+                    else
+                    {
+                        <div style="display:grid;gap:10px;">
+                            @foreach (var regimen in _cliente.Regimenes)
+                            {
+                                <div style="padding:12px 14px;border:1px solid var(--glass-border);border-radius:10px;background:color-mix(in srgb, var(--glass-bg-primary) 82%, var(--bg-base) 18%);">
+                                    <div style="font-size:15px;font-weight:600;color:var(--text-primary);">@regimen.NombreRegimen</div>
+                                    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--text-secondary);">
+                                        <span>Inicio: @FmtDate(regimen.FechaInicio)</span>
+                                        <span>Fin: @FmtDate(regimen.FechaFin)</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="card" style="padding:20px;">
+                    <h3 style="margin-bottom:12px;">Actividades economicas</h3>
+                    @if (_cliente.ActividadesEconomicas.Count == 0)
+                    {
+                        <p class="body-small text-muted">No hay actividades cargadas.</p>
+                    }
+                    else
+                    {
+                        <div style="display:grid;gap:10px;">
+                            @foreach (var actividad in _cliente.ActividadesEconomicas.OrderBy(x => x.Orden))
+                            {
+                                <div style="padding:12px 14px;border:1px solid var(--glass-border);border-radius:10px;background:color-mix(in srgb, var(--glass-bg-primary) 82%, var(--bg-base) 18%);">
+                                    <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
+                                        <div style="font-size:15px;font-weight:600;color:var(--text-primary);">@actividad.Descripcion</div>
+                                        <span class="badge badge-accent">@actividad.Porcentaje?.ToString("0.##")%</span>
+                                    </div>
+                                    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--text-secondary);">
+                                        <span>Orden: @actividad.Orden</span>
+                                        <span>Inicio: @FmtDate(actividad.FechaInicio)</span>
+                                        <span>Fin: @FmtDate(actividad.FechaFin)</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="card" style="padding:20px;">
+                    <h3 style="margin-bottom:12px;">Vigencias y auxiliares</h3>
+                    <div style="display:grid;gap:12px;">
+                        <div style="padding:10px 12px;border:1px solid var(--glass-border);border-radius:10px;background:color-mix(in srgb, var(--glass-bg-primary) 82%, var(--bg-base) 18%);">
+                            <div style="font-size:11px;color:var(--text-secondary);">E-Firma Inicio</div>
+                            <div style="font-weight:600;color:var(--text-primary);">@FmtDate(_cliente.EFirmaVigenciaInicio)</div>
+                        </div>
+                        <div style="padding:10px 12px;border:1px solid var(--glass-border);border-radius:10px;background:color-mix(in srgb, var(--glass-bg-primary) 82%, var(--bg-base) 18%);">
+                            <div style="font-size:11px;color:var(--text-secondary);">E-Firma Fin</div>
+                            <div style="font-weight:600;color:var(--text-primary);">@FmtDate(_cliente.EFirmaVigenciaFin)</div>
+                        </div>
+                        <div>
+                            <div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;margin-bottom:8px;">Auxiliares asignados</div>
+                            @if (_cliente.Asignaciones.Count == 0)
+                            {
+                                <p class="body-small text-muted">Sin auxiliares asignados</p>
+                            }
+                            else
+                            {
+                                <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                                    @foreach (var a in _cliente.Asignaciones)
+                                    {
+                                        <span class="badge badge-accent" style="padding:6px 10px;">@a.AuxiliarNombre</span>
+                                    }
+                                </div>
+                            }
+                        </div>
                     </div>
-                }
+                </div>
             </div>
         </div>
     }
@@ -164,6 +271,7 @@
     }
 
     private static string FmtDate(DateOnly? date) => date?.ToString("dd/MM/yyyy") ?? "-";
+    private static string Empty(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
     private void Volver() => Navigation.NavigateTo("/clientes");
     private void EditarActual() => Navigation.NavigateTo($"/clientes/{Id}/editar");
 }
