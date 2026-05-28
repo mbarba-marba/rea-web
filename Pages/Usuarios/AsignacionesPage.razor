@@ -280,9 +280,27 @@
         try
         {
             var r = await Http.GetFromJsonAsync<ApiResponse<List<AuxiliarItem>>>("api/v1/usuarios?rol=auxiliar&activo=true&limit=100");
-            if (r?.Ok == true)
+            if (r?.Ok == true && (r.Data?.Count ?? 0) > 0)
             {
-                _auxiliares = r.Data ?? new();
+                _auxiliares = (r.Data ?? new())
+                    .OrderBy(x => x.NombreCompleto)
+                    .ToList();
+                return;
+            }
+
+            var fallback = await Http.GetFromJsonAsync<ApiResponse<List<UsuarioListaItem>>>("api/v1/usuarios?limit=100");
+            if (fallback?.Ok == true)
+            {
+                _auxiliares = (fallback.Data ?? new())
+                    .Where(x => x.Activo && string.Equals(x.Rol, "auxiliar", StringComparison.OrdinalIgnoreCase))
+                    .Select(x => new AuxiliarItem
+                    {
+                        UsuarioId = x.UsuarioId,
+                        Nombre = x.Nombre,
+                        Apellidos = x.Apellidos
+                    })
+                    .OrderBy(x => x.NombreCompleto)
+                    .ToList();
             }
         }
         catch
@@ -400,6 +418,15 @@
         public string Nombre { get; set; } = "";
         public string Apellidos { get; set; } = "";
         public string NombreCompleto => $"{Nombre} {Apellidos}".Trim();
+    }
+
+    private class UsuarioListaItem
+    {
+        public long UsuarioId { get; set; }
+        public string Nombre { get; set; } = "";
+        public string Apellidos { get; set; } = "";
+        public string Rol { get; set; } = "";
+        public bool Activo { get; set; }
     }
 
     private class AsignacionItem
