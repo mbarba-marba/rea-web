@@ -29,6 +29,22 @@ public class XmlService
 
     public async Task<ApiResponse<List<XmlFacturaDto>>?> ListarFacturasAsync(long cargaId, int page = 1, int limit = 50)
         => await _http.GetFromJsonAsync<ApiResponse<List<XmlFacturaDto>>>($"api/v1/xml/cargas/{cargaId}/facturas?page={page}&limit={limit}");
+
+    public async Task<ApiResponse<List<XmlFacturaDto>>?> BuscarFacturasAsync(
+        long? clienteId = null,
+        long? periodoId = null,
+        string? tipo = null,
+        string? metodoPago = null,
+        int page = 1,
+        int limit = 50)
+    {
+        var query = $"api/v1/xml/facturas?page={page}&limit={limit}";
+        if (clienteId.HasValue) query += $"&clienteId={clienteId}";
+        if (periodoId.HasValue) query += $"&periodoId={periodoId}";
+        if (!string.IsNullOrWhiteSpace(tipo)) query += $"&tipo={Uri.EscapeDataString(tipo)}";
+        if (!string.IsNullOrWhiteSpace(metodoPago)) query += $"&metodoPago={Uri.EscapeDataString(metodoPago)}";
+        return await _http.GetFromJsonAsync<ApiResponse<List<XmlFacturaDto>>>(query);
+    }
 }
 
 public class XmlCargaDto
@@ -61,8 +77,25 @@ public class XmlFacturaDto
     public decimal Subtotal { get; set; }
     public decimal Total { get; set; }
     public decimal IvaTrasladado { get; set; }
+    public decimal IepsTrasladado { get; set; }
+    public decimal IvaRetenido { get; set; }
+    public decimal IsrRetenido { get; set; }
     public string Tipo { get; set; } = string.Empty;
     public string? MetodoPago { get; set; }
+    public bool TieneComplemento { get; set; }
+    public string? ComplementosDetectados { get; set; }
     public DateOnly FechaEmision { get; set; }
     public string? ErrorValidacion { get; set; }
+    public List<XmlFacturaImpuestoDto> Impuestos { get; set; } = new();
+}
+
+public class XmlFacturaImpuestoDto
+{
+    public string Tipo { get; set; } = string.Empty;
+    public string ClaveImpuesto { get; set; } = string.Empty;
+    public string NombreImpuesto { get; set; } = string.Empty;
+    public string? TipoFactor { get; set; }
+    public decimal? Base { get; set; }
+    public decimal? TasaOCuota { get; set; }
+    public decimal Importe { get; set; }
 }
