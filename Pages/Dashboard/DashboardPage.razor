@@ -112,25 +112,25 @@
         <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:var(--space-md);margin-bottom:var(--space-xl);">
             <div class="card">
                 <p class="label">Clientes Asignados</p>
-                <p class="display" style="font-size:28px;">@_dashboard?.TotalClientes</p>
+                <p class="display" style="font-size:28px;">@ClientesAsignadosAuxiliar</p>
                 <p class="caption text-muted" style="margin-top:var(--space-xs);">Expedientes visibles en tu libro de trabajo.</p>
             </div>
 
             <div class="card">
                 <p class="label">En Proceso</p>
-                <p class="display" style="font-size:28px;">@_dashboard?.ChecklistsEnProceso</p>
+                <p class="display" style="font-size:28px;">@ChecklistsEnProcesoAuxiliar</p>
                 <p class="caption text-muted" style="margin-top:var(--space-xs);">Checklists abiertos que requieren seguimiento.</p>
             </div>
 
             <div class="card">
                 <p class="label">Pendientes</p>
-                <p class="display" style="font-size:28px;">@_dashboard?.ChecklistsPendientes</p>
-                <p class="caption text-muted" style="margin-top:var(--space-xs);">Trabajo por arrancar dentro de tu cartera.</p>
+                <p class="display" style="font-size:28px;">@ChecklistsPendientesAuxiliar</p>
+                <p class="caption text-muted" style="margin-top:var(--space-xs);">Checklists todavía abiertos dentro de tu cartera.</p>
             </div>
 
             <div class="card">
                 <p class="label">Completados</p>
-                <p class="display" style="font-size:28px;">@_dashboard?.ChecklistsCompletados</p>
+                <p class="display" style="font-size:28px;">@ChecklistsCompletadosAuxiliar</p>
                 <p class="caption text-muted" style="margin-top:var(--space-xs);">Expedientes cerrados de tus clientes.</p>
             </div>
         </div>
@@ -215,6 +215,10 @@
     private bool _cargando = true;
     private string? _error;
     private bool _esAdmin;
+    private int ClientesAsignadosAuxiliar => _misChecklists.Select(x => x.ClienteId).Distinct().Count();
+    private int ChecklistsEnProcesoAuxiliar => _misChecklists.Count(x => ObtenerEstado(x) == "en_proceso");
+    private int ChecklistsPendientesAuxiliar => _misChecklists.Count(x => ObtenerEstado(x) == "pendiente");
+    private int ChecklistsCompletadosAuxiliar => _misChecklists.Count(x => ObtenerEstado(x) == "completado");
 
     protected override async Task OnInitializedAsync()
     {
@@ -252,7 +256,7 @@
             }
             else
             {
-                var checklistsResult = await ChecklistService.ListarAsync(page: 1, limit: 8);
+                var checklistsResult = await ChecklistService.ListarAsync(page: 1, limit: 100);
                 if (checklistsResult?.Ok == true)
                 {
                     _misChecklists = checklistsResult.Data ?? new();
