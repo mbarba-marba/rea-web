@@ -412,6 +412,24 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="card" style="padding:0;overflow:hidden;">
+                    <div class="surface-panel-header" style="padding:16px 20px;">
+                        <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">E-Firma</div>
+                        <h3 style="margin-top:4px;">Vigencia y control fiscal</h3>
+                    </div>
+
+                    <div style="padding:20px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 18px;">
+                        <div>
+                            <label class="input-label">E-Firma inicio</label>
+                            <InputDate @bind-Value="_form.EFirmaVigenciaInicio" class="input-field" />
+                        </div>
+                        <div>
+                            <label class="input-label">E-Firma fin</label>
+                            <InputDate @bind-Value="_form.EFirmaVigenciaFin" class="input-field" />
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div style="display:grid;gap:16px;align-content:start;">
@@ -446,6 +464,20 @@
                         <div>
                             <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Cobertura cargada</div>
                             <div class="body-small text-muted">@_form.Regimenes.Count regimenes, @_form.ActividadesEconomicas.Count actividades y @_form.ObligacionesFiscales.Count obligaciones.</div>
+                        </div>
+
+                        <div>
+                            <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">E-Firma</div>
+                            <div class="body-small text-muted">
+                                @if (_form.EFirmaVigenciaFin.HasValue)
+                                {
+                                    <span>Vence el @_form.EFirmaVigenciaFin.Value.ToString("dd/MM/yyyy").</span>
+                                }
+                                else
+                                {
+                                    <span>Sin vigencia capturada aun.</span>
+                                }
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -574,6 +606,8 @@
                     NumeroInterior = c.NumeroInterior,
                     EntreCalle = c.EntreCalle,
                     YCalle = c.YCalle,
+                    EFirmaVigenciaInicio = c.EFirmaVigenciaInicio,
+                    EFirmaVigenciaFin = c.EFirmaVigenciaFin,
                     Regimenes = c.Regimenes.Select(x => new ClienteRegimenDto
                     {
                         ClienteRegimenId = x.ClienteRegimenId,
@@ -740,6 +774,8 @@
                     NumeroInterior = _form.NumeroInterior,
                     EntreCalle = _form.EntreCalle,
                     YCalle = _form.YCalle,
+                    EFirmaVigenciaInicio = _form.EFirmaVigenciaInicio,
+                    EFirmaVigenciaFin = _form.EFirmaVigenciaFin,
                     Regimenes = _form.Regimenes.Select(CloneRegimen).ToList(),
                     ActividadesEconomicas = _form.ActividadesEconomicas.Select(CloneActividad).ToList(),
                     ObligacionesFiscales = _form.ObligacionesFiscales.Select(CloneObligacion).ToList()

@@ -74,6 +74,8 @@ public class CreateClienteRequest
     public string? NumeroInterior { get; set; }
     public string? EntreCalle { get; set; }
     public string? YCalle { get; set; }
+    public DateOnly? EFirmaVigenciaInicio { get; set; }
+    public DateOnly? EFirmaVigenciaFin { get; set; }
     public List<ClienteRegimenDto> Regimenes { get; set; } = new();
     public List<ClienteActividadEconomicaDto> ActividadesEconomicas { get; set; } = new();
     public List<ClienteObligacionFiscalDto> ObligacionesFiscales { get; set; } = new();
@@ -104,6 +106,8 @@ public class UpdateClienteRequest
     public string? NumeroInterior { get; set; }
     public string? EntreCalle { get; set; }
     public string? YCalle { get; set; }
+    public DateOnly? EFirmaVigenciaInicio { get; set; }
+    public DateOnly? EFirmaVigenciaFin { get; set; }
     public List<ClienteRegimenDto>? Regimenes { get; set; }
     public List<ClienteActividadEconomicaDto>? ActividadesEconomicas { get; set; }
     public List<ClienteObligacionFiscalDto>? ObligacionesFiscales { get; set; }
