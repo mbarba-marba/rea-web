@@ -23,11 +23,17 @@ public class ReaAuthStateProvider : AuthenticationStateProvider
         try
         {
             var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+            if (jwt.ValidTo == DateTime.MinValue || jwt.ValidTo <= DateTime.UtcNow.AddSeconds(15))
+            {
+                await MarkUserAsLoggedOut();
+                return Anonymous;
+            }
             var identity = new ClaimsIdentity(jwt.Claims, "jwt");
             return new AuthenticationState(new ClaimsPrincipal(identity));
         }
         catch
         {
+            await MarkUserAsLoggedOut();
             return Anonymous;
         }
     }
@@ -44,6 +50,7 @@ public class ReaAuthStateProvider : AuthenticationStateProvider
     public async Task MarkUserAsLoggedOut()
     {
         await _storage.RemoveAsync("rea_access_token");
+        await _storage.RemoveAsync("rea_refresh_token");
         NotifyAuthenticationStateChanged(Task.FromResult(Anonymous));
     }
 }

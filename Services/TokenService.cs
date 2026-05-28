@@ -1,3 +1,5 @@
+using System.IdentityModel.Tokens.Jwt;
+
 namespace REA.Web.Services;
 
 public class TokenService
@@ -13,6 +15,13 @@ public class TokenService
 
     public async Task<string?> GetAccessTokenAsync() => await _storage.GetAsync(AccessTokenKey);
     public async Task<string?> GetRefreshTokenAsync() => await _storage.GetAsync(RefreshTokenKey);
+
+    public async Task<bool> IsAccessTokenExpiredAsync()
+    {
+        var token = await GetAccessTokenAsync();
+        return IsTokenExpired(token);
+    }
+
     public async Task SaveTokensAsync(string accessToken, string refreshToken)
     {
         await _storage.SetAsync(AccessTokenKey, accessToken);
@@ -22,5 +31,29 @@ public class TokenService
     {
         await _storage.RemoveAsync(AccessTokenKey);
         await _storage.RemoveAsync(RefreshTokenKey);
+    }
+
+    public bool IsTokenExpired(string? token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return true;
+        }
+
+        try
+        {
+            var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+            var expiresAt = jwt.ValidTo;
+            if (expiresAt == DateTime.MinValue)
+            {
+                return true;
+            }
+
+            return expiresAt <= DateTime.UtcNow.AddSeconds(15);
+        }
+        catch
+        {
+            return true;
+        }
     }
 }

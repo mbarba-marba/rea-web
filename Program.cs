@@ -13,6 +13,7 @@ builder.Services.AddAuthorizationCore();
 
 builder.Services.AddScoped<ILocalStorageService, LocalStorageService>();
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<SessionRedirectService>();
 builder.Services.AddScoped<ApiClient>();
 builder.Services.AddScoped<AuthenticationStateProvider, ReaAuthStateProvider>();
 
