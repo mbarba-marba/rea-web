@@ -213,17 +213,17 @@
                             {
                                 var item = _form.ActividadesEconomicas[i];
                                 <div class="card" style="padding:14px 16px;background:color-mix(in srgb, var(--glass-bg-primary) 84%, var(--bg-base) 16%);">
-                                    <div style="display:grid;grid-template-columns:96px minmax(0,1.7fr) 120px auto;gap:12px;align-items:end;">
+                                    <div style="display:grid;grid-template-columns:88px minmax(0,1.9fr) 132px auto;gap:12px;align-items:end;">
                                         <div>
                                             <label class="input-label">Orden</label>
                                             <InputNumber @bind-Value="item.Orden" class="input-field" />
                                         </div>
                                         <div>
-                                            <label class="input-label">Actividad</label>
-                                            <input @bind="item.Descripcion" class="input-field" placeholder="Descripcion de la actividad" />
+                                            <label class="input-label">Actividad economica</label>
+                                            <input @bind="item.Descripcion" class="input-field" placeholder="Descripcion completa de la actividad economica" />
                                         </div>
                                         <div>
-                                            <label class="input-label">% actividad</label>
+                                            <label class="input-label">% participacion</label>
                                             <InputNumber @bind-Value="item.Porcentaje" class="input-field" step="0.01" />
                                         </div>
                                         <div style="display:flex;justify-content:flex-end;">
@@ -233,7 +233,7 @@
                                         </div>
                                     </div>
 
-                                    <div style="display:grid;grid-template-columns:repeat(2,minmax(180px,1fr));gap:12px;align-items:end;margin-top:12px;">
+                                    <div style="display:grid;grid-template-columns:repeat(2,minmax(180px,1fr));gap:12px;align-items:end;margin-top:10px;">
                                         <div>
                                             <label class="input-label">Inicio</label>
                                             <InputDate @bind-Value="item.FechaInicio" class="input-field" />
@@ -274,7 +274,7 @@
                                     <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start;">
                                         <div>
                                             <label class="input-label">Obligacion</label>
-                                            <textarea @bind="item.DescripcionObligacion" class="input-field" rows="3" style="min-height:88px;" placeholder="Descripcion de la obligacion"></textarea>
+                                            <textarea @bind="item.DescripcionObligacion" class="input-field" rows="2" style="min-height:64px;resize:vertical;" placeholder="Descripcion de la obligacion fiscal"></textarea>
                                         </div>
                                         <div style="display:flex;justify-content:flex-end;padding-top:24px;">
                                             <button type="button" class="btn btn-secondary btn-icon" @onclick="() => RemoverObligacion(i)" title="Remover obligacion">
@@ -285,7 +285,7 @@
 
                                     <div style="margin-top:12px;">
                                         <label class="input-label">Vencimiento</label>
-                                        <textarea @bind="item.DescripcionVencimiento" class="input-field" rows="3" style="min-height:88px;" placeholder="Regla o periodo de vencimiento"></textarea>
+                                        <textarea @bind="item.DescripcionVencimiento" class="input-field" rows="2" style="min-height:64px;resize:vertical;" placeholder="Regla o periodo de vencimiento"></textarea>
                                     </div>
 
                                     <div style="display:grid;grid-template-columns:repeat(2,minmax(180px,1fr));gap:12px;align-items:end;margin-top:12px;">
