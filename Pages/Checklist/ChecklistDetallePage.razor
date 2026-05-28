@@ -1,13 +1,11 @@
 @page "/checklists/{Id:long}"
 @using Microsoft.AspNetCore.Authorization
-@using System.Security.Claims
 @using REA.Web.Components.Shared
 @using REA.Web.Models
 @using REA.Web.Services
 @attribute [Authorize(Roles = "admin,auxiliar")]
 @inject ChecklistService ChecklistService
 @inject NavigationManager Navigation
-@inject AuthenticationStateProvider AuthStateProvider
 
 <div class="page-container animate-fade-in">
     <div class="page-header" style="margin-bottom:20px;align-items:flex-start;gap:16px;">
@@ -18,12 +16,6 @@
         </div>
 
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
-            @if (_esAdmin)
-            {
-                <GlassButton Variant="secondary" OnClick='() => Navigation.NavigateTo("/checklists/protocolo")'>
-                    <LucideIcon Name="shield-check" Size="16" /> Protocolo
-                </GlassButton>
-            }
             <GlassButton Variant="secondary" OnClick='() => Navigation.NavigateTo("/checklists")'>
                 <LucideIcon Name="arrow-left" Size="16" /> Volver
             </GlassButton>
@@ -219,8 +211,6 @@
     private ChecklistDto? _checklist;
     private bool _cargando = true;
     private string? _error;
-    private bool _esAdmin;
-
     private int PasosCompletados => _checklist?.Pasos.Count(x => NormalizarEstado(x.Estado) == "completado") ?? 0;
     private int PasosEnProceso => _checklist?.Pasos.Count(x => NormalizarEstado(x.Estado) == "en_proceso") ?? 0;
     private decimal PorcentajeVisible => CalcularPorcentajeVisible(_checklist);
@@ -237,10 +227,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        _esAdmin = authState.User.IsInRole("admin") ||
-                   string.Equals(authState.User.FindFirst(ClaimTypes.Role)?.Value, "admin", StringComparison.OrdinalIgnoreCase);
-
         await Cargar();
     }
 
