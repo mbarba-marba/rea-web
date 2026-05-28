@@ -2,13 +2,16 @@
 @page "/dashboard"
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 @using REA.Web.Models
 @using REA.Web.Services
 @attribute [Authorize]
 @inject DashboardService DashboardService
 @inject ClienteService ClienteService
+@inject ChecklistService ChecklistService
 @inject HttpClient Http
 @inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
 
 <div class="page-container animate-fade-in">
     <div class="page-header">
@@ -23,89 +26,191 @@
         <REA.Web.Components.Feedback.ErrorBanner Message="@_error" OnDismiss="() => _error = null" />
     }
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:var(--space-md);margin-bottom:var(--space-xl);">
-        <div class="card">
-            <p class="label">Total Clientes</p>
-            <p class="display" style="font-size:28px;">@_dashboard?.TotalClientes</p>
-            <p class="caption text-muted" style="margin-top:var(--space-xs);">
-                <span class="text-success">@_dashboard?.ClientesActivos Activos</span> · <span class="text-warning">@_dashboard?.ClientesIrregulares Irregulares</span>
-            </p>
-        </div>
+    @if (_esAdmin)
+    {
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:var(--space-md);margin-bottom:var(--space-xl);">
+            <div class="card">
+                <p class="label">Total Clientes</p>
+                <p class="display" style="font-size:28px;">@_dashboard?.TotalClientes</p>
+                <p class="caption text-muted" style="margin-top:var(--space-xs);">
+                    <span class="text-success">@_dashboard?.ClientesActivos Activos</span> · <span class="text-warning">@_dashboard?.ClientesIrregulares Irregulares</span>
+                </p>
+            </div>
 
-        <div class="card">
-            <p class="label">Avance Global</p>
-            <p class="display" style="font-size:28px;">@_dashboard?.PorcentajeGlobalAvance%</p>
-            <div class="progress-bar" style="margin-top:var(--space-sm);">
-                <div class="progress-bar-fill" style="width:@(_dashboard?.PorcentajeGlobalAvance ?? 0)%;"></div>
+            <div class="card">
+                <p class="label">Avance Global</p>
+                <p class="display" style="font-size:28px;">@_dashboard?.PorcentajeGlobalAvance%</p>
+                <div class="progress-bar" style="margin-top:var(--space-sm);">
+                    <div class="progress-bar-fill" style="width:@(_dashboard?.PorcentajeGlobalAvance ?? 0)%;"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <p class="label">Completados</p>
+                <p class="display" style="font-size:28px;">@_dashboard?.ChecklistsCompletados</p>
+                <p class="caption text-muted" style="margin-top:var(--space-xs);">
+                    @_dashboard?.ChecklistsEnProceso en proceso · @_dashboard?.ChecklistsPendientes pendientes
+                </p>
+            </div>
+
+            <div class="card">
+                <p class="label">Alertas</p>
+                <p class="display" style="font-size:28px;color:var(--danger);">@_dashboard?.DeclaracionesVencidas</p>
+                <p class="caption text-muted" style="margin-top:var(--space-xs);">Declaraciones por vencer</p>
             </div>
         </div>
 
-        <div class="card">
-            <p class="label">Completados</p>
-            <p class="display" style="font-size:28px;">@_dashboard?.ChecklistsCompletados</p>
-            <p class="caption text-muted" style="margin-top:var(--space-xs);">
-                @_dashboard?.ChecklistsEnProceso en proceso · @_dashboard?.ChecklistsPendientes pendientes
-            </p>
+        <div style="margin-top:24px;">
+            <div class="card glass-elevation-2" style="padding:20px 20px 44px 20px;overflow:hidden;">
+                <h3 style="margin-bottom:8px;">Clientes por Estado</h3>
+                <REA.Web.Components.MexicoMap Estados="@_estadosClientes" />
+            </div>
         </div>
 
-        <div class="card">
-            <p class="label">Alertas</p>
-            <p class="display" style="font-size:28px;color:var(--danger);">@_dashboard?.DeclaracionesVencidas</p>
-            <p class="caption text-muted" style="margin-top:var(--space-xs);">Declaraciones por vencer</p>
-        </div>
-    </div>
-
-    <div style="margin-top:24px;">
-        <div class="card glass-elevation-2" style="padding:20px 20px 44px 20px;overflow:hidden;">
-            <h3 style="margin-bottom:8px;">Clientes por Estado</h3>
-            <REA.Web.Components.MexicoMap Estados="@_estadosClientes" />
-        </div>
-    </div>
-
-    <div class="card glass-elevation-2" style="margin-top:24px;padding:0;overflow:hidden;">
-        <div style="padding:var(--space-lg);border-bottom:1px solid var(--border-subtle);">
-            <h3>Clientes Recientes</h3>
-        </div>
-        <div style="overflow-x:auto;">
-            @if (_cargando)
-            {
-                <div style="text-align:center;padding:40px;color:var(--text-secondary);">Cargando...</div>
-            }
-            else if (_clientes.Count == 0)
-            {
-                <div style="text-align:center;padding:40px;color:var(--text-secondary);">No hay clientes registrados</div>
-            }
-            else
-            {
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>RFC</th>
-                            <th>Razón Social</th>
-                            <th>Clasificación</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var c in _clientes)
-                        {
+        <div class="card glass-elevation-2" style="margin-top:24px;padding:0;overflow:hidden;">
+            <div style="padding:var(--space-lg);border-bottom:1px solid var(--border-subtle);">
+                <h3>Clientes Recientes</h3>
+            </div>
+            <div style="overflow-x:auto;">
+                @if (_cargando)
+                {
+                    <div style="text-align:center;padding:40px;color:var(--text-secondary);">Cargando...</div>
+                }
+                else if (_clientes.Count == 0)
+                {
+                    <div style="text-align:center;padding:40px;color:var(--text-secondary);">No hay clientes registrados</div>
+                }
+                else
+                {
+                    <table class="data-table">
+                        <thead>
                             <tr>
-                                <td class="mono">@c.Rfc</td>
-                                <td>@c.RazonSocial</td>
-                                <td>
-                                    <REA.Web.Components.Data.BadgeCliente Clasificacion="@c.Clasificacion" />
-                                </td>
+                                <th>RFC</th>
+                                <th>Razón Social</th>
+                                <th>Clasificación</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
-            }
+                        </thead>
+                        <tbody>
+                            @foreach (var c in _clientes)
+                            {
+                                <tr>
+                                    <td class="mono">@c.Rfc</td>
+                                    <td>@c.RazonSocial</td>
+                                    <td>
+                                        <REA.Web.Components.Data.BadgeCliente Clasificacion="@c.Clasificacion" />
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
         </div>
-    </div>
+    }
+    else
+    {
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:var(--space-md);margin-bottom:var(--space-xl);">
+            <div class="card">
+                <p class="label">Clientes Asignados</p>
+                <p class="display" style="font-size:28px;">@_dashboard?.TotalClientes</p>
+                <p class="caption text-muted" style="margin-top:var(--space-xs);">Expedientes visibles en tu libro de trabajo.</p>
+            </div>
+
+            <div class="card">
+                <p class="label">En Proceso</p>
+                <p class="display" style="font-size:28px;">@_dashboard?.ChecklistsEnProceso</p>
+                <p class="caption text-muted" style="margin-top:var(--space-xs);">Checklists abiertos que requieren seguimiento.</p>
+            </div>
+
+            <div class="card">
+                <p class="label">Pendientes</p>
+                <p class="display" style="font-size:28px;">@_dashboard?.ChecklistsPendientes</p>
+                <p class="caption text-muted" style="margin-top:var(--space-xs);">Trabajo por arrancar dentro de tu cartera.</p>
+            </div>
+
+            <div class="card">
+                <p class="label">Completados</p>
+                <p class="display" style="font-size:28px;">@_dashboard?.ChecklistsCompletados</p>
+                <p class="caption text-muted" style="margin-top:var(--space-xs);">Expedientes cerrados de tus clientes.</p>
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,0.85fr);gap:16px;align-items:start;">
+            <div class="card glass-elevation-2" style="padding:0;overflow:hidden;">
+                <div style="padding:var(--space-lg);border-bottom:1px solid var(--border-subtle);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <div>
+                        <h3>Mi Libro de Trabajo</h3>
+                        <p class="body-small text-muted" style="margin-top:6px;">Solo se muestran checklists de clientes que tienes asignados.</p>
+                    </div>
+                    <GlassButton Variant="secondary" OnClick='() => Navigation.NavigateTo("/checklists")'>
+                        <LucideIcon Name="list-checks" Size="16" /> Abrir bandeja
+                    </GlassButton>
+                </div>
+                <div style="overflow-x:auto;">
+                    @if (_misChecklists.Count == 0)
+                    {
+                        <div style="text-align:center;padding:40px;color:var(--text-secondary);">No hay checklists asignados para mostrar</div>
+                    }
+                    else
+                    {
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Periodo</th>
+                                    <th>Avance</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var checklist in _misChecklists)
+                                {
+                                    <tr style="cursor:pointer;" @onclick='() => Navigation.NavigateTo($"/checklists/{checklist.ChecklistId}")'>
+                                        <td>@checklist.ClienteNombre</td>
+                                        <td>@checklist.PeriodoNombre</td>
+                                        <td class="mono">@ObtenerPorcentajeVisible(checklist)%</td>
+                                        <td><REA.Web.Components.Data.BadgeEstado Estado="@ObtenerEstado(checklist)" /></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+
+            <div class="card glass-elevation-2" style="padding:0;overflow:hidden;">
+                <div style="padding:var(--space-lg);border-bottom:1px solid var(--border-subtle);">
+                    <h3>Próximos Vencimientos</h3>
+                    <p class="body-small text-muted" style="margin-top:6px;">Pendientes cercanos dentro de tu operación.</p>
+                </div>
+                @if (_dashboard?.ProximosVencimientos?.Count > 0)
+                {
+                    <div style="display:grid;gap:0;">
+                        @foreach (var item in _dashboard.ProximosVencimientos)
+                        {
+                            <div style="padding:14px 16px;border-bottom:1px solid var(--border-subtle);display:flex;justify-content:space-between;gap:12px;align-items:center;">
+                                <div>
+                                    <div style="font-weight:600;color:var(--text-primary);">@item.Cliente</div>
+                                    <div class="body-small text-muted" style="margin-top:4px;">Seguimiento próximo en libro de trabajo</div>
+                                </div>
+                                <div class="mono" style="font-weight:700;color:@(item.DiasRestantes <= 3 ? "var(--danger)" : "var(--text-primary)")">@item.DiasRestantes d</div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div style="text-align:center;padding:40px;color:var(--text-secondary);">No hay vencimientos próximos en tu cartera</div>
+                }
+            </div>
+        </div>
+    }
 </div>
 
 @code {
     private DashboardDto? _dashboard;
     private List<ClienteDto> _clientes = new();
+    private List<ChecklistDto> _misChecklists = new();
     private List<EstadoClienteDto> _estadosClientes = new();
     private bool _cargando = true;
     private string? _error;
@@ -116,32 +221,82 @@
         try
         {
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-            _esAdmin = authState.User.IsInRole("admin");
+            _esAdmin = authState.User.IsInRole("admin") ||
+                       string.Equals(authState.User.FindFirst(ClaimTypes.Role)?.Value, "admin", StringComparison.OrdinalIgnoreCase);
 
-            var dashTask = DashboardService.ObtenerResumenAsync();
-            var dashResult = await dashTask;
+            var dashResult = await DashboardService.ObtenerResumenAsync();
             if (dashResult?.Ok == true)
+            {
                 _dashboard = dashResult.Data;
+            }
 
             if (_esAdmin)
             {
                 var clientesResult = await ClienteService.ListarAsync(page: 1, limit: 5);
                 if (clientesResult?.Ok == true)
+                {
                     _clientes = clientesResult.Data ?? new();
-            }
+                }
 
-            try
-            {
-                var mapResult = await Http.GetFromJsonAsync<ApiResponse<List<EstadoClienteDto>>>("api/v1/dashboard/clientes-por-estado");
-                if (mapResult?.Ok == true)
-                    _estadosClientes = mapResult.Data ?? new();
+                try
+                {
+                    var mapResult = await Http.GetFromJsonAsync<ApiResponse<List<EstadoClienteDto>>>("api/v1/dashboard/clientes-por-estado");
+                    if (mapResult?.Ok == true)
+                    {
+                        _estadosClientes = mapResult.Data ?? new();
+                    }
+                }
+                catch
+                {
+                }
             }
-            catch { }
+            else
+            {
+                var checklistsResult = await ChecklistService.ListarAsync(page: 1, limit: 8);
+                if (checklistsResult?.Ok == true)
+                {
+                    _misChecklists = checklistsResult.Data ?? new();
+                }
+            }
         }
         catch (Exception ex)
         {
             _error = ex.Message;
         }
+
         _cargando = false;
+    }
+
+    private static decimal ObtenerPorcentajeVisible(ChecklistDto checklist)
+    {
+        if (checklist.Pasos?.Count > 0)
+        {
+            var completados = checklist.Pasos.Count(x => x.Estado == "completado");
+            return Math.Round((decimal)completados * 100m / checklist.Pasos.Count, 0);
+        }
+
+        return checklist.PorcentajeAvance;
+    }
+
+    private static string ObtenerEstado(ChecklistDto checklist)
+    {
+        var avance = ObtenerPorcentajeVisible(checklist);
+
+        if (checklist.Completado || avance >= 100)
+        {
+            return "completado";
+        }
+
+        if (checklist.Cerrado)
+        {
+            return "bloqueado";
+        }
+
+        if (avance <= 0)
+        {
+            return "pendiente";
+        }
+
+        return "en_proceso";
     }
 }

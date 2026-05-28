@@ -10,6 +10,13 @@ public class DashboardDto
     public int ChecklistsPendientes { get; set; }
     public decimal PorcentajeGlobalAvance { get; set; }
     public int DeclaracionesVencidas { get; set; }
+    public List<ProximoVencimientoDto> ProximosVencimientos { get; set; } = new();
+}
+
+public class ProximoVencimientoDto
+{
+    public string Cliente { get; set; } = string.Empty;
+    public int DiasRestantes { get; set; }
 }
 
 public class PeriodoDto
