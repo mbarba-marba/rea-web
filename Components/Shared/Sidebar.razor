@@ -19,8 +19,8 @@
 
     @* Brand *@
     <div class="flex items-center gap-2.5 px-3 border-b border-black/[0.06] flex-shrink-0 h-14">
-        <div class="w-7 h-7 rounded-lg bg-[#076280] flex items-center justify-center flex-shrink-0 shadow-sm">
-            <span class="text-white text-[12px] font-bold tracking-wide">R</span>
+        <div class="w-8 h-8 rounded-xl bg-white/70 border border-white/60 flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
+            <img src="/img/logo-rea.png" alt="REA" class="w-6 h-6 object-contain" />
         </div>
         <span class="@BrandTextCls">REA</span>
     </div>
@@ -105,6 +105,12 @@
                      class="@NavCls">
                 <span class="@IconCls"><LucideIcon Name="clipboard-check" Size="18" /></span>
                 <span class="@LabelCls">Protocolo Checklist</span>
+            </NavLink>
+
+            <NavLink href="/configuracion/categorias-egresos-xml" Match="NavLinkMatch.Prefix" title="Categorias XML"
+                     class="@NavCls">
+                <span class="@IconCls"><LucideIcon Name="tags" Size="18" /></span>
+                <span class="@LabelCls">Categorias XML</span>
             </NavLink>
 
         </AuthorizeView>

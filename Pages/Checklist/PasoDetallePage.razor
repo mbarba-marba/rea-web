@@ -50,9 +50,9 @@
             </div>
 
             <div class="card" style="padding:16px 18px;">
-                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">@(EsPasoXml ? "Cargas XML" : "Evidencias")</div>
-                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@(EsPasoXml ? _xmlCargasPaso.Count : _evidencias.Count)</div>
-                <div class="body-small text-muted" style="margin-top:4px;">@(EsPasoXml ? "Emitidos y recibidos ligados al cliente y periodo." : "Archivos adjuntos a este paso.")</div>
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">@(EsPasoXml ? "Egresos sin categoria" : "Evidencias")</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@(EsPasoXml ? FacturasSinCategoria.Count : _evidencias.Count)</div>
+                <div class="body-small text-muted" style="margin-top:4px;">@(EsPasoXml ? "No entran a ISR/IVA hasta que alguien los clasifique." : "Archivos adjuntos a este paso.")</div>
             </div>
 
             <div class="card" style="padding:16px 18px;">
@@ -266,6 +266,12 @@
                                                             <div style="font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@(!string.IsNullOrWhiteSpace(carga.NombreArchivo) ? carga.NombreArchivo : carga.NombreZip)</div>
                                                         </div>
                                                         <div class="body-small text-muted" style="margin-top:6px;">@carga.CreatedAt.ToString("dd/MM/yy HH:mm") · @carga.Procesados procesados · @carga.ConErrores errores</div>
+                                                        @if (!string.IsNullOrWhiteSpace(carga.ErrorMensaje))
+                                                        {
+                                                            <div style="margin-top:8px;padding:10px 12px;border-radius:12px;background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.16);color:#b45309;font-size:12px;white-space:pre-line;">
+                                                                @carga.ErrorMensaje
+                                                            </div>
+                                                        }
                                                     </div>
                                                     <BadgeEstado Estado="@carga.Estado" />
                                                 </div>
@@ -281,27 +287,38 @@
                                         <div class="body-small text-muted">Facturas extraidas</div>
                                         <div style="font-weight:700;color:var(--text-primary);margin-top:4px;">Desglose fiscal por cliente y periodo</div>
                                     </div>
-                                    <div class="body-small text-muted">@_facturasXmlPaso.Count CFDI</div>
+                                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+                                        <span class="badge badge-muted">@FacturasSinCategoria.Count sin categoria</span>
+                                        <select class="input-field" style="min-width:180px;" @bind="_filtroCategoriaXml">
+                                            <option value="todos">Todos los CFDI</option>
+                                            <option value="sin_categoria">Solo sin categoria</option>
+                                            <option value="categorizados">Solo categorizados</option>
+                                        </select>
+                                        <GlassButton Variant="secondary" OnClick="AbrirModalCategorias" Disabled="@(FacturasSinCategoria.Count == 0)">
+                                            <LucideIcon Name="tags" Size="16" /> Clasificar egresos
+                                        </GlassButton>
+                                    </div>
                                 </div>
 
-                                @if (_facturasXmlPaso.Count == 0)
+                                @if (FacturasFiltradasXml.Count == 0)
                                 {
                                     <div class="empty-state" style="padding:24px 18px;">
                                         <LucideIcon Name="receipt-text" Size="28" />
-                                        <div class="empty-state-heading" style="font-size:16px;">Sin CFDI procesados</div>
-                                        <div class="empty-state-body">Cuando las cargas emitidas o recibidas se procesen, aqui veras el tipo, metodo de pago, complementos e impuestos detectados.</div>
+                                        <div class="empty-state-heading" style="font-size:16px;">Sin CFDI en este filtro</div>
+                                        <div class="empty-state-body">Ajusta el filtro o carga nuevos XML para revisar el desglose fiscal del periodo.</div>
                                     </div>
                                 }
                                 else
                                 {
                                     <div style="overflow:auto;margin-top:12px;">
-                                        <table style="width:100%;border-collapse:collapse;min-width:@($"{860 + (_columnasImpuestoXml.Count * 120)}px");">
+                                        <table style="width:100%;border-collapse:collapse;min-width:@($"{980 + (_columnasImpuestoXml.Count * 120)}px");">
                                             <thead>
                                                 <tr style="border-bottom:1px solid var(--border-color);">
                                                     <th style="text-align:left;padding:10px 8px;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Fecha</th>
                                                     <th style="text-align:left;padding:10px 8px;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">UUID</th>
                                                     <th style="text-align:left;padding:10px 8px;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Tipo</th>
                                                     <th style="text-align:left;padding:10px 8px;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Metodo</th>
+                                                    <th style="text-align:left;padding:10px 8px;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Categoria</th>
                                                     <th style="text-align:left;padding:10px 8px;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Complementos</th>
                                                     @foreach (var columna in _columnasImpuestoXml)
                                                     {
@@ -311,7 +328,7 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                @foreach (var factura in _facturasXmlPaso)
+                                                @foreach (var factura in FacturasFiltradasXml)
                                                 {
                                                     <tr style="border-bottom:1px solid var(--border-color);">
                                                         <td style="padding:12px 8px;color:var(--text-primary);white-space:nowrap;">@factura.FechaEmision.ToString("dd/MM/yyyy")</td>
@@ -321,6 +338,16 @@
                                                         </td>
                                                         <td style="padding:12px 8px;color:var(--text-primary);white-space:nowrap;">@factura.Tipo.ToUpperInvariant()</td>
                                                         <td style="padding:12px 8px;color:var(--text-primary);white-space:nowrap;">@(string.IsNullOrWhiteSpace(factura.MetodoPago) ? "-" : factura.MetodoPago)</td>
+                                                        <td style="padding:12px 8px;color:var(--text-primary);white-space:nowrap;">
+                                                            @if (EsEgreso(factura))
+                                                            {
+                                                                <span class="badge @(string.IsNullOrWhiteSpace(factura.CategoriaGastoXml) ? "badge-muted" : "badge-accent")">@EtiquetaCategoriaFactura(factura)</span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="body-small text-muted">-</span>
+                                                            }
+                                                        </td>
                                                         <td style="padding:12px 8px;color:var(--text-primary);min-width:160px;">
                                                             @(factura.TieneComplemento
                                                                 ? (!string.IsNullOrWhiteSpace(factura.ComplementosDetectados) ? factura.ComplementosDetectados : "Complemento detectado")
@@ -428,6 +455,99 @@
     }
 </div>
 
+@if (_modalCategoriasVisible)
+{
+    <div class="fixed inset-0 z-[1200] flex items-center justify-center bg-black/35 backdrop-blur-sm p-6" @onclick="CerrarModalCategorias">
+        <div class="card" style="width:min(1180px,96vw);max-height:88vh;overflow:hidden;padding:0;" @onclick:stopPropagation="true">
+            <div class="surface-panel-header" style="padding:18px 20px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;">
+                <div>
+                    <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Clasificacion opcional</div>
+                    <h3 style="margin-top:4px;">UUID de egresos pendientes</h3>
+                    <div class="body-small text-muted" style="margin-top:6px;">Puedes clasificar ahora o cerrar el modal y dejar pendientes para despues. Solo los egresos categorizados alimentan ISR e IVA automaticos.</div>
+                </div>
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                    <GlassButton Variant="secondary" OnClick="CerrarModalCategorias">
+                        <LucideIcon Name="x" Size="16" /> Cerrar
+                    </GlassButton>
+                    <GlassButton Variant="primary" OnClick="GuardarCategoriasPendientes" Disabled="@(_guardandoCategorias || !_pendientesCategoria.Any(x => !string.IsNullOrWhiteSpace(x.CategoriaSeleccionada)))">
+                        <LucideIcon Name="save" Size="16" /> @(_guardandoCategorias ? "Guardando..." : "Guardar categorias")
+                    </GlassButton>
+                </div>
+            </div>
+
+            <div style="padding:18px 20px;display:grid;gap:14px;">
+                <div class="card" style="padding:14px 16px;background:color-mix(in srgb, var(--glass-bg-primary) 82%, var(--bg-base) 18%);">
+                    <div style="display:flex;align-items:end;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+                        <div style="display:grid;gap:8px;grid-template-columns:minmax(220px,1fr) auto;">
+                            <div>
+                                <label class="input-label">Aplicar en lote</label>
+                                <select class="input-field" @bind="_categoriaLote">
+                                    <option value="">Selecciona categoria</option>
+                                    @foreach (var categoria in _opcionesCategoriasGasto)
+                                    {
+                                        <option value="@categoria.Value">@categoria.Label</option>
+                                    }
+                                </select>
+                            </div>
+                            <GlassButton Variant="secondary" OnClick="AplicarCategoriaLote" Disabled="@(string.IsNullOrWhiteSpace(_categoriaLote) || !_pendientesCategoria.Any(x => x.Seleccionado))">
+                                <LucideIcon Name="wand-sparkles" Size="16" /> Aplicar a seleccionados
+                            </GlassButton>
+                        </div>
+                        <div class="body-small text-muted">@_pendientesCategoria.Count pendiente(s) · @_pendientesCategoria.Count(x => x.Seleccionado) seleccionado(s)</div>
+                    </div>
+                </div>
+
+                <div style="overflow:auto;">
+                    <table style="width:100%;border-collapse:collapse;min-width:1100px;">
+                        <thead>
+                            <tr style="border-bottom:1px solid var(--border-color);">
+                                <th style="padding:10px 8px;text-align:center;width:48px;"></th>
+                                <th style="padding:10px 8px;text-align:left;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">UUID</th>
+                                <th style="padding:10px 8px;text-align:left;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Fecha</th>
+                                <th style="padding:10px 8px;text-align:left;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Proveedor</th>
+                                <th style="padding:10px 8px;text-align:right;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Sub-neto</th>
+                                <th style="padding:10px 8px;text-align:right;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Total</th>
+                                <th style="padding:10px 8px;text-align:left;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Metodo</th>
+                                <th style="padding:10px 8px;text-align:left;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Impuestos</th>
+                                <th style="padding:10px 8px;text-align:left;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Categoria</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var factura in _pendientesCategoria)
+                            {
+                                <tr style="border-bottom:1px solid var(--border-color);">
+                                    <td style="padding:12px 8px;text-align:center;">
+                                        <input type="checkbox" @bind="factura.Seleccionado" style="width:16px;height:16px;" />
+                                    </td>
+                                    <td style="padding:12px 8px;color:var(--text-primary);min-width:200px;">
+                                        <div style="font-weight:700;">@factura.Uuid</div>
+                                        <div class="body-small text-muted" style="margin-top:4px;">@factura.RfcEmisor</div>
+                                    </td>
+                                    <td style="padding:12px 8px;color:var(--text-primary);white-space:nowrap;">@factura.FechaEmision.ToString("dd/MM/yyyy")</td>
+                                    <td style="padding:12px 8px;color:var(--text-primary);min-width:220px;">@(string.IsNullOrWhiteSpace(factura.NombreEmisor) ? "-" : factura.NombreEmisor)</td>
+                                    <td style="padding:12px 8px;text-align:right;color:var(--text-primary);white-space:nowrap;">@factura.SubNeto.ToString("N2")</td>
+                                    <td style="padding:12px 8px;text-align:right;color:var(--text-primary);white-space:nowrap;">@factura.Total.ToString("N2")</td>
+                                    <td style="padding:12px 8px;color:var(--text-primary);white-space:nowrap;">@(string.IsNullOrWhiteSpace(factura.MetodoPago) ? "-" : factura.MetodoPago)</td>
+                                    <td style="padding:12px 8px;color:var(--text-primary);min-width:220px;">@ResumenImpuestosFactura(factura)</td>
+                                    <td style="padding:12px 8px;min-width:180px;">
+                                        <select class="input-field" @bind="factura.CategoriaSeleccionada">
+                                            <option value="">Sin categoria</option>
+                                            @foreach (var categoria in _opcionesCategoriasGasto)
+                                            {
+                                                <option value="@categoria.Value">@categoria.Label</option>
+                                            }
+                                        </select>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     [Parameter] public long ChecklistId { get; set; }
     [Parameter] public long PasoId { get; set; }
@@ -447,6 +567,7 @@
     private List<XmlCargaDto> _xmlCargasPaso = new();
     private List<XmlFacturaDto> _facturasXmlPaso = new();
     private List<string> _columnasImpuestoXml = new();
+    private List<FacturaCategoriaDraft> _pendientesCategoria = new();
     private string _titulo = "Paso";
     private string _subtitulo = "";
     private string _notas = "";
@@ -463,14 +584,36 @@
     private IBrowserFile? _archivoRecibidos;
     private bool _subiendoEmitidos;
     private bool _subiendoRecibidos;
+    private bool _modalCategoriasVisible;
+    private bool _guardandoCategorias;
     private bool _esAdmin;
     private bool _esAuxiliar;
+    private string _filtroCategoriaXml = "todos";
+    private string? _categoriaLote;
     private bool EsPasoXml => _paso?.NumeroPaso == 2;
     private string EstadoActual => NormalizarEstado(_paso?.Estado);
     private bool TieneNotaOperativa => !string.IsNullOrWhiteSpace(_notas);
     private bool TieneEvidencias => EsPasoXml ? _xmlCargasPaso.Count > 0 : _evidencias.Count > 0;
     private bool PuedeCompletarPaso => string.IsNullOrWhiteSpace(MensajeBloqueoCompletar);
     private string? MensajeBloqueoCompletar => ObtenerMensajeBloqueoCompletar();
+    private IReadOnlyList<XmlFacturaDto> FacturasSinCategoria => _facturasXmlPaso
+        .Where(x => EsEgreso(x) && string.IsNullOrWhiteSpace(x.CategoriaGastoXml))
+        .ToList();
+    private IReadOnlyList<XmlFacturaDto> FacturasFiltradasXml => _filtroCategoriaXml switch
+    {
+        "sin_categoria" => _facturasXmlPaso.Where(x => EsEgreso(x) && string.IsNullOrWhiteSpace(x.CategoriaGastoXml)).ToList(),
+        "categorizados" => _facturasXmlPaso.Where(x => !EsEgreso(x) || !string.IsNullOrWhiteSpace(x.CategoriaGastoXml)).ToList(),
+        _ => _facturasXmlPaso
+    };
+    private readonly (string Value, string Label)[] _opcionesCategoriasGasto =
+    [
+        ("Compra", "Compra"),
+        ("Gasto", "Gasto"),
+        ("NoDeducible", "No deducible"),
+        ("Inversion", "Inversion"),
+        ("DeduccionPersonal", "Deduccion personal"),
+        ("Restaurante", "Restaurante")
+    ];
 
     protected override async Task OnInitializedAsync()
     {
@@ -576,12 +719,48 @@
                 _facturasXmlPaso = new();
                 _columnasImpuestoXml = new();
             }
+
+            await CargarPendientesCategoriaAsync(false);
         }
         catch
         {
             _xmlCargasPaso = new();
             _facturasXmlPaso = new();
             _columnasImpuestoXml = new();
+            _pendientesCategoria = new();
+        }
+    }
+
+    private async Task CargarPendientesCategoriaAsync(bool abrirSiHayPendientes)
+    {
+        if (_checklist == null)
+        {
+            _pendientesCategoria = new();
+            return;
+        }
+
+        var pendientes = await XmlService.ObtenerFacturasPendientesCategoriaAsync(_checklist.ClienteId, _checklist.PeriodoId);
+        _pendientesCategoria = (pendientes?.Ok == true ? pendientes.Data : null)?
+            .OrderByDescending(x => x.FechaEmision)
+            .ThenByDescending(x => x.Total)
+            .Select(x => new FacturaCategoriaDraft
+            {
+                FacturaId = x.FacturaId,
+                Uuid = x.Uuid,
+                FechaEmision = x.FechaEmision,
+                RfcEmisor = x.RfcEmisor,
+                NombreEmisor = x.NombreEmisor,
+                MetodoPago = x.MetodoPago,
+                SubNeto = x.SubNeto,
+                Total = x.Total,
+                Impuestos = x.Impuestos ?? new(),
+                CategoriaSeleccionada = x.CategoriaGastoXml
+            })
+            .ToList() ?? new();
+
+        if (abrirSiHayPendientes && _pendientesCategoria.Count > 0)
+        {
+            _modalCategoriasVisible = true;
         }
     }
 
@@ -718,7 +897,10 @@
             var result = await XmlService.SubirCargaAsync(content);
             if (result?.Ok == true)
             {
-                _mensaje = $"Carga de {TituloTipoCarga(tipoCarga).ToLowerInvariant()} procesada correctamente.";
+                var carga = result.Data;
+                _mensaje = carga != null && carga.ConErrores > 0
+                    ? $"Se procesaron {carga.Procesados} XML de {TituloTipoCarga(tipoCarga).ToLowerInvariant()} y {carga.ConErrores} quedaron rechazados por direccion incorrecta o por error de lectura."
+                    : $"Carga de {TituloTipoCarga(tipoCarga).ToLowerInvariant()} procesada correctamente.";
                 if (tipoCarga == "emitidos")
                 {
                     _archivoEmitidos = null;
@@ -733,6 +915,7 @@
                 }
 
                 await CargarXmlPasoAsync();
+                await CargarPendientesCategoriaAsync(true);
                 return;
             }
 
@@ -760,6 +943,87 @@
 
     private Task SubirXmlRecibidos()
         => SubirXml("recibidos");
+
+    private void AbrirModalCategorias()
+    {
+        _modalCategoriasVisible = true;
+    }
+
+    private void CerrarModalCategorias()
+    {
+        _modalCategoriasVisible = false;
+        _categoriaLote = null;
+        foreach (var factura in _pendientesCategoria)
+        {
+            factura.Seleccionado = false;
+        }
+    }
+
+    private void AplicarCategoriaLote()
+    {
+        if (string.IsNullOrWhiteSpace(_categoriaLote))
+        {
+            return;
+        }
+
+        foreach (var factura in _pendientesCategoria.Where(x => x.Seleccionado))
+        {
+            factura.CategoriaSeleccionada = _categoriaLote;
+        }
+    }
+
+    private async Task GuardarCategoriasPendientes()
+    {
+        if (_checklist == null)
+        {
+            return;
+        }
+
+        var items = _pendientesCategoria
+            .Where(x => !string.IsNullOrWhiteSpace(x.CategoriaSeleccionada))
+            .Select(x => new ActualizarCategoriaFacturaItemDto
+            {
+                FacturaId = x.FacturaId,
+                Categoria = x.CategoriaSeleccionada
+            })
+            .ToList();
+
+        if (items.Count == 0)
+        {
+            _mensaje = "No hay categorias nuevas para guardar.";
+            return;
+        }
+
+        _guardandoCategorias = true;
+        try
+        {
+            var result = await XmlService.ActualizarCategoriasFacturasAsync(new ActualizarCategoriasFacturasRequest
+            {
+                ClienteId = _checklist.ClienteId,
+                PeriodoId = _checklist.PeriodoId,
+                Items = items
+            });
+
+            if (result?.Ok == true)
+            {
+                _mensaje = "Categorias guardadas correctamente.";
+                _modalCategoriasVisible = false;
+                await CargarXmlPasoAsync();
+            }
+            else
+            {
+                _error = result?.Error?.Message ?? "No se pudieron guardar las categorias.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _guardandoCategorias = false;
+        }
+    }
 
     private async Task SubirEvidencia()
     {
@@ -914,4 +1178,42 @@
 
     private static string TituloTipoImpuesto(string? tipo)
         => string.Equals(tipo, "retencion", StringComparison.OrdinalIgnoreCase) ? "Ret." : "Tras.";
+
+    private static bool EsEgreso(XmlFacturaDto factura)
+        => string.Equals(factura.Tipo, "egreso", StringComparison.OrdinalIgnoreCase);
+
+    private static string EtiquetaCategoriaFactura(XmlFacturaDto factura)
+        => EtiquetaCategoria(factura.CategoriaGastoXml);
+
+    private static string EtiquetaCategoria(string? categoria)
+        => categoria switch
+        {
+            "NoDeducible" => "No deducible",
+            "DeduccionPersonal" => "Deduccion personal",
+            "Inversion" => "Inversion",
+            null or "" => "Sin categoria",
+            _ => categoria
+        };
+
+    private static string ResumenImpuestosFactura(FacturaCategoriaDraft factura)
+        => factura.Impuestos.Count == 0
+            ? "-"
+            : string.Join(" · ", factura.Impuestos
+                .GroupBy(x => $"{x.NombreImpuesto} {TituloTipoImpuesto(x.Tipo)}")
+                .Select(x => $"{x.Key}: {x.Sum(y => y.Importe):N2}"));
+
+    private sealed class FacturaCategoriaDraft
+    {
+        public long FacturaId { get; set; }
+        public string Uuid { get; set; } = string.Empty;
+        public DateOnly FechaEmision { get; set; }
+        public string RfcEmisor { get; set; } = string.Empty;
+        public string? NombreEmisor { get; set; }
+        public string? MetodoPago { get; set; }
+        public decimal SubNeto { get; set; }
+        public decimal Total { get; set; }
+        public List<XmlFacturaImpuestoDto> Impuestos { get; set; } = new();
+        public string? CategoriaSeleccionada { get; set; }
+        public bool Seleccionado { get; set; }
+    }
 }

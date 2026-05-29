@@ -33,6 +33,7 @@ public class XmlService
     public async Task<ApiResponse<List<XmlFacturaDto>>?> BuscarFacturasAsync(
         long? clienteId = null,
         long? periodoId = null,
+        int? anio = null,
         string? tipo = null,
         string? metodoPago = null,
         int page = 1,
@@ -41,9 +42,28 @@ public class XmlService
         var query = $"api/v1/xml/facturas?page={page}&limit={limit}";
         if (clienteId.HasValue) query += $"&clienteId={clienteId}";
         if (periodoId.HasValue) query += $"&periodoId={periodoId}";
+        if (anio.HasValue) query += $"&anio={anio}";
         if (!string.IsNullOrWhiteSpace(tipo)) query += $"&tipo={Uri.EscapeDataString(tipo)}";
         if (!string.IsNullOrWhiteSpace(metodoPago)) query += $"&metodoPago={Uri.EscapeDataString(metodoPago)}";
         return await _http.GetFromJsonAsync<ApiResponse<List<XmlFacturaDto>>>(query);
+    }
+
+    public async Task<ApiResponse<List<XmlFacturaDto>>?> ObtenerFacturasPendientesCategoriaAsync(long clienteId, long periodoId)
+        => await _http.GetFromJsonAsync<ApiResponse<List<XmlFacturaDto>>>($"api/v1/xml/facturas/pendientes-categoria?clienteId={clienteId}&periodoId={periodoId}");
+
+    public async Task<ApiResponse<List<XmlFacturaDto>>?> ActualizarCategoriasFacturasAsync(ActualizarCategoriasFacturasRequest request)
+    {
+        var response = await _http.PutAsJsonAsync("api/v1/xml/facturas/categorias", request);
+        return await response.Content.ReadFromJsonAsync<ApiResponse<List<XmlFacturaDto>>>();
+    }
+
+    public async Task<ApiResponse<List<CategoriaEgresoXmlConfigDto>>?> ObtenerConfiguracionCategoriasAsync()
+        => await _http.GetFromJsonAsync<ApiResponse<List<CategoriaEgresoXmlConfigDto>>>("api/v1/xml/categorias-egresos-config");
+
+    public async Task<ApiResponse<List<CategoriaEgresoXmlConfigDto>>?> ActualizarConfiguracionCategoriasAsync(ActualizarCategoriasEgresosXmlConfigRequest request)
+    {
+        var response = await _http.PutAsJsonAsync("api/v1/xml/categorias-egresos-config", request);
+        return await response.Content.ReadFromJsonAsync<ApiResponse<List<CategoriaEgresoXmlConfigDto>>>();
     }
 }
 
@@ -75,6 +95,8 @@ public class XmlFacturaDto
     public string RfcReceptor { get; set; } = string.Empty;
     public string? NombreReceptor { get; set; }
     public decimal Subtotal { get; set; }
+    public decimal Descuento { get; set; }
+    public decimal SubNeto { get; set; }
     public decimal Total { get; set; }
     public decimal IvaTrasladado { get; set; }
     public decimal IepsTrasladado { get; set; }
@@ -82,11 +104,56 @@ public class XmlFacturaDto
     public decimal IsrRetenido { get; set; }
     public string Tipo { get; set; } = string.Empty;
     public string? MetodoPago { get; set; }
+    public string? CategoriaGastoXml { get; set; }
+    public long? CategoriaAsignadaPor { get; set; }
+    public DateTime? CategoriaAsignadaEn { get; set; }
     public bool TieneComplemento { get; set; }
     public string? ComplementosDetectados { get; set; }
     public DateOnly FechaEmision { get; set; }
+    public DateOnly? FechaPago { get; set; }
+    public bool EsValida { get; set; }
+    public string? FormaPago { get; set; }
+    public string Moneda { get; set; } = "MXN";
     public string? ErrorValidacion { get; set; }
     public List<XmlFacturaImpuestoDto> Impuestos { get; set; } = new();
+}
+
+public class CategoriaEgresoXmlConfigDto
+{
+    public string Categoria { get; set; } = string.Empty;
+    public string IsrDestino { get; set; } = string.Empty;
+    public decimal IsrPorcentajeDeducible { get; set; }
+    public string IvaModoAcreditamiento { get; set; } = string.Empty;
+    public decimal IvaPorcentajeAcreditable { get; set; }
+    public bool ActivaParaReporte { get; set; }
+}
+
+public class ActualizarCategoriasFacturasRequest
+{
+    public long ClienteId { get; set; }
+    public long PeriodoId { get; set; }
+    public List<ActualizarCategoriaFacturaItemDto> Items { get; set; } = new();
+}
+
+public class ActualizarCategoriaFacturaItemDto
+{
+    public long FacturaId { get; set; }
+    public string? Categoria { get; set; }
+}
+
+public class ActualizarCategoriasEgresosXmlConfigRequest
+{
+    public List<ActualizarCategoriaEgresoXmlConfigItemDto> Items { get; set; } = new();
+}
+
+public class ActualizarCategoriaEgresoXmlConfigItemDto
+{
+    public string Categoria { get; set; } = string.Empty;
+    public string IsrDestino { get; set; } = string.Empty;
+    public decimal IsrPorcentajeDeducible { get; set; }
+    public string IvaModoAcreditamiento { get; set; } = string.Empty;
+    public decimal IvaPorcentajeAcreditable { get; set; }
+    public bool ActivaParaReporte { get; set; }
 }
 
 public class XmlFacturaImpuestoDto

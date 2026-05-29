@@ -1,0 +1,248 @@
+@page "/configuracion/categorias-egresos-xml"
+@using Microsoft.AspNetCore.Authorization
+@using REA.Web.Components.Shared
+@using REA.Web.Services
+@attribute [Authorize(Roles = "admin")]
+@inject XmlService XmlService
+@inject NavigationManager Navigation
+
+<div class="page-container animate-fade-in">
+    <div class="page-header" style="margin-bottom:20px;align-items:flex-start;gap:16px;">
+        <div class="page-header-left">
+            <h1>Categorias de Egresos XML</h1>
+            <Breadcrumb Items="@_breadcrumb" />
+            <p class="body-small text-muted" style="margin-top:6px;">Define como cada categoria fija de egresos impacta ISR, acreditamiento de IVA y la salida de reportes.</p>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+            <GlassButton Variant="secondary" OnClick='() => Navigation.NavigateTo("/calculos")'>
+                <LucideIcon Name="arrow-left" Size="16" /> Volver a calculos
+            </GlassButton>
+            <GlassButton Variant="primary" OnClick="Guardar" Disabled="@(_guardando || _cargando)">
+                <LucideIcon Name="save" Size="16" /> @(_guardando ? "Guardando..." : "Guardar categorias")
+            </GlassButton>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_mensaje))
+    {
+        <div class="card" style="margin-bottom:16px;padding:14px 16px;border-color:@(_mensajeError ? "rgba(239,68,68,0.24)" : "rgba(16,185,129,0.24)");background:@(_mensajeError ? "rgba(239,68,68,0.08)" : "rgba(16,185,129,0.10)");">
+            <div style="display:flex;align-items:center;gap:10px;color:@(_mensajeError ? "var(--danger)" : "var(--success)");font-weight:600;">
+                <LucideIcon Name="@(_mensajeError ? "alert-circle" : "badge-check")" Size="18" />
+                <span>@_mensaje</span>
+            </div>
+        </div>
+    }
+
+    @if (_cargando)
+    {
+        <SkeletonLoader />
+    }
+    else
+    {
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:16px;">
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Categorias activas</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@_items.Count(x => x.ActivaParaReporte)</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Se mostraran en reportes y resumenes.</div>
+            </div>
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">Compra por metodo</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@_items.Count(x => x.IsrDestino == "CompraPorMetodo")</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Se reparte entre PUE y PPD automaticamente.</div>
+            </div>
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">IVA parcial</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@_items.Count(x => x.IvaModoAcreditamiento == "Parcial")</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Categorias con acreditamiento proporcional.</div>
+            </div>
+            <div class="card" style="padding:16px 18px;">
+                <div style="font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin-bottom:6px;">No deducibles</div>
+                <div style="font-size:28px;font-weight:700;color:var(--text-primary);">@_items.Count(x => x.IsrDestino == "NoDeducible")</div>
+                <div class="body-small text-muted" style="margin-top:4px;">Quedan fuera del gasto ISR acreditable.</div>
+            </div>
+        </div>
+
+        <div class="card" style="padding:0;overflow:hidden;">
+            <div class="surface-panel-header" style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                <div>
+                    <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Reglas fiscales</div>
+                    <h3 style="margin-top:4px;">Matriz fija de categorias</h3>
+                </div>
+                <div class="body-small text-muted">Las facturas de egreso usaran esta configuracion al alimentar ISR, IVA y reportes.</div>
+            </div>
+
+            <div style="padding:18px 20px;display:grid;gap:12px;">
+                @foreach (var item in _items)
+                {
+                    <div class="card" style="padding:16px 18px;background:color-mix(in srgb, var(--glass-bg-primary) 84%, var(--bg-base) 16%);">
+                        <div style="display:grid;grid-template-columns:minmax(160px,0.9fr) repeat(4,minmax(0,1fr));gap:14px;align-items:start;">
+                            <div style="min-width:0;">
+                                <div style="font-weight:700;color:var(--text-primary);">@EtiquetaCategoria(item.Categoria)</div>
+                                <div class="body-small text-muted" style="margin-top:4px;">Categoria fija disponible al clasificar CFDI de egresos.</div>
+                            </div>
+
+                            <div>
+                                <label class="input-label">Destino ISR</label>
+                                <select class="input-field" @bind="item.IsrDestino">
+                                    @foreach (var opcion in _opcionesIsrDestino)
+                                    {
+                                        <option value="@opcion.Value">@opcion.Label</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="input-label">% deducible ISR</label>
+                                <input class="input-field" type="number" step="0.01" min="0" max="100" @bind="item.IsrPorcentajeDeducible" />
+                            </div>
+
+                            <div>
+                                <label class="input-label">IVA acreditable</label>
+                                <select class="input-field" @bind="item.IvaModoAcreditamiento">
+                                    @foreach (var opcion in _opcionesIvaModo)
+                                    {
+                                        <option value="@opcion.Value">@opcion.Label</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div style="display:grid;gap:10px;">
+                                <div>
+                                    <label class="input-label">% acreditable IVA</label>
+                                    <input class="input-field" type="number" step="0.01" min="0" max="100" @bind="item.IvaPorcentajeAcreditable" disabled="@(item.IvaModoAcreditamiento != "Parcial")" />
+                                </div>
+                                <label style="display:flex;align-items:center;gap:10px;color:var(--text-primary);font-size:13px;font-weight:600;">
+                                    <input type="checkbox" @bind="item.ActivaParaReporte" style="width:18px;height:18px;" />
+                                    <span>Activa en reportes</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private readonly List<BreadcrumbItem> _breadcrumb = new()
+    {
+        new() { Text = "Inicio", Url = "/" },
+        new() { Text = "Administracion", Url = "#" },
+        new() { Text = "Categorias XML", Url = "/configuracion/categorias-egresos-xml" }
+    };
+
+    private readonly (string Value, string Label)[] _opcionesIsrDestino =
+    [
+        ("CompraPorMetodo", "Compra por metodo"),
+        ("OtrasDeducciones", "Otras deducciones"),
+        ("NoDeducible", "No deducible"),
+        ("DeduccionInversiones", "Deduccion de inversiones")
+    ];
+
+    private readonly (string Value, string Label)[] _opcionesIvaModo =
+    [
+        ("Total", "Total"),
+        ("Parcial", "Parcial"),
+        ("Ninguno", "Ninguno")
+    ];
+
+    private List<ActualizarCategoriaEgresoXmlConfigItemDto> _items = new();
+    private bool _cargando = true;
+    private bool _guardando;
+    private string? _mensaje;
+    private bool _mensajeError;
+
+    protected override async Task OnInitializedAsync() => await Cargar();
+
+    private async Task Cargar()
+    {
+        _cargando = true;
+        _mensaje = null;
+
+        try
+        {
+            var result = await XmlService.ObtenerConfiguracionCategoriasAsync();
+            if (result?.Ok == true && result.Data != null)
+            {
+                _items = result.Data
+                    .OrderBy(x => OrdenCategoria(x.Categoria))
+                    .Select(x => new ActualizarCategoriaEgresoXmlConfigItemDto
+                    {
+                        Categoria = x.Categoria,
+                        IsrDestino = x.IsrDestino,
+                        IsrPorcentajeDeducible = x.IsrPorcentajeDeducible,
+                        IvaModoAcreditamiento = x.IvaModoAcreditamiento,
+                        IvaPorcentajeAcreditable = x.IvaPorcentajeAcreditable,
+                        ActivaParaReporte = x.ActivaParaReporte
+                    })
+                    .ToList();
+            }
+            else
+            {
+                _mensaje = result?.Error?.Message ?? "No se pudo cargar la configuracion.";
+                _mensajeError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            _mensaje = ex.Message;
+            _mensajeError = true;
+        }
+
+        _cargando = false;
+    }
+
+    private async Task Guardar()
+    {
+        _guardando = true;
+        _mensaje = null;
+
+        try
+        {
+            var result = await XmlService.ActualizarConfiguracionCategoriasAsync(new ActualizarCategoriasEgresosXmlConfigRequest
+            {
+                Items = _items
+            });
+
+            if (result?.Ok == true)
+            {
+                _mensaje = "Configuracion guardada correctamente.";
+                _mensajeError = false;
+                await Cargar();
+            }
+            else
+            {
+                _mensaje = result?.Error?.Message ?? "No se pudo guardar la configuracion.";
+                _mensajeError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            _mensaje = ex.Message;
+            _mensajeError = true;
+        }
+
+        _guardando = false;
+    }
+
+    private static int OrdenCategoria(string categoria) => categoria switch
+    {
+        "Compra" => 0,
+        "Gasto" => 1,
+        "NoDeducible" => 2,
+        "Inversion" => 3,
+        "DeduccionPersonal" => 4,
+        "Restaurante" => 5,
+        _ => 99
+    };
+
+    private static string EtiquetaCategoria(string categoria) => categoria switch
+    {
+        "NoDeducible" => "No deducible",
+        "DeduccionPersonal" => "Deduccion personal",
+        "Inversion" => "Inversion",
+        _ => categoria
+    };
+}

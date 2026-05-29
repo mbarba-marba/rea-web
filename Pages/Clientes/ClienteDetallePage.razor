@@ -18,6 +18,9 @@
             <GlassButton Variant="secondary" OnClick="Volver">
                 <LucideIcon Name="arrow-left" Size="16" /> Volver
             </GlassButton>
+            <GlassButton Variant="secondary" OnClick="VerXmls">
+                <LucideIcon Name="file-code-2" Size="16" /> Ver XMLs
+            </GlassButton>
             <GlassButton Variant="primary" OnClick="EditarActual">
                 <LucideIcon Name="pencil" Size="16" /> Editar
             </GlassButton>
@@ -273,5 +276,6 @@
     private static string FmtDate(DateOnly? date) => date?.ToString("dd/MM/yyyy") ?? "-";
     private static string Empty(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
     private void Volver() => Navigation.NavigateTo("/clientes");
+    private void VerXmls() => Navigation.NavigateTo($"/clientes/{Id}/xmls");
     private void EditarActual() => Navigation.NavigateTo($"/clientes/{Id}/editar");
 }

@@ -1,0 +1,840 @@
+@page "/clientes/{Id:long}/xmls"
+@using Microsoft.AspNetCore.Authorization
+@using REA.Web.Components.Shared
+@using REA.Web.Models
+@using REA.Web.Services
+@attribute [Authorize(Roles = "admin,auxiliar")]
+@inject ClienteService ClienteService
+@inject XmlService XmlService
+@inject NavigationManager Navigation
+
+<div class="page-container animate-fade-in">
+    <div class="page-header" style="margin-bottom:18px;">
+        <div class="page-header-left">
+            <h1>XMLs del cliente</h1>
+            <Breadcrumb Items="@_breadcrumb" />
+            <p class="body-small text-muted" style="margin-top:6px;">Consulta anual de CFDI, fechas de pago, complementos y desglose fiscal del expediente.</p>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;">
+            <GlassButton Variant="secondary" OnClick="VolverCliente">
+                <LucideIcon Name="arrow-left" Size="16" /> Volver al cliente
+            </GlassButton>
+            @if (_facturaSeleccionada is not null)
+            {
+                <a class="btn btn-secondary" href="@XmlDownloadUrl(_facturaSeleccionada)" target="_blank" rel="noopener noreferrer" style="text-decoration:none;">
+                    <span style="display:inline-flex;align-items:center;gap:8px;">
+                        <LucideIcon Name="download" Size="16" /> Descargar XML
+                    </span>
+                </a>
+            }
+        </div>
+    </div>
+
+    <ErrorBanner Message="@_error" OnDismiss="() => _error = null" />
+
+    @if (_cargando)
+    {
+        <SkeletonLoader />
+    }
+    else if (_cliente is not null)
+    {
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px;">
+            <div class="card cliente-xml-kpi">
+                <div class="cliente-xml-kpi-label">Cliente</div>
+                <div class="cliente-xml-kpi-value" style="font-size:1.55rem;">@_cliente.Rfc</div>
+                <div class="body-small text-muted">@_cliente.RazonSocial</div>
+            </div>
+            <div class="card cliente-xml-kpi">
+                <div class="cliente-xml-kpi-label">XMLs del año</div>
+                <div class="cliente-xml-kpi-value">@FacturasFiltradas.Count</div>
+                <div class="body-small text-muted">@_anioSeleccionado factura(s) visibles</div>
+            </div>
+            <div class="card cliente-xml-kpi">
+                <div class="cliente-xml-kpi-label">Emitidos / Recibidos</div>
+                <div class="cliente-xml-kpi-value">@FacturasEmitidas.Count / @FacturasRecibidas.Count</div>
+                <div class="body-small text-muted">Dirección validada por RFC del cliente.</div>
+            </div>
+            <div class="card cliente-xml-kpi">
+                <div class="cliente-xml-kpi-label">Complementos detectados</div>
+                <div class="cliente-xml-kpi-value">@FacturasConComplemento.Count</div>
+                <div class="body-small text-muted">@FacturasConFechaPago.Count con fecha de pago encontrada</div>
+            </div>
+        </div>
+
+        <div class="card cliente-xml-filter-card">
+            <div class="cliente-xml-filter-topline">
+                <div>
+                    <div class="eyebrow">FILTROS</div>
+                    <h3 style="margin:4px 0 0;">Lectura anual del expediente XML</h3>
+                </div>
+                <div class="body-small text-muted">Los totales se recalculan con base en el año visible del cliente.</div>
+            </div>
+
+            <div class="cliente-xml-filter-grid">
+                <div>
+                    <label class="field-label">Buscar XML</label>
+                    <input class="input-field" @bind="_busqueda" @bind:event="oninput" @bind:after="SincronizarSeleccion" placeholder="UUID, RFC, nombre o complemento" />
+                </div>
+                <div>
+                    <label class="field-label">Año</label>
+                    <select class="select-field" @bind="_anioSeleccionado" @bind:after="SincronizarSeleccion">
+                        @foreach (var anio in _aniosDisponibles)
+                        {
+                            <option value="@anio">@anio</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="field-label">Dirección</label>
+                    <select class="select-field" @bind="_direccionFiltro" @bind:after="SincronizarSeleccion">
+                        <option value="todos">Todos</option>
+                        <option value="emitidos">Emitidos</option>
+                        <option value="recibidos">Recibidos</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="field-label">Complementos</label>
+                    <select class="select-field" @bind="_complementoFiltro" @bind:after="SincronizarSeleccion">
+                        <option value="todos">Todos</option>
+                        <option value="con">Con complementos</option>
+                        <option value="sin">Sin complementos</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(320px,0.92fr);gap:18px;align-items:start;">
+            <div style="display:grid;gap:18px;">
+                <div class="card cliente-xml-surface">
+                    <div class="cliente-xml-section-head">
+                        <div>
+                            <div class="eyebrow">ANUAL</div>
+                            <h3 style="margin:4px 0 0;">Corte por mes</h3>
+                        </div>
+                        <div class="body-small text-muted">Detecta meses con movimiento, pagos y acumulado visible.</div>
+                    </div>
+
+                    @if (ResumenMensual.Count == 0)
+                    {
+                        <div class="empty-state-box">
+                            <LucideIcon Name="calendar-search" Size="28" />
+                            <div>
+                                <div style="font-weight:600;color:var(--text-primary);">No hay XMLs para este filtro</div>
+                                <div class="body-small text-muted">Prueba otro año o limpia la búsqueda para revisar el historial completo del cliente.</div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="cliente-xml-month-list">
+                            @foreach (var mes in ResumenMensual)
+                            {
+                                <div class="cliente-xml-month-row">
+                                    <div>
+                                        <div class="cliente-xml-month-name">@mes.Etiqueta</div>
+                                        <div class="body-small text-muted">@mes.TotalFacturas XMLs · @mes.ConComplemento con complemento</div>
+                                    </div>
+                                    <div class="cliente-xml-month-metrics">
+                                        <span>@mes.Emitidos emitidos</span>
+                                        <span>@mes.Recibidos recibidos</span>
+                                        <span>@FmtCurrency(mes.TotalMonto)</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="card cliente-xml-surface" style="padding-bottom:0;">
+                    <div class="cliente-xml-section-head" style="padding-bottom:14px;">
+                        <div>
+                            <div class="eyebrow">DETALLE</div>
+                            <h3 style="margin:4px 0 0;">XMLs del cliente</h3>
+                        </div>
+                        <div class="body-small text-muted">@FacturasFiltradas.Count registro(s) visibles</div>
+                    </div>
+
+                    @if (FacturasFiltradas.Count == 0)
+                    {
+                        <div class="empty-state-box" style="margin-bottom:18px;">
+                            <LucideIcon Name="file-search" Size="28" />
+                            <div>
+                                <div style="font-weight:600;color:var(--text-primary);">Sin XMLs visibles</div>
+                                <div class="body-small text-muted">Cuando exista información procesada del cliente podrás inspeccionar aquí fechas, complementos e impuestos.</div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="cliente-xml-table-wrap">
+                            <table class="cliente-xml-table">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha emisión</th>
+                                        <th>Fecha pago</th>
+                                        <th>XML</th>
+                                        <th>Dirección</th>
+                                        <th>Complementos</th>
+                                        <th>Total</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var factura in FacturasFiltradas)
+                                    {
+                                        var seleccionada = _facturaSeleccionada?.FacturaId == factura.FacturaId;
+                                        <tr class="@(seleccionada ? "is-selected" : "")" @onclick="() => SeleccionarFactura(factura)">
+                                            <td>
+                                                <div class="cliente-xml-strong">@FmtDate(factura.FechaEmision)</div>
+                                                <div class="body-small text-muted">@EtiquetaTipo(factura)</div>
+                                            </td>
+                                            <td>
+                                                <div class="cliente-xml-strong">@FmtDate(factura.FechaPago)</div>
+                                                <div class="body-small text-muted">@(factura.FechaPago.HasValue ? "Pago detectado" : "Sin fecha de pago")</div>
+                                            </td>
+                                            <td>
+                                                <div class="cliente-xml-strong mono">@ShortUuid(factura.Uuid)</div>
+                                                <div class="body-small text-muted">@(ProveedorEtiqueta(factura))</div>
+                                            </td>
+                                            <td>
+                                                <span class="cliente-xml-pill @(ObtenerDireccion(factura) == "emitidos" ? "is-accent" : "is-info")">@EtiquetaDireccion(factura)</span>
+                                                <div class="body-small text-muted" style="margin-top:6px;">@MetodoEtiqueta(factura)</div>
+                                            </td>
+                                            <td>
+                                                @if (string.IsNullOrWhiteSpace(factura.ComplementosDetectados))
+                                                {
+                                                    <span class="body-small text-muted">Sin complementos</span>
+                                                }
+                                                else
+                                                {
+                                                    <div class="cliente-xml-complements-cell">@factura.ComplementosDetectados</div>
+                                                }
+                                            </td>
+                                            <td>
+                                                <div class="cliente-xml-strong">@FmtCurrency(factura.Total)</div>
+                                                <div class="body-small text-muted">@factura.Moneda</div>
+                                            </td>
+                                            <td style="text-align:right;">
+                                                <a class="cliente-xml-row-link" href="@XmlDownloadUrl(factura)" target="_blank" rel="noopener noreferrer" @onclick:stopPropagation="true">XML</a>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div style="display:grid;gap:18px;position:sticky;top:22px;">
+                <div class="card cliente-xml-surface">
+                    <div class="cliente-xml-section-head">
+                        <div>
+                            <div class="eyebrow">INSPECTOR</div>
+                            <h3 style="margin:4px 0 0;">Detalle del XML</h3>
+                        </div>
+                        <div class="body-small text-muted">Haz clic en cualquier fila para revisar el comprobante.</div>
+                    </div>
+
+                    @if (_facturaSeleccionada is null)
+                    {
+                        <div class="empty-state-box">
+                            <LucideIcon Name="mouse-pointer-click" Size="28" />
+                            <div>
+                                <div style="font-weight:600;color:var(--text-primary);">Selecciona un XML</div>
+                                <div class="body-small text-muted">Aquí verás fechas, complemento de pago, partes involucradas e impuestos detectados.</div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="cliente-xml-detail-grid">
+                            <div class="cliente-xml-detail-item wide">
+                                <span>UUID</span>
+                                <strong class="mono">@_facturaSeleccionada.Uuid</strong>
+                            </div>
+                            <div class="cliente-xml-detail-item">
+                                <span>Fecha emisión</span>
+                                <strong>@FmtDate(_facturaSeleccionada.FechaEmision)</strong>
+                            </div>
+                            <div class="cliente-xml-detail-item">
+                                <span>Fecha pago</span>
+                                <strong>@FmtDate(_facturaSeleccionada.FechaPago)</strong>
+                            </div>
+                            <div class="cliente-xml-detail-item">
+                                <span>Dirección</span>
+                                <strong>@EtiquetaDireccion(_facturaSeleccionada)</strong>
+                            </div>
+                            <div class="cliente-xml-detail-item">
+                                <span>Método</span>
+                                <strong>@MetodoEtiqueta(_facturaSeleccionada)</strong>
+                            </div>
+                            <div class="cliente-xml-detail-item wide">
+                                <span>Complementos detectados</span>
+                                <strong>@(string.IsNullOrWhiteSpace(_facturaSeleccionada.ComplementosDetectados) ? "Sin complementos" : _facturaSeleccionada.ComplementosDetectados)</strong>
+                            </div>
+                            <div class="cliente-xml-detail-item wide">
+                                <span>Proveedor / emisor</span>
+                                <strong>@($"{_facturaSeleccionada.RfcEmisor} · {(_facturaSeleccionada.NombreEmisor ?? "-")}")</strong>
+                            </div>
+                            <div class="cliente-xml-detail-item wide">
+                                <span>Cliente / receptor</span>
+                                <strong>@($"{_facturaSeleccionada.RfcReceptor} · {(_facturaSeleccionada.NombreReceptor ?? "-")}")</strong>
+                            </div>
+                            <div class="cliente-xml-detail-item">
+                                <span>Subtotal</span>
+                                <strong>@FmtCurrency(_facturaSeleccionada.Subtotal)</strong>
+                            </div>
+                            <div class="cliente-xml-detail-item">
+                                <span>Sub-neto</span>
+                                <strong>@FmtCurrency(_facturaSeleccionada.SubNeto)</strong>
+                            </div>
+                            <div class="cliente-xml-detail-item">
+                                <span>Total</span>
+                                <strong>@FmtCurrency(_facturaSeleccionada.Total)</strong>
+                            </div>
+                            <div class="cliente-xml-detail-item">
+                                <span>Categoría</span>
+                                <strong>@(string.IsNullOrWhiteSpace(_facturaSeleccionada.CategoriaGastoXml) ? "Sin categoría" : EtiquetaCategoria(_facturaSeleccionada.CategoriaGastoXml))</strong>
+                            </div>
+                        </div>
+
+                        <div class="cliente-xml-tax-panel">
+                            <div class="eyebrow" style="margin-bottom:8px;">IMPUESTOS DESGLOSADOS</div>
+                            @if (_facturaSeleccionada.Impuestos.Count == 0)
+                            {
+                                <div class="body-small text-muted">Este XML no expone impuestos desglosados en el procesamiento actual.</div>
+                            }
+                            else
+                            {
+                                <div class="cliente-xml-tax-list">
+                                    @foreach (var impuesto in _facturaSeleccionada.Impuestos)
+                                    {
+                                        <div class="cliente-xml-tax-row">
+                                            <div>
+                                                <div class="cliente-xml-strong">@impuesto.NombreImpuesto</div>
+                                                <div class="body-small text-muted">@EtiquetaImpuesto(impuesto)</div>
+                                            </div>
+                                            <div style="text-align:right;">
+                                                <div class="cliente-xml-strong">@FmtCurrency(impuesto.Importe)</div>
+                                                <div class="body-small text-muted">Base @FmtCurrency(impuesto.Base ?? 0m)</div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .cliente-xml-kpi {
+        padding: 16px 18px;
+        display: grid;
+        gap: 6px;
+    }
+
+    .cliente-xml-kpi-label,
+    .eyebrow {
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+    }
+
+    .cliente-xml-kpi-value {
+        font-size: 2rem;
+        line-height: 1;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .cliente-xml-filter-card,
+    .cliente-xml-surface {
+        padding: 20px;
+    }
+
+    .cliente-xml-filter-topline,
+    .cliente-xml-section-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: end;
+        margin-bottom: 16px;
+    }
+
+    .cliente-xml-filter-grid {
+        display: grid;
+        grid-template-columns: minmax(240px, 1.35fr) repeat(3, minmax(160px, 0.55fr));
+        gap: 14px;
+    }
+
+    .field-label {
+        display: inline-block;
+        margin-bottom: 8px;
+        font-size: 12px;
+        color: var(--text-secondary);
+    }
+
+    .cliente-xml-month-list,
+    .cliente-xml-tax-list {
+        display: grid;
+        gap: 10px;
+    }
+
+    .cliente-xml-month-row,
+    .cliente-xml-tax-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        align-items: center;
+        padding: 14px 16px;
+        border: 1px solid var(--glass-border);
+        border-radius: 14px;
+        background: color-mix(in srgb, var(--glass-bg-primary) 78%, var(--bg-base) 22%);
+    }
+
+    .cliente-xml-month-name {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .cliente-xml-month-metrics {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        font-size: 12px;
+        color: var(--text-secondary);
+    }
+
+    .cliente-xml-table-wrap {
+        overflow-x: auto;
+        margin: 0 -20px;
+        border-top: 1px solid var(--glass-border);
+    }
+
+    .cliente-xml-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .cliente-xml-table th {
+        padding: 14px 20px 12px;
+        text-align: left;
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        border-bottom: 1px solid var(--glass-border);
+    }
+
+    .cliente-xml-table td {
+        padding: 14px 20px;
+        border-bottom: 1px solid color-mix(in srgb, var(--glass-border) 72%, transparent 28%);
+        vertical-align: top;
+        cursor: pointer;
+    }
+
+    .cliente-xml-table tbody tr {
+        transition: background 120ms ease, transform 120ms ease;
+    }
+
+    .cliente-xml-table tbody tr:hover {
+        background: color-mix(in srgb, var(--accent-primary) 6%, transparent 94%);
+    }
+
+    .cliente-xml-table tbody tr.is-selected {
+        background: color-mix(in srgb, var(--accent-primary) 10%, transparent 90%);
+        box-shadow: inset 3px 0 0 var(--accent-primary);
+    }
+
+    .cliente-xml-strong {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .cliente-xml-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        border: 1px solid var(--glass-border);
+        background: color-mix(in srgb, var(--glass-bg-primary) 76%, var(--bg-base) 24%);
+        color: var(--text-primary);
+    }
+
+    .cliente-xml-pill.is-accent {
+        background: color-mix(in srgb, var(--accent-primary) 18%, transparent 82%);
+        color: var(--accent-primary);
+        border-color: color-mix(in srgb, var(--accent-primary) 28%, transparent 72%);
+    }
+
+    .cliente-xml-pill.is-info {
+        background: color-mix(in srgb, #0ea5e9 16%, transparent 84%);
+        color: #0ea5e9;
+        border-color: color-mix(in srgb, #0ea5e9 28%, transparent 72%);
+    }
+
+    .cliente-xml-complements-cell {
+        max-width: 250px;
+        font-size: 13px;
+        color: var(--text-primary);
+        line-height: 1.4;
+    }
+
+    .cliente-xml-row-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 44px;
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid var(--glass-border);
+        text-decoration: none;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--accent-primary);
+        background: color-mix(in srgb, var(--glass-bg-primary) 78%, var(--bg-base) 22%);
+    }
+
+    .cliente-xml-row-link:hover {
+        border-color: color-mix(in srgb, var(--accent-primary) 40%, var(--glass-border) 60%);
+    }
+
+    .cliente-xml-detail-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .cliente-xml-detail-item {
+        display: grid;
+        gap: 6px;
+        padding: 14px 15px;
+        border-radius: 14px;
+        border: 1px solid var(--glass-border);
+        background: color-mix(in srgb, var(--glass-bg-primary) 80%, var(--bg-base) 20%);
+    }
+
+    .cliente-xml-detail-item.wide {
+        grid-column: 1 / -1;
+    }
+
+    .cliente-xml-detail-item span {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-secondary);
+    }
+
+    .cliente-xml-detail-item strong {
+        color: var(--text-primary);
+        font-size: 14px;
+        line-height: 1.45;
+    }
+
+    .cliente-xml-tax-panel {
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid var(--glass-border);
+    }
+
+    .empty-state-box {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 18px;
+        border: 1px dashed color-mix(in srgb, var(--glass-border) 74%, transparent 26%);
+        border-radius: 16px;
+        color: var(--text-secondary);
+        background: color-mix(in srgb, var(--glass-bg-primary) 70%, var(--bg-base) 30%);
+    }
+
+    @@media (max-width: 1200px) {
+        .cliente-xml-filter-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @@media (max-width: 1080px) {
+        .cliente-xml-detail-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .cliente-xml-detail-item.wide {
+            grid-column: auto;
+        }
+    }
+
+    @@media (max-width: 920px) {
+        .cliente-xml-filter-grid,
+        .cliente-xml-month-metrics {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+@code {
+    [Parameter] public long Id { get; set; }
+
+    private ClienteDto? _cliente;
+    private List<XmlFacturaDto> _facturas = new();
+    private XmlFacturaDto? _facturaSeleccionada;
+    private bool _cargando = true;
+    private string? _error;
+    private string _busqueda = string.Empty;
+    private string _direccionFiltro = "todos";
+    private string _complementoFiltro = "todos";
+    private int _anioSeleccionado = DateTime.Now.Year;
+    private List<int> _aniosDisponibles = new();
+    private List<BreadcrumbItem> _breadcrumb = new();
+
+    private List<XmlFacturaDto> FacturasFiltradas => _facturas
+        .Where(f => f.FechaEmision.Year == _anioSeleccionado)
+        .Where(f => _direccionFiltro == "todos" || ObtenerDireccion(f) == _direccionFiltro)
+        .Where(f => _complementoFiltro switch
+        {
+            "con" => f.TieneComplemento,
+            "sin" => !f.TieneComplemento,
+            _ => true
+        })
+        .Where(FiltroBusqueda)
+        .OrderByDescending(f => f.FechaPago ?? DateOnly.MinValue)
+        .ThenByDescending(f => f.FechaEmision)
+        .ThenByDescending(f => f.Total)
+        .ToList();
+
+    private List<XmlFacturaDto> FacturasEmitidas => FacturasFiltradas.Where(f => ObtenerDireccion(f) == "emitidos").ToList();
+    private List<XmlFacturaDto> FacturasRecibidas => FacturasFiltradas.Where(f => ObtenerDireccion(f) == "recibidos").ToList();
+    private List<XmlFacturaDto> FacturasConComplemento => FacturasFiltradas.Where(f => f.TieneComplemento).ToList();
+    private List<XmlFacturaDto> FacturasConFechaPago => FacturasFiltradas.Where(f => f.FechaPago.HasValue).ToList();
+
+    private List<ResumenMensualItem> ResumenMensual => FacturasFiltradas
+        .GroupBy(f => f.FechaEmision.Month)
+        .Select(g => new ResumenMensualItem
+        {
+            Mes = g.Key,
+            Etiqueta = $"{NombreMes(g.Key)} {_anioSeleccionado}",
+            TotalFacturas = g.Count(),
+            Emitidos = g.Count(x => ObtenerDireccion(x) == "emitidos"),
+            Recibidos = g.Count(x => ObtenerDireccion(x) == "recibidos"),
+            ConComplemento = g.Count(x => x.TieneComplemento),
+            TotalMonto = g.Sum(x => x.Total)
+        })
+        .OrderByDescending(x => x.Mes)
+        .ToList();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await Cargar();
+    }
+
+    private async Task Cargar()
+    {
+        _cargando = true;
+        _error = null;
+
+        try
+        {
+            var clienteResult = await ClienteService.ObtenerAsync(Id);
+            if (clienteResult?.Ok != true || clienteResult.Data is null)
+            {
+                _error = clienteResult?.Error?.Message ?? "No se pudo cargar el cliente.";
+                _cargando = false;
+                return;
+            }
+
+            _cliente = clienteResult.Data;
+            _breadcrumb = new()
+            {
+                new() { Text = "Inicio", Url = "/" },
+                new() { Text = "Clientes", Url = "/clientes" },
+                new() { Text = _cliente.Rfc, Url = $"/clientes/{Id}" },
+                new() { Text = "XMLs", Url = $"/clientes/{Id}/xmls" }
+            };
+
+            var facturasResult = await XmlService.BuscarFacturasAsync(clienteId: Id, page: 1, limit: 1000);
+            if (facturasResult?.Ok == true)
+            {
+                _facturas = (facturasResult.Data ?? new())
+                    .Where(x => x.EsValida)
+                    .OrderByDescending(x => x.FechaEmision)
+                    .ThenByDescending(x => x.Total)
+                    .ToList();
+
+                _aniosDisponibles = _facturas
+                    .Select(x => x.FechaEmision.Year)
+                    .Distinct()
+                    .OrderByDescending(x => x)
+                    .ToList();
+
+                if (_aniosDisponibles.Count == 0)
+                {
+                    _aniosDisponibles = new() { DateTime.Now.Year };
+                }
+
+                if (!_aniosDisponibles.Contains(_anioSeleccionado))
+                {
+                    _anioSeleccionado = _aniosDisponibles.First();
+                }
+
+                _facturaSeleccionada = FacturasFiltradas.FirstOrDefault();
+            }
+            else
+            {
+                _error = facturasResult?.Error?.Message ?? "No se pudieron cargar los XMLs del cliente.";
+                _facturas = new();
+                _aniosDisponibles = new() { DateTime.Now.Year };
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _cargando = false;
+        }
+    }
+
+    private bool FiltroBusqueda(XmlFacturaDto factura)
+    {
+        if (string.IsNullOrWhiteSpace(_busqueda))
+        {
+            return true;
+        }
+
+        var term = _busqueda.Trim();
+        return (factura.Uuid?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (factura.RfcEmisor?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (factura.RfcReceptor?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (factura.NombreEmisor?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (factura.NombreReceptor?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (factura.ComplementosDetectados?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false);
+    }
+
+    private void SeleccionarFactura(XmlFacturaDto factura) => _facturaSeleccionada = factura;
+
+    private void VolverCliente() => Navigation.NavigateTo($"/clientes/{Id}");
+
+    private string ObtenerDireccion(XmlFacturaDto factura)
+    {
+        if (_cliente is null)
+        {
+            return "desconocido";
+        }
+
+        var rfcCliente = (_cliente.Rfc ?? string.Empty).Trim().ToUpperInvariant();
+        var rfcEmisor = (factura.RfcEmisor ?? string.Empty).Trim().ToUpperInvariant();
+        var rfcReceptor = (factura.RfcReceptor ?? string.Empty).Trim().ToUpperInvariant();
+
+        if (rfcEmisor == rfcCliente)
+        {
+            return "emitidos";
+        }
+
+        if (rfcReceptor == rfcCliente)
+        {
+            return "recibidos";
+        }
+
+        return "desconocido";
+    }
+
+    private string XmlDownloadUrl(XmlFacturaDto factura)
+        => $"/api/v1/xml/facturas/{factura.FacturaId}/xml";
+
+    private static string EtiquetaTipo(XmlFacturaDto factura)
+        => factura.Tipo?.ToLowerInvariant() switch
+        {
+            "ingreso" => "Ingreso",
+            "egreso" => "Egreso",
+            "pago" => "Complemento de pago",
+            "nomina" => "Nómina",
+            "traslado" => "Traslado",
+            _ => "Comprobante"
+        };
+
+    private static string MetodoEtiqueta(XmlFacturaDto factura)
+        => string.IsNullOrWhiteSpace(factura.MetodoPago)
+            ? (string.IsNullOrWhiteSpace(factura.FormaPago) ? "Sin método" : $"Forma {factura.FormaPago}")
+            : factura.MetodoPago!;
+
+    private static string ProveedorEtiqueta(XmlFacturaDto factura)
+        => string.IsNullOrWhiteSpace(factura.NombreEmisor) ? factura.RfcEmisor : factura.NombreEmisor!;
+
+    private static string EtiquetaCategoria(string? categoria)
+        => categoria?.Replace("_", " ", StringComparison.OrdinalIgnoreCase) switch
+        {
+            null or "" => "Sin categoría",
+            var value => System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(value.ToLowerInvariant())
+        };
+
+    private static string EtiquetaImpuesto(XmlFacturaImpuestoDto impuesto)
+    {
+        var tasa = impuesto.TasaOCuota.HasValue
+            ? $"{impuesto.TasaOCuota.Value:P2}".Replace(" %", "%", StringComparison.Ordinal)
+            : "Sin tasa";
+        return $"{(impuesto.Tipo == "retencion" ? "Retención" : "Traslado")} · {tasa}";
+    }
+
+    private static string ShortUuid(string uuid)
+        => string.IsNullOrWhiteSpace(uuid) || uuid.Length < 12 ? uuid : $"{uuid[..8]}…{uuid[^4..]}";
+
+    private static string FmtDate(DateOnly? date) => date?.ToString("dd/MM/yyyy") ?? "-";
+    private static string FmtCurrency(decimal value) => value.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("es-MX"));
+
+    private static string NombreMes(int mes) => mes switch
+    {
+        1 => "Enero",
+        2 => "Febrero",
+        3 => "Marzo",
+        4 => "Abril",
+        5 => "Mayo",
+        6 => "Junio",
+        7 => "Julio",
+        8 => "Agosto",
+        9 => "Septiembre",
+        10 => "Octubre",
+        11 => "Noviembre",
+        12 => "Diciembre",
+        _ => "Mes"
+    };
+
+    private string EtiquetaDireccion(XmlFacturaDto factura)
+        => ObtenerDireccion(factura) switch
+        {
+            "emitidos" => "Emitido",
+            "recibidos" => "Recibido",
+            _ => "No clasificado"
+        };
+
+    private void SincronizarSeleccion()
+    {
+        if (_facturaSeleccionada is not null && FacturasFiltradas.Any(x => x.FacturaId == _facturaSeleccionada.FacturaId))
+        {
+            return;
+        }
+
+        _facturaSeleccionada = FacturasFiltradas.FirstOrDefault();
+    }
+
+    private sealed class ResumenMensualItem
+    {
+        public int Mes { get; set; }
+        public string Etiqueta { get; set; } = string.Empty;
+        public int TotalFacturas { get; set; }
+        public int Emitidos { get; set; }
+        public int Recibidos { get; set; }
+        public int ConComplemento { get; set; }
+        public decimal TotalMonto { get; set; }
+    }
+}
