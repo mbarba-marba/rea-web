@@ -179,38 +179,113 @@ a:hover {
 .text-accent  { color: var(--accent); }
 
 /* Blazor loading + error UI */
-.loading-progress {
+.app-loading-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.4rem;
+  padding: 2rem;
+  background:
+    radial-gradient(circle at top, rgba(7, 98, 128, 0.12), transparent 38%),
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-base) 90%, white 10%) 0%, var(--bg-base) 100%);
+}
+
+.app-loading-mark {
   position: relative;
+  width: 13rem;
+  height: 13rem;
+  display: grid;
+  place-items: center;
+}
+
+.app-loading-logo-frame {
+  width: 8.5rem;
+  height: 8.5rem;
+  border-radius: 2rem;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--glass-bg-primary) 84%, white 16%);
+  border: 1px solid color-mix(in srgb, var(--glass-border) 78%, white 22%);
+  box-shadow:
+    0 26px 60px rgba(7, 98, 128, 0.14),
+    inset 0 1px 0 rgba(255,255,255,0.38);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  animation: app-loading-pulse 2.4s ease-in-out infinite;
+}
+
+.app-loading-logo {
+  width: 5.8rem;
+  height: 5.8rem;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 18px rgba(7, 98, 128, 0.18));
+}
+
+.loading-progress {
+  position: absolute;
+  inset: 0;
   display: block;
-  width: 8rem;
-  height: 8rem;
-  margin: 20vh auto 1rem auto;
+  width: 13rem;
+  height: 13rem;
+  margin: 0;
+  filter: drop-shadow(0 18px 28px rgba(7, 98, 128, 0.14));
 }
 
 .loading-progress circle {
   fill: none;
-  stroke: #e0e0e0;
-  stroke-width: 0.6rem;
+  stroke: color-mix(in srgb, var(--glass-border) 70%, transparent 30%);
+  stroke-width: 0.42rem;
   transform-origin: 50% 50%;
   transform: rotate(-90deg);
 }
 
 .loading-progress circle:last-child {
   stroke: var(--accent);
-  stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
+  stroke-linecap: round;
+  stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 1.24), 500%;
   transition: stroke-dasharray 0.05s ease-in-out;
 }
 
-.loading-progress-text {
-  position: absolute;
+.app-loading-copy {
+  display: grid;
+  gap: 0.35rem;
   text-align: center;
+}
+
+.app-loading-title {
+  font-size: 1.6rem;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+}
+
+.loading-progress-text {
+  text-align: center;
+  font-size: 0.95rem;
   font-weight: 600;
-  inset: calc(20vh + 3.25rem) 0 auto 0.2rem;
   color: var(--text-secondary);
 }
 
 .loading-progress-text:after {
   content: var(--blazor-load-percentage-text, "Cargando");
+}
+
+@keyframes app-loading-pulse {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+    box-shadow:
+      0 26px 60px rgba(7, 98, 128, 0.14),
+      inset 0 1px 0 rgba(255,255,255,0.38);
+  }
+  50% {
+    transform: translateY(-2px) scale(1.015);
+    box-shadow:
+      0 30px 68px rgba(7, 98, 128, 0.18),
+      inset 0 1px 0 rgba(255,255,255,0.46);
+  }
 }
 
 #blazor-error-ui {

@@ -6,8 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>REA — Gestión Contable</title>
     <base href="/" />
-    <link rel="icon" type="image/png" href="img/logo-rea.png" />
-    <link rel="apple-touch-icon" href="img/logo-rea.png" />
+    <link rel="icon" type="image/png" href="img/favicon-rea.png" />
+    <link rel="apple-touch-icon" href="img/favicon-rea.png" />
     <link rel="preload" id="webassembly" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -176,11 +176,21 @@
 
 <body>
     <div id="app">
-        <svg class="loading-progress">
-            <circle r="40%" cx="50%" cy="50%" />
-            <circle r="40%" cx="50%" cy="50%" />
-        </svg>
-        <div class="loading-progress-text"></div>
+        <div class="app-loading-shell" aria-live="polite" aria-label="Cargando aplicación REA">
+            <div class="app-loading-mark">
+                <div class="app-loading-logo-frame">
+                    <img src="img/logo-rea.png" alt="REA" class="app-loading-logo" />
+                </div>
+                <svg class="loading-progress" viewBox="0 0 160 160" aria-hidden="true">
+                    <circle r="62" cx="80" cy="80" />
+                    <circle r="62" cx="80" cy="80" />
+                </svg>
+            </div>
+            <div class="app-loading-copy">
+                <div class="app-loading-title">REA</div>
+                <div class="loading-progress-text"></div>
+            </div>
+        </div>
     </div>
 
     <div id="blazor-error-ui">

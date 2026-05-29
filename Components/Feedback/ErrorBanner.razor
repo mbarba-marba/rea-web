@@ -1,3 +1,5 @@
+@implements IDisposable
+
 @if (!string.IsNullOrEmpty(Message))
 {
     <div class="error-banner">
@@ -5,7 +7,7 @@
             <LucideIcon Name="alert-circle" Size="18" />
             <span>@Message</span>
         </div>
-        <button @onclick="OnDismiss" class="error-dismiss" title="Cerrar">
+        <button @onclick="DismissAsync" class="error-dismiss" title="Cerrar">
             <LucideIcon Name="x" Size="16" />
         </button>
     </div>
@@ -14,4 +16,65 @@
 @code {
     [Parameter] public string? Message { get; set; }
     [Parameter] public EventCallback OnDismiss { get; set; }
+    [Parameter] public bool AutoDismiss { get; set; } = true;
+    [Parameter] public int AutoDismissMs { get; set; } = 6000;
+
+    private CancellationTokenSource? _dismissCts;
+    private string? _lastMessage;
+
+    protected override void OnParametersSet()
+    {
+        if (string.Equals(_lastMessage, Message, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _lastMessage = Message;
+        ProgramarAutoCierre();
+    }
+
+    private void ProgramarAutoCierre()
+    {
+        _dismissCts?.Cancel();
+        _dismissCts?.Dispose();
+        _dismissCts = null;
+
+        if (!AutoDismiss || string.IsNullOrWhiteSpace(Message) || AutoDismissMs <= 0)
+        {
+            return;
+        }
+
+        _dismissCts = new CancellationTokenSource();
+        var token = _dismissCts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(AutoDismissMs, token);
+                if (!token.IsCancellationRequested)
+                {
+                    await InvokeAsync(DismissAsync);
+                }
+            }
+            catch (TaskCanceledException)
+            {
+            }
+        }, token);
+    }
+
+    private async Task DismissAsync()
+    {
+        _dismissCts?.Cancel();
+        if (OnDismiss.HasDelegate)
+        {
+            await OnDismiss.InvokeAsync();
+        }
+    }
+
+    public void Dispose()
+    {
+        _dismissCts?.Cancel();
+        _dismissCts?.Dispose();
+    }
 }
