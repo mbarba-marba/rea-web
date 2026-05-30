@@ -18,9 +18,8 @@
               @(_collapsed ? "w-16" : "w-64")">
 
     @* Brand *@
-    <div class="flex items-center gap-2.5 px-3 border-b border-black/[0.06] flex-shrink-0 h-14">
-        <img src="/img/logo-rea.png" alt="REA" class="w-9 h-9 object-contain flex-shrink-0" />
-        <span class="@BrandTextCls">REA</span>
+    <div class="flex items-center justify-center px-3 border-b border-black/[0.06] flex-shrink-0 h-16">
+        <img src="/img/logo-rea-ui.png" alt="REA" class="@(_collapsed ? "w-9 h-9" : "w-11 h-11") object-contain flex-shrink-0" />
     </div>
 
     @* Nav *@
@@ -222,9 +221,6 @@
     private string NavCls => _collapsed
         ? "relative flex items-center justify-center h-10 w-10 rounded-lg text-gray-500 no-underline transition-colors duration-150 hover:bg-[#076280]/[0.06] hover:text-[#076280] cursor-pointer overflow-hidden [&.active]:bg-[#076280]/10 [&.active]:text-[#076280] [&.active]:font-medium"
         : "relative flex items-center gap-2.5 h-10 px-2 rounded-lg text-sm text-gray-500 no-underline transition-colors duration-150 hover:bg-[#076280]/[0.06] hover:text-[#076280] cursor-pointer w-full overflow-hidden [&.active]:bg-[#076280]/10 [&.active]:text-[#076280] [&.active]:font-medium [&.active]:border-l-2 [&.active]:border-[#076280] [&.active]:pl-[calc(0.5rem-2px)]";
-
-    private string BrandTextCls => "font-semibold text-[15px] text-gray-900 whitespace-nowrap overflow-hidden transition-[max-width,opacity] duration-[280ms] ease-[cubic-bezier(0.4,0,0.2,1)] "
-        + (_collapsed ? "max-w-0 opacity-0" : "flex-1 max-w-[200px] opacity-100");
 
     private string IconCls => _collapsed
         ? "w-5 h-5 flex items-center justify-center flex-shrink-0"
