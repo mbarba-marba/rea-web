@@ -149,6 +149,25 @@
                         }
                     </div>
                 </div>
+
+                @if (EsPasoXml)
+                {
+                    <div class="card" style="padding:18px 20px;">
+                        <div style="font-size:12px;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.4px;">Alcance XML</div>
+                        <h3 style="margin-top:4px;">Solo este checklist</h3>
+                        <p class="body-small text-muted" style="margin-top:8px;">Aqui solo se muestran las cargas y facturas subidas desde este paso 2. No mezclamos historicos del cliente para mantener el expediente limpio y controlable.</p>
+                        <div style="display:grid;gap:8px;margin-top:14px;">
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <LucideIcon Name="folder-lock" Size="16" />
+                                <span class="body-small">Cargas aisladas por checklist actual.</span>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <LucideIcon Name="trash-2" Size="16" />
+                                <span class="body-small">Puedes depurar XML individuales sin tocar historicos ajenos.</span>
+                            </div>
+                        </div>
+                    </div>
+                }
             </div>
         </div>
 
@@ -206,7 +225,7 @@
                                     <div class="empty-state" style="padding:24px 18px;">
                                         <LucideIcon Name="archive-x" Size="28" />
                                         <div class="empty-state-heading" style="font-size:16px;">Sin cargas XML</div>
-                                        <div class="empty-state-body">Aun no hay emitidos ni recibidos registrados para este cliente y periodo.</div>
+                                        <div class="empty-state-body">Aun no hay emitidos ni recibidos registrados dentro de este checklist.</div>
                                     </div>
                                 }
                                 else
@@ -241,7 +260,7 @@
                                 <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
                                     <div>
                                         <div class="body-small text-muted">Facturas extraidas</div>
-                                        <div style="font-weight:700;color:var(--text-primary);margin-top:4px;">Desglose fiscal por cliente y periodo</div>
+                                        <div style="font-weight:700;color:var(--text-primary);margin-top:4px;">Desglose fiscal del checklist actual</div>
                                     </div>
                                     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
                                         <span class="badge badge-muted">@FacturasSinCategoria.Count sin categoria</span>
@@ -281,6 +300,7 @@
                                                         <th style="text-align:right;padding:10px 8px;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">@EtiquetaColumnaImpuesto(columna)</th>
                                                     }
                                                     <th style="text-align:right;padding:10px 8px;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Total</th>
+                                                    <th style="text-align:right;padding:10px 8px;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Acciones</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -315,6 +335,23 @@
                                                             <td style="padding:12px 8px;text-align:right;color:var(--text-primary);white-space:nowrap;">@(importe == 0 ? "-" : importe.ToString("N2"))</td>
                                                         }
                                                         <td style="padding:12px 8px;text-align:right;color:var(--text-primary);font-weight:700;white-space:nowrap;">@factura.Total.ToString("N2")</td>
+                                                        <td style="padding:12px 8px;text-align:right;white-space:nowrap;">
+                                                            @if (_facturaPendienteEliminarId == factura.FacturaId)
+                                                            {
+                                                                <div style="display:inline-flex;gap:8px;align-items:center;">
+                                                                    <button class="btn btn-secondary btn-sm" @onclick="CancelarEliminarFactura" disabled="@_eliminandoFactura">Cancelar</button>
+                                                                    <button class="btn btn-danger btn-sm" @onclick="() => EliminarFactura(factura.FacturaId)" disabled="@_eliminandoFactura">
+                                                                        @(_eliminandoFactura ? "Eliminando..." : "Confirmar")
+                                                                    </button>
+                                                                </div>
+                                                            }
+                                                            else
+                                                            {
+                                                                <button class="btn btn-secondary btn-icon" title="Eliminar XML del checklist" @onclick="() => SolicitarEliminarFactura(factura.FacturaId)">
+                                                                    <LucideIcon Name="trash-2" Size="16" />
+                                                                </button>
+                                                            }
+                                                        </td>
                                                     </tr>
                                                 }
                                             </tbody>
@@ -593,6 +630,8 @@
     private bool _subiendoRecibidos;
     private bool _modalCategoriasVisible;
     private bool _guardandoCategorias;
+    private long? _facturaPendienteEliminarId;
+    private bool _eliminandoFactura;
     private bool _esAdmin;
     private bool _esAuxiliar;
     private string _filtroCategoriaXml = "todos";
@@ -683,7 +722,7 @@
 
     private async Task CargarXmlPasoAsync()
     {
-        if (_checklist == null)
+        if (_checklist == null || !EsPasoXml)
         {
             _xmlCargasPaso = new();
             _facturasXmlPaso = new();
@@ -693,7 +732,7 @@
 
         try
         {
-            var result = await XmlService.ListarCargasAsync(_checklist.ClienteId, _checklist.PeriodoId, page: 1, limit: 100);
+            var result = await XmlService.ListarCargasPorChecklistAsync(ChecklistId, page: 1, limit: 100);
             if (result?.Ok == true)
             {
                 _xmlCargasPaso = (result.Data ?? new())
@@ -706,11 +745,12 @@
                 _xmlCargasPaso = new();
             }
 
-            var facturasResult = await XmlService.BuscarFacturasAsync(_checklist.ClienteId, _checklist.PeriodoId, page: 1, limit: 100);
+            var facturasResult = await XmlService.ListarFacturasPorChecklistAsync(ChecklistId, page: 1, limit: 500);
             if (facturasResult?.Ok == true)
             {
                 _facturasXmlPaso = (facturasResult.Data ?? new())
-                    .OrderByDescending(x => x.FechaEmision)
+                    .OrderByDescending(x => x.ProcesadoEn)
+                    .ThenByDescending(x => x.FechaEmision)
                     .ThenByDescending(x => x.Total)
                     .ToList();
 
@@ -746,9 +786,10 @@
             return;
         }
 
-        var pendientes = await XmlService.ObtenerFacturasPendientesCategoriaAsync(_checklist.ClienteId, _checklist.PeriodoId);
+        var pendientes = await XmlService.ObtenerFacturasPendientesCategoriaPorChecklistAsync(ChecklistId);
         _pendientesCategoria = (pendientes?.Ok == true ? pendientes.Data : null)?
-            .OrderByDescending(x => x.FechaEmision)
+            .OrderByDescending(x => x.ProcesadoEn)
+            .ThenByDescending(x => x.FechaEmision)
             .ThenByDescending(x => x.Total)
             .Select(x => new FacturaCategoriaDraft
             {
@@ -899,6 +940,8 @@
             content.Add(fileContent, "archivo", archivo.Name);
             content.Add(new StringContent(_checklist.ClienteId.ToString()), "clienteId");
             content.Add(new StringContent(_checklist.PeriodoId.ToString()), "periodoId");
+            content.Add(new StringContent(ChecklistId.ToString()), "checklistId");
+            content.Add(new StringContent(PasoId.ToString()), "pasoId");
             content.Add(new StringContent(tipoCarga), "tipoCarga");
 
             var result = await XmlService.SubirCargaAsync(content);
@@ -942,6 +985,43 @@
             {
                 _subiendoRecibidos = false;
             }
+        }
+    }
+
+    private void SolicitarEliminarFactura(long facturaId)
+    {
+        _facturaPendienteEliminarId = facturaId;
+    }
+
+    private void CancelarEliminarFactura()
+    {
+        _facturaPendienteEliminarId = null;
+    }
+
+    private async Task EliminarFactura(long facturaId)
+    {
+        _eliminandoFactura = true;
+        try
+        {
+            var result = await XmlService.EliminarFacturaAsync(facturaId);
+            if (result?.Ok == true)
+            {
+                _mensaje = "XML eliminado del checklist actual.";
+                _facturaPendienteEliminarId = null;
+                await CargarXmlPasoAsync();
+            }
+            else
+            {
+                _error = result?.Error?.Message ?? "No se pudo eliminar el XML.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _eliminandoFactura = false;
         }
     }
 

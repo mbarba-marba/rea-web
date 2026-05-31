@@ -27,6 +27,13 @@ public class XmlService
     public async Task<ApiResponse<XmlCargaDto>?> ObtenerCargaAsync(long id)
         => await _http.GetFromJsonAsync<ApiResponse<XmlCargaDto>>($"api/v1/xml/cargas/{id}");
 
+    public async Task<ApiResponse<List<XmlCargaDto>>?> ListarCargasPorChecklistAsync(long checklistId, string? tipoCarga = null, int page = 1, int limit = 50)
+    {
+        var query = $"api/v1/xml/checklists/{checklistId}/cargas?page={page}&limit={limit}";
+        if (!string.IsNullOrWhiteSpace(tipoCarga)) query += $"&tipoCarga={Uri.EscapeDataString(tipoCarga)}";
+        return await _http.GetFromJsonAsync<ApiResponse<List<XmlCargaDto>>>(query);
+    }
+
     public async Task<ApiResponse<List<XmlFacturaDto>>?> ListarFacturasAsync(long cargaId, int page = 1, int limit = 50)
         => await _http.GetFromJsonAsync<ApiResponse<List<XmlFacturaDto>>>($"api/v1/xml/cargas/{cargaId}/facturas?page={page}&limit={limit}");
 
@@ -48,8 +55,19 @@ public class XmlService
         return await _http.GetFromJsonAsync<ApiResponse<List<XmlFacturaDto>>>(query);
     }
 
+    public async Task<ApiResponse<List<XmlFacturaDto>>?> ListarFacturasPorChecklistAsync(long checklistId, string? tipo = null, string? metodoPago = null, int page = 1, int limit = 200)
+    {
+        var query = $"api/v1/xml/checklists/{checklistId}/facturas?page={page}&limit={limit}";
+        if (!string.IsNullOrWhiteSpace(tipo)) query += $"&tipo={Uri.EscapeDataString(tipo)}";
+        if (!string.IsNullOrWhiteSpace(metodoPago)) query += $"&metodoPago={Uri.EscapeDataString(metodoPago)}";
+        return await _http.GetFromJsonAsync<ApiResponse<List<XmlFacturaDto>>>(query);
+    }
+
     public async Task<ApiResponse<List<XmlFacturaDto>>?> ObtenerFacturasPendientesCategoriaAsync(long clienteId, long periodoId)
         => await _http.GetFromJsonAsync<ApiResponse<List<XmlFacturaDto>>>($"api/v1/xml/facturas/pendientes-categoria?clienteId={clienteId}&periodoId={periodoId}");
+
+    public async Task<ApiResponse<List<XmlFacturaDto>>?> ObtenerFacturasPendientesCategoriaPorChecklistAsync(long checklistId)
+        => await _http.GetFromJsonAsync<ApiResponse<List<XmlFacturaDto>>>($"api/v1/xml/checklists/{checklistId}/facturas/pendientes-categoria");
 
     public async Task<ApiResponse<List<XmlFacturaDto>>?> ActualizarCategoriasFacturasAsync(ActualizarCategoriasFacturasRequest request)
     {
@@ -65,11 +83,19 @@ public class XmlService
         var response = await _http.PutAsJsonAsync("api/v1/xml/categorias-egresos-config", request);
         return await response.Content.ReadFromJsonAsync<ApiResponse<List<CategoriaEgresoXmlConfigDto>>>();
     }
+
+    public async Task<ApiResponse<object>?> EliminarFacturaAsync(long facturaId)
+    {
+        var response = await _http.DeleteAsync($"api/v1/xml/facturas/{facturaId}");
+        return await response.Content.ReadFromJsonAsync<ApiResponse<object>>();
+    }
 }
 
 public class XmlCargaDto
 {
     public long CargaId { get; set; }
+    public long? ChecklistId { get; set; }
+    public long? PasoId { get; set; }
     public long ClienteId { get; set; }
     public string ClienteNombre { get; set; } = string.Empty;
     public long PeriodoId { get; set; }
@@ -111,6 +137,7 @@ public class XmlFacturaDto
     public string? ComplementosDetectados { get; set; }
     public DateOnly FechaEmision { get; set; }
     public DateOnly? FechaPago { get; set; }
+    public DateTime ProcesadoEn { get; set; }
     public bool EsValida { get; set; }
     public string? FormaPago { get; set; }
     public string Moneda { get; set; } = "MXN";
