@@ -300,21 +300,26 @@
                                 }
                                 else
                                 {
-                                    <div style="overflow:auto;margin-top:12px;">
-                                        <table style="width:100%;border-collapse:collapse;min-width:@($"{980 + (_columnasImpuestoXml.Count * 120)}px");">
+                                    <div style="display:grid;gap:8px;margin-top:12px;">
+                                        <div class="body-small text-muted">Desliza lateralmente para revisar direccion, fechas, complementos, impuestos y montos del XML.</div>
+                                        <div style="overflow-x:auto;overflow-y:hidden;padding-bottom:8px;scrollbar-gutter:stable both-edges;">
+                                        <table style="width:100%;border-collapse:collapse;min-width:@($"{1180 + (_columnasImpuestoXml.Count * 120)}px");">
                                             <thead>
                                                 <tr style="border-bottom:1px solid var(--border-color);">
                                                     <th style="text-align:left;padding:10px 8px;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Fecha</th>
+                                                    <th style="text-align:left;padding:10px 8px;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Direccion</th>
                                                     <th style="text-align:left;padding:10px 8px;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">UUID</th>
-                                                    <th style="text-align:left;padding:10px 8px;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Tipo</th>
+                                                    <th style="text-align:left;padding:10px 8px;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Tipo CFDI</th>
                                                     <th style="text-align:left;padding:10px 8px;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Metodo</th>
+                                                    <th style="text-align:left;padding:10px 8px;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Fecha pago</th>
+                                                    <th style="text-align:right;padding:10px 8px;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Monto pagado</th>
                                                     <th style="text-align:left;padding:10px 8px;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Categoria</th>
                                                     <th style="text-align:left;padding:10px 8px;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Complementos</th>
                                                     @foreach (var columna in _columnasImpuestoXml)
                                                     {
                                                         <th style="text-align:right;padding:10px 8px;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">@EtiquetaColumnaImpuesto(columna)</th>
                                                     }
-                                                    <th style="text-align:right;padding:10px 8px;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Total</th>
+                                                    <th style="text-align:right;padding:10px 8px;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Total CFDI</th>
                                                     <th style="text-align:right;padding:10px 8px;font-size:11px;text-transform:uppercase;color:var(--text-secondary);">Acciones</th>
                                                 </tr>
                                             </thead>
@@ -323,12 +328,19 @@
                                                 {
                                                     <tr style="border-bottom:1px solid var(--border-color);">
                                                         <td style="padding:12px 8px;color:var(--text-primary);white-space:nowrap;">@factura.FechaEmision.ToString("dd/MM/yyyy")</td>
+                                                        <td style="padding:12px 8px;color:var(--text-primary);white-space:nowrap;">
+                                                            <span class="badge @(string.Equals(factura.TipoCarga, "emitidos", StringComparison.OrdinalIgnoreCase) ? "badge-accent" : "badge-muted")">
+                                                                @EtiquetaDireccionCarga(factura.TipoCarga)
+                                                            </span>
+                                                        </td>
                                                         <td style="padding:12px 8px;color:var(--text-primary);min-width:180px;">
                                                             <div style="font-weight:600;">@factura.Uuid</div>
                                                             <div class="body-small text-muted" style="margin-top:4px;">@factura.RfcEmisor â†’ @factura.RfcReceptor</div>
                                                         </td>
                                                         <td style="padding:12px 8px;color:var(--text-primary);white-space:nowrap;">@factura.Tipo.ToUpperInvariant()</td>
                                                         <td style="padding:12px 8px;color:var(--text-primary);white-space:nowrap;">@(string.IsNullOrWhiteSpace(factura.MetodoPago) ? "-" : factura.MetodoPago)</td>
+                                                        <td style="padding:12px 8px;color:var(--text-primary);white-space:nowrap;">@(factura.FechaPago?.ToString("dd/MM/yyyy") ?? "-")</td>
+                                                        <td style="padding:12px 8px;text-align:right;color:var(--text-primary);white-space:nowrap;">@FormatearMontoPago(factura)</td>
                                                         <td style="padding:12px 8px;color:var(--text-primary);white-space:nowrap;">
                                                             @if (EsEgreso(factura))
                                                             {
@@ -371,6 +383,7 @@
                                                 }
                                             </tbody>
                                         </table>
+                                        </div>
                                     </div>
                                 }
                             </div>
@@ -964,7 +977,7 @@
             {
                 var carga = result.Data;
                 _mensaje = carga != null && carga.ConErrores > 0
-                    ? $"Se procesaron {carga.Procesados} XML de {TituloTipoCarga(tipoCarga).ToLowerInvariant()} y {carga.ConErrores} quedaron rechazados por direccion incorrecta o por error de lectura."
+                    ? $"Se procesaron {carga.Procesados} XML de {TituloTipoCarga(tipoCarga).ToLowerInvariant()} y {carga.ConErrores} quedaron rechazados por fecha fuera del periodo, direccion incorrecta o error de lectura."
                     : $"Carga de {TituloTipoCarga(tipoCarga).ToLowerInvariant()} procesada correctamente.";
                 if (tipoCarga == "emitidos")
                 {
@@ -1264,6 +1277,9 @@
         _ => "Emitidos"
     };
 
+    private static string EtiquetaDireccionCarga(string? tipoCarga)
+        => string.Equals(tipoCarga, "recibidos", StringComparison.OrdinalIgnoreCase) ? "Recibido" : "Emitido";
+
     private static string ObtenerClaveColumnaImpuesto(XmlFacturaImpuestoDto impuesto)
         => $"{TituloTipoImpuesto(impuesto.Tipo)}|{impuesto.NombreImpuesto}";
 
@@ -1286,6 +1302,11 @@
 
     private static string EtiquetaCategoriaFactura(XmlFacturaDto factura)
         => EtiquetaCategoria(factura.CategoriaGastoXml);
+
+    private static string FormatearMontoPago(XmlFacturaDto factura)
+        => factura.MontoPago.HasValue
+            ? factura.MontoPago.Value.ToString("N2")
+            : "-";
 
     private static string EtiquetaCategoria(string? categoria)
         => categoria switch

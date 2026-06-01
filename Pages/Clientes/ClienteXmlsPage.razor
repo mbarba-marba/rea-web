@@ -598,7 +598,10 @@
     private List<BreadcrumbItem> _breadcrumb = new();
 
     private List<XmlFacturaDto> FacturasFiltradas => _facturas
-        .Where(f => f.FechaEmision.Year == _anioSeleccionado)
+        // Complementos de pago (Tipo P) se agrupan por FechaPago, igual que el Excel
+        .Where(f => (f.Tipo?.ToLowerInvariant() == "pago" && f.FechaPago.HasValue
+                        ? f.FechaPago.Value.Year
+                        : f.FechaEmision.Year) == _anioSeleccionado)
         .Where(f => _direccionFiltro == "todos" || ObtenerDireccion(f) == _direccionFiltro)
         .Where(f => _complementoFiltro switch
         {
@@ -618,7 +621,9 @@
     private List<XmlFacturaDto> FacturasConFechaPago => FacturasFiltradas.Where(f => f.FechaPago.HasValue).ToList();
 
     private List<ResumenMensualItem> ResumenMensual => FacturasFiltradas
-        .GroupBy(f => f.FechaEmision.Month)
+        .GroupBy(f => f.Tipo?.ToLowerInvariant() == "pago" && f.FechaPago.HasValue
+                          ? f.FechaPago.Value.Month
+                          : f.FechaEmision.Month)
         .Select(g => new ResumenMensualItem
         {
             Mes = g.Key,
@@ -671,7 +676,9 @@
                     .ToList();
 
                 _aniosDisponibles = _facturas
-                    .Select(x => x.FechaEmision.Year)
+                    .Select(x => x.Tipo?.ToLowerInvariant() == "pago" && x.FechaPago.HasValue
+                                    ? x.FechaPago.Value.Year
+                                    : x.FechaEmision.Year)
                     .Distinct()
                     .OrderByDescending(x => x)
                     .ToList();

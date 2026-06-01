@@ -116,6 +116,7 @@ public class XmlFacturaDto
 {
     public long FacturaId { get; set; }
     public string Uuid { get; set; } = string.Empty;
+    public string TipoCarga { get; set; } = string.Empty;
     public string RfcEmisor { get; set; } = string.Empty;
     public string? NombreEmisor { get; set; }
     public string RfcReceptor { get; set; } = string.Empty;
@@ -137,6 +138,7 @@ public class XmlFacturaDto
     public string? ComplementosDetectados { get; set; }
     public DateOnly FechaEmision { get; set; }
     public DateOnly? FechaPago { get; set; }
+    public decimal? MontoPago { get; set; }
     public DateTime ProcesadoEn { get; set; }
     public bool EsValida { get; set; }
     public string? FormaPago { get; set; }
